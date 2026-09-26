@@ -18,7 +18,7 @@
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
 <link rel="preload" href="assets/fonts/Newsreader-Variable.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/Satoshi-Variable.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="assets/site.css?v=24">
+<link rel="stylesheet" href="assets/site.css?v=25">
 <script>document.documentElement.classList.add('js')</script>
 
 <style>
@@ -275,7 +275,8 @@
     color: var(--primary);
     min-height: 18px;
   }
-  .form-status.error{ color: var(--red-accent); }
+  .form-status.error{ color: #B3261E; }
+  .field [aria-invalid="true"]{ border-bottom-color:#B3261E; }
   .form-status.success{
     color: #1F7A4D;
     font-weight: 600;
@@ -451,24 +452,25 @@
       <p class="form-lead">Compila il form, scegli come preferisci essere contattato. Nessun obbligo, nessuna fretta.</p>
 
       <form id="contact-form" novalidate>
+        <div class="hp" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden"><label for="f-website">Lascia vuoto</label><input id="f-website" name="website" type="text" tabindex="-1" autocomplete="off"></div>
         <div class="form-row">
           <div class="field">
             <label for="f-nome">Nome *</label>
-            <input id="f-nome" name="nome" type="text" placeholder="Es. Mario" required>
+            <input id="f-nome" name="nome" type="text" autocomplete="given-name" placeholder="Es. Mario" required>
           </div>
           <div class="field">
             <label for="f-cognome">Cognome *</label>
-            <input id="f-cognome" name="cognome" type="text" placeholder="Es. Rossi" required>
+            <input id="f-cognome" name="cognome" type="text" autocomplete="family-name" placeholder="Es. Rossi" required>
           </div>
         </div>
         <div class="form-row">
           <div class="field">
             <label for="f-email">Email *</label>
-            <input id="f-email" name="email" type="email" placeholder="mario@email.it" required>
+            <input id="f-email" name="email" type="email" autocomplete="email" inputmode="email" placeholder="mario@email.it" required>
           </div>
           <div class="field">
             <label for="f-tel">Telefono</label>
-            <input id="f-tel" name="telefono" type="tel" placeholder="+39 ...">
+            <input id="f-tel" name="telefono" type="tel" autocomplete="tel" placeholder="+39 ...">
           </div>
         </div>
         <div class="form-row full">
@@ -665,6 +667,6 @@
   </div>
 </footer>
 
-<script src="assets/site.js?v=12"></script>
+<script src="assets/site.js?v=13"></script>
 </body>
 </html>

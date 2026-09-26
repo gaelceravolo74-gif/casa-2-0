@@ -802,3 +802,15 @@ body.cookie-active{ padding-bottom: 120px; }
   #cookie-banner button{ flex:1 1 auto; padding: 12px 14px; }
 }
 
+
+/* ============================================================
+   SOLIDITÀ NEI PUNTI DI DECISIONE
+   Forma squadrata (angoli 6px) = stabilità, affidabilità, serietà.
+   Applicata solo dove l'utente decide (form, invio, conferme, prove),
+   non ovunque: hero e navigazione restano morbidi.
+   ============================================================ */
+.form-card, .form-card .btn, .form-actions .btn,
+#exit-modal .em-card, #exit-modal .btn,
+.boss__btn, .vmember__cta, .immo__cta, .not-found .btn,
+.cta-banner .btn, #cookie-banner, #cookie-banner button{ border-radius: 6px !important; }
+.immo__cta::before{ display:none !important; }      /* niente pulsazione continua: distrae, non convince */

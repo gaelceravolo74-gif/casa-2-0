@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Richieste — Area riservata Casa 2.0</title>
+<meta name="robots" content="noindex, nofollow" />
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+<link rel="stylesheet" href="assets/site.css?v=25">
+<script>document.documentElement.classList.add('js')</script>
+<style>
+  body{ background: var(--paper); }
+  .adm{ max-width: 1180px; margin: 0 auto; padding: 40px 22px 80px; }
+  .adm__top{ display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom: 26px; }
+  .adm__top img{ height: 44px; }
+  .adm h1{ font-size: 30px; color: var(--navy); margin: 18px 0 4px; }
+  .adm p.muted{ color: var(--text-muted); margin:0; }
+  .box{ background:#fff; border:1px solid var(--hairline); border-radius:6px; padding: 22px; }
+  .login{ max-width: 420px; }
+  label{ display:block; font-size: 13px; font-weight:600; margin-bottom:6px; }
+  input, select{ font: inherit; font-size:16px; padding: 11px 12px; border:1px solid rgba(24,42,78,.2); border-radius:6px; background:#fff; width:100%; }
+  .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:end; margin-bottom: 18px; }
+  .row > div{ min-width: 160px; }
+  .btn{ border-radius: 6px; }
+  .count{ font-size: 14px; color: var(--text-muted); margin: 0 0 12px; }
+  .lead{ border:1px solid var(--hairline); border-radius:6px; background:#fff; padding:16px 18px; margin-bottom:12px; }
+  .lead__head{ display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:center; }
+  .lead__name{ font-family: var(--font-display); font-size: 21px; color: var(--navy); font-weight:600; }
+  .tag{ display:inline-block; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; padding:4px 8px; border-radius:4px; background: var(--primary-soft); color: var(--navy); margin-right:6px; }
+  .tag--valuta{ background: var(--primary); color:#fff; }
+  .lead dl{ display:grid; grid-template-columns: 150px 1fr; gap: 4px 14px; margin: 12px 0 0; font-size: 14.5px; }
+  .lead dt{ color: var(--text-muted); }
+  .lead dd{ margin:0; white-space: pre-wrap; word-break: break-word; }
+  .lead a{ color: var(--primary); text-decoration: underline; }
+  .err{ color:#B3261E; font-weight:600; margin-top:10px; }
+  @media (max-width:600px){ .lead dl{ grid-template-columns: 1fr; } .lead dt{ margin-top:6px; } }
+</style>
+</head>
+<body>
+<main class="adm">
+  <div class="adm__top">
+    <a href="index.html"><img src="assets/logo@2x.png" alt="Casa 2.0"></a>
+    <button class="btn btn--outline" id="logout" hidden>Esci</button>
+  </div>
+  <h1>Richieste dal sito</h1>
+  <p class="muted">Contatti e valutazioni ricevute. Pagina riservata, non indicizzata.</p>
+
+  <section class="box login" id="login" style="margin-top:24px">
+    <form id="login-form">
+      <label for="token">Codice di accesso</label>
+      <input id="token" type="password" autocomplete="current-password" required>
+      <button class="btn" style="margin-top:14px; width:100%">Entra</button>
+      <p class="err" id="login-err" hidden></p>
+    </form>
+  </section>
+
+  <section id="panel" hidden style="margin-top:24px">
+    <div class="row">
+      <div><label for="f-form">Modulo</label><select id="f-form"><option value="">Tutti</option><option value="valuta">Valutazioni</option><option value="contatti">Contatti</option></select></div>
+      <div><label for="f-status">Stato</label><select id="f-status"><option value="">Tutti</option><option value="nuovo">Nuovi</option><option value="in_lavorazione">In lavorazione</option><option value="chiuso">Chiusi</option></select></div>
+      <button class="btn btn--outline" id="csv" type="button">Scarica Excel (CSV)</button>
+    </div>
+    <p class="count" id="count"></p>
+    <div id="list"></div>
+  </section>
+</main>
+<script>
+(function(){
+  const $ = (s) => document.querySelector(s);
+  let token = sessionStorage.getItem('casa2_admin') || '';
+  const LABELS = { telefono:'Telefono', indirizzo:'Indirizzo immobile', tipologia:'Tipologia', mq:'Superficie (mq)', anno:'Anno', locali:'Locali', piano:'Piano', stato:'Stato immobile', messaggio:'Messaggio / note', pagina:'Pagina' };
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const q = () => { const p = new URLSearchParams(); if($('#f-form').value) p.set('form', $('#f-form').value); if($('#f-status').value) p.set('status', $('#f-status').value); return p; };
+
+  async function load(){
+    const r = await fetch('/api/leads?' + q(), { headers:{ Authorization:'Bearer ' + token } });
+    if(r.status === 401){ sessionStorage.removeItem('casa2_admin'); show(false, 'Codice non valido.'); return; }
+    const d = await r.json();
+    if(!d.ok){ $('#list').innerHTML = '<p class="err">' + esc(d.error) + '</p>'; return; }
+    show(true);
+    $('#count').textContent = d.leads.length + (d.leads.length === 1 ? ' richiesta' : ' richieste');
+    $('#list').innerHTML = d.leads.map(l => {
+      const when = new Date(l.created_at).toLocaleString('it-IT', { dateStyle:'medium', timeStyle:'short' });
+      const rows = Object.keys(LABELS).filter(k => l[k] !== null && l[k] !== '' && l[k] !== undefined)
+        .map(k => '<dt>' + LABELS[k] + '</dt><dd>' + (k === 'telefono' ? '<a href="tel:' + esc(l[k]) + '">' + esc(l[k]) + '</a>' : esc(l[k])) + '</dd>').join('');
+      return '<article class="lead"><div class="lead__head"><div>' +
+        '<span class="tag ' + (l.form === 'valuta' ? 'tag--valuta' : '') + '">' + (l.form === 'valuta' ? 'Valutazione' : 'Contatto') + '</span>' +
+        '<span class="lead__name">' + esc(l.nome + ' ' + l.cognome) + '</span></div>' +
+        '<div style="display:flex;gap:10px;align-items:center"><small class="muted">' + esc(when) + '</small>' +
+        '<select data-id="' + l.id + '" aria-label="Stato richiesta">' +
+          ['nuovo','in_lavorazione','chiuso'].map(s => '<option value="' + s + '"' + (s === l.status ? ' selected' : '') + '>' + s.replace('_',' ') + '</option>').join('') +
+        '</select></div></div>' +
+        '<dl><dt>Email</dt><dd><a href="mailto:' + esc(l.email) + '">' + esc(l.email) + '</a></dd>' + rows +
+        '<dt>Newsletter</dt><dd>' + (l.newsletter ? 'Sì' : 'No') + '</dd></dl></article>';
+    }).join('') || '<p class="muted">Nessuna richiesta con questi filtri.</p>';
+    document.querySelectorAll('select[data-id]').forEach(s => s.addEventListener('change', async () => {
+      await fetch('/api/leads', { method:'PATCH', headers:{ Authorization:'Bearer ' + token, 'Content-Type':'application/json' }, body: JSON.stringify({ id: s.dataset.id, status: s.value }) });
+    }));
+  }
+  function show(ok, err){
+    $('#login').hidden = ok; $('#panel').hidden = !ok; $('#logout').hidden = !ok;
+    const e = $('#login-err'); e.hidden = !err; e.textContent = err || '';
+  }
+  $('#login-form').addEventListener('submit', e => { e.preventDefault(); token = $('#token').value.trim(); sessionStorage.setItem('casa2_admin', token); load(); });
+  $('#logout').addEventListener('click', () => { sessionStorage.removeItem('casa2_admin'); token = ''; show(false); });
+  $('#f-form').addEventListener('change', load); $('#f-status').addEventListener('change', load);
+  $('#csv').addEventListener('click', async () => {
+    const p = q(); p.set('format','csv');
+    const r = await fetch('/api/leads?' + p, { headers:{ Authorization:'Bearer ' + token } });
+    const b = await r.blob(); const a = document.createElement('a');
+    a.href = URL.createObjectURL(b); a.download = 'richieste-casa2.csv'; a.click();
+  });
+  if(token) load(); else show(false);
+})();
+</script>
+</body>
+</html>

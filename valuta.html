@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#182A4E" />
 <link rel="preload" href="assets/fonts/Newsreader-Variable.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/Satoshi-Variable.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="assets/site.css?v=24">
+<link rel="stylesheet" href="assets/site.css?v=25">
 <script>document.documentElement.classList.add('js')</script>
 
 <style>
@@ -92,6 +92,37 @@
   .form-status{ margin-top: 14px; font-size:13px; font-weight: 500; }
   .form-status.error{ color: var(--red-accent); }
   .form-status.success{ color: #1F7A4D; }
+  /* Area di decisione: forme squadrate = solidità e serietà (non pillole) */
+  .valuta-card{ border-radius: 6px; }
+  .field input, .field select, .field textarea{ border-radius: 6px; }
+  .pill-group label{ border-radius: 6px; }
+  .submit-row .btn{ border-radius: 6px; }
+  .hp{ position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden; }
+  .field [aria-invalid="true"]{ border-color:#B3261E; box-shadow: 0 0 0 3px rgba(179,38,30,0.12); }
+
+  .vprog[hidden], .vdone[hidden]{ display:none !important; }
+  .vprog{ list-style:none; margin: 0 0 26px; padding:0; display:grid; grid-template-columns: repeat(3,1fr); gap:8px; position:relative; padding-bottom: 14px; }
+  .vprog li{ display:flex; align-items:center; gap:8px; font-size: 13px; font-weight:600; color: var(--text-muted); transition: color .3s ease; }
+  .vprog li span{ width:24px; height:24px; border-radius:4px; display:inline-flex; align-items:center; justify-content:center; font-size:12px; border:1px solid var(--hairline); background:#fff; transition: all .3s ease; flex:none; }
+  .vprog li.is-on{ color: var(--navy); }
+  .vprog li.is-on span{ border-color: var(--primary); color: var(--primary); }
+  .vprog li.is-done span{ background: var(--primary); border-color: var(--primary); color:#fff; }
+  .vprog__bar{ position:absolute; left:0; right:0; bottom:0; height:3px; background: var(--hairline); border-radius:2px; overflow:hidden; }
+  .vprog__bar b{ display:block; height:100%; width:0; background: linear-gradient(90deg, var(--primary), var(--primary-light)); transition: width .45s cubic-bezier(.2,.7,.2,1); }
+
+  .vdone{ text-align:left; animation: vdoneIn .6s cubic-bezier(.2,.7,.2,1) both; }
+  .vdone:focus{ outline:none; }
+  .vdone__check{ width:56px; height:56px; margin-bottom:14px; fill:none; stroke: var(--primary); stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; }
+  .vdone__check circle{ stroke-dasharray:151; stroke-dashoffset:151; animation: vdraw .7s ease forwards; }
+  .vdone__check path{ stroke-dasharray:40; stroke-dashoffset:40; animation: vdraw .45s .55s ease forwards; }
+  .vdone__steps{ margin: 18px 0 22px; padding-left: 20px; display:grid; gap:12px; color: var(--text-dark); line-height:1.55; }
+  .vdone__steps li{ opacity:0; animation: vdoneIn .5s ease forwards; }
+  .vdone__steps li:nth-child(1){ animation-delay:.8s } .vdone__steps li:nth-child(2){ animation-delay:1s } .vdone__steps li:nth-child(3){ animation-delay:1.2s }
+  .vdone a{ color: var(--primary); text-decoration: underline; }
+  @keyframes vdraw{ to{ stroke-dashoffset:0; } }
+  @keyframes vdoneIn{ from{ opacity:0; transform: translateY(10px); } to{ opacity:1; transform:none; } }
+  @media (max-width: 420px){ .vprog li{ font-size:11.5px; gap:6px; } }
+
   @media (max-width: 760px){
     .valuta-wrap{ grid-template-columns: minmax(0,1fr); gap: 32px; }
     .valuta-side{ position:static; }
@@ -150,10 +181,20 @@
     <h2>Il tuo immobile</h2>
     <p class="sub">Compila i campi che conosci. Per gli altri facciamo noi.</p>
 
+    <!-- avanzamento: tre tappe, si riempie mentre compili -->
+    <ol class="vprog" id="vprog" aria-label="Avanzamento modulo">
+      <li data-step="0" class="is-on"><span>1</span>Immobile</li>
+      <li data-step="1"><span>2</span>Caratteristiche</li>
+      <li data-step="2"><span>3</span>Contatti</li>
+      <i class="vprog__bar" aria-hidden="true"><b id="vprog-fill"></b></i>
+    </ol>
+
     <form id="valuta-form" novalidate>
-      <div class="form-section">
+      <!-- campo trappola anti-spam: invisibile alle persone -->
+      <div class="hp" aria-hidden="true"><label for="v-website">Lascia vuoto</label><input id="v-website" name="website" type="text" tabindex="-1" autocomplete="off"></div>
+      <div class="form-section" data-section="0">
         <h4>Dove si trova</h4>
-        <div class="field"><label for="indirizzo">Indirizzo (via, città) *</label><input id="indirizzo" name="indirizzo" type="text" placeholder="Es. Via Empolitana 12, Tivoli" required></div>
+        <div class="field"><label for="indirizzo">Indirizzo (via, città) *</label><input id="indirizzo" name="indirizzo" type="text" placeholder="Es. Via Empolitana 12, Tivoli" autocomplete="street-address" required></div>
 
         <div class="field">
           <label>Tipologia</label>
@@ -167,12 +208,12 @@
         </div>
       </div>
 
-      <div class="form-section">
+      <div class="form-section" data-section="1">
         <h4>Caratteristiche</h4>
         <div class="grid-2">
-          <div class="field"><label for="mq">Superficie (mq)</label><input id="mq" name="mq" type="number" min="20" max="2000" placeholder="Es. 95"></div>
-          <div class="field"><label for="anno">Anno di costruzione</label><input id="anno" name="anno" type="number" min="1800" max="2026" placeholder="Es. 1985"></div>
-          <div class="field"><label for="locali">Locali</label><input id="locali" name="locali" type="number" min="1" max="20" placeholder="Es. 3"></div>
+          <div class="field"><label for="mq">Superficie (mq)</label><input id="mq" name="mq" type="number" inputmode="numeric" min="20" max="2000" placeholder="Es. 95"></div>
+          <div class="field"><label for="anno">Anno di costruzione</label><input id="anno" name="anno" type="number" inputmode="numeric" min="1800" max="2026" placeholder="Es. 1985"></div>
+          <div class="field"><label for="locali">Locali</label><input id="locali" name="locali" type="number" inputmode="numeric" min="1" max="20" placeholder="Es. 3"></div>
           <div class="field"><label for="piano">Piano</label><input id="piano" name="piano" type="text" placeholder="Es. 2° con ascensore"></div>
         </div>
         <div class="field">
@@ -186,13 +227,13 @@
         </div>
       </div>
 
-      <div class="form-section">
+      <div class="form-section" data-section="2">
         <h4>I tuoi contatti</h4>
         <div class="grid-2">
-          <div class="field"><label for="v-nome">Nome *</label><input id="v-nome" name="nome" type="text" required></div>
-          <div class="field"><label for="v-cognome">Cognome *</label><input id="v-cognome" name="cognome" type="text" required></div>
-          <div class="field"><label for="v-email">Email *</label><input id="v-email" name="email" type="email" required></div>
-          <div class="field"><label for="v-tel">Telefono *</label><input id="v-tel" name="telefono" type="tel" required placeholder="+39 ..."></div>
+          <div class="field"><label for="v-nome">Nome *</label><input id="v-nome" name="nome" type="text" autocomplete="given-name" required></div>
+          <div class="field"><label for="v-cognome">Cognome *</label><input id="v-cognome" name="cognome" type="text" autocomplete="family-name" required></div>
+          <div class="field"><label for="v-email">Email *</label><input id="v-email" name="email" type="email" autocomplete="email" inputmode="email" required></div>
+          <div class="field"><label for="v-tel">Telefono *</label><input id="v-tel" name="telefono" type="tel" autocomplete="tel" required placeholder="+39 ..."></div>
         </div>
         <div class="field"><label for="v-note">Note (opzionale)</label><textarea id="v-note" name="note" placeholder="Aggiungi qualunque informazione utile..."></textarea></div>
         <label class="consent"><input type="checkbox" name="privacy" required><span>Ho letto e accetto la <a href="privacy.html">Privacy Policy</a> e autorizzo Casa 2.0 a contattarmi per la valutazione. *</span></label>
@@ -209,6 +250,19 @@
       </div>
       <div class="form-status" id="v-status" aria-live="polite"></div>
     </form>
+
+    <!-- dopo l'invio: cosa succede adesso (riduce l'ansia dell'attesa) -->
+    <div class="vdone" id="vdone" hidden tabindex="-1">
+      <svg class="vdone__check" viewBox="0 0 52 52" aria-hidden="true"><circle cx="26" cy="26" r="24"/><path d="M15 27l7 7 15-16"/></svg>
+      <h2>Richiesta ricevuta.</h2>
+      <p class="sub">Grazie <span id="vdone-name"></span>. Ecco cosa succede adesso:</p>
+      <ol class="vdone__steps">
+        <li><b>Entro 24 ore</b> ti chiamiamo per conoscere la casa e fissare il sopralluogo.</li>
+        <li><b>Veniamo a vederla</b> e confrontiamo le vendite reali della tua zona.</li>
+        <li><b>Ti diamo la stima</b>, chiara e motivata. Poi decidi tu, senza impegno.</li>
+      </ol>
+      <p class="sub">Hai fretta? <a href="tel:+393388449030">Chiamaci al 338 844 9030</a>.</p>
+    </div>
   </section>
 </main>
 
@@ -222,58 +276,62 @@
   </div>
 </footer>
 
-<script src="assets/site.js?v=12"></script>
+<script src="assets/site.js?v=13"></script>
 <script>
-  /* Form valutazione — riusa la stessa logica web3forms/mailto del form contatti */
+  /* Form valutazione → /api/lead (database) con barra di avanzamento e conferma */
   (function(){
-    const WEB3FORMS_KEY = ''; // incolla qui access key da web3forms.com
-    const LEAD_EMAIL    = 'info@casaduepuntozero.net';
     const form = document.getElementById('valuta-form');
     const fst  = document.getElementById('v-status');
     if(!form) return;
-    form.addEventListener('submit', async e=>{
-      e.preventDefault(); fst.className='form-status'; fst.textContent='';
+    const sections = [...form.querySelectorAll('[data-section]')];
+    const steps = [...document.querySelectorAll('#vprog li')];
+    const fill = document.getElementById('vprog-fill');
+    const KEY = ['indirizzo','mq','anno','locali','piano','nome','cognome','email','telefono'];
+    const get = k => { const el = form.elements[k]; return el ? String(el.value || '').trim() : ''; };
+    function progress(active){
+      const filled = KEY.filter(k => get(k)).length + (form.elements.privacy.checked ? 1 : 0);
+      fill.style.width = Math.round(filled / (KEY.length + 1) * 100) + '%';
+      const done = [!!get('indirizzo'), !!(get('mq') || get('locali') || get('anno') || get('piano')), !!(get('nome') && get('cognome') && get('email') && get('telefono'))];
+      steps.forEach((li, i) => { li.classList.toggle('is-done', done[i]); li.classList.toggle('is-on', i === active || done[i]); });
+    }
+    let active = 0;
+    form.addEventListener('focusin', e => { const sec = e.target.closest('[data-section]'); if(sec){ active = +sec.dataset.section; progress(active); } });
+    form.addEventListener('input', e => { e.target.removeAttribute('aria-invalid'); progress(active); });
+    form.addEventListener('change', () => progress(active));
+    progress(0);
+
+    const say = (m, t) => { fst.className = 'form-status' + (t ? ' ' + t : ''); fst.textContent = m; };
+    const mark = n => { const el = form.elements[n]; if(el && el.focus){ if(el.setAttribute) el.setAttribute('aria-invalid','true'); el.focus(); } };
+    form.addEventListener('submit', async e => {
+      e.preventDefault(); say('');
+      const checks = [
+        [!get('indirizzo'), 'indirizzo', 'Inserisci l’indirizzo dell’immobile.'],
+        [!get('nome'), 'nome', 'Inserisci il nome.'], [!get('cognome'), 'cognome', 'Inserisci il cognome.'],
+        [!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(get('email')), 'email', 'Inserisci un’email valida.'],
+        [!get('telefono'), 'telefono', 'Inserisci un numero di telefono: ti chiamiamo per il sopralluogo.'],
+        [!form.elements.privacy.checked, 'privacy', 'Per inviare serve il consenso alla privacy.'],
+      ];
+      const bad = checks.find(c => c[0]);
+      if(bad){ say(bad[2], 'error'); mark(bad[1]); return; }
       const f = new FormData(form);
-      const get = k => (f.get(k)||'').toString().trim();
-      const errs = [];
-      if(!get('nome') || !get('cognome')) errs.push('Inserisci nome e cognome.');
-      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(get('email'))) errs.push('Email non valida.');
-      if(!get('telefono')) errs.push('Inserisci un numero di telefono.');
-      if(!get('indirizzo')) errs.push('Inserisci l’indirizzo dell’immobile.');
-      if(!f.get('privacy')) errs.push('Accetta la privacy policy.');
-      if(errs.length){ fst.classList.add('error'); fst.textContent = errs[0]; return; }
+      const payload = Object.fromEntries(f.entries());
+      payload.form = 'valuta'; payload.privacy = true;
       const btn = form.querySelector('[type="submit"]'); const label = btn.innerHTML;
-      btn.disabled = true; btn.textContent = 'Invio…';
-      // Webhook parallelo (n8n/Make)
-      if(window.Casa20 && window.Casa20.sendLead){
-        window.Casa20.sendLead({ form:'valuta',
-          nome:get('nome'), cognome:get('cognome'), email:get('email'), telefono:get('telefono'),
-          indirizzo:get('indirizzo'), tipologia:get('tipologia'), mq:get('mq'), anno:get('anno'),
-          locali:get('locali'), piano:get('piano'), stato:get('stato'), note:get('note')
-        });
-      }
-      const payload = {
-        access_key: WEB3FORMS_KEY,
-        subject: `Valutazione immobile — ${get('nome')} ${get('cognome')} — ${get('indirizzo')}`,
-        from_name: `${get('nome')} ${get('cognome')}`,
-        indirizzo: get('indirizzo'), tipologia: get('tipologia'),
-        mq: get('mq'), anno: get('anno'), locali: get('locali'), piano: get('piano'), stato: get('stato'),
-        email: get('email'), telefono: get('telefono'), note: get('note'),
-      };
-      try{
-        if(WEB3FORMS_KEY){
-          const r = await fetch('https://api.web3forms.com/submit',{ method:'POST', headers:{'Content-Type':'application/json',Accept:'application/json'}, body: JSON.stringify(payload) });
-          if(!r.ok) throw new Error('bad');
-          fst.classList.add('success'); fst.textContent = '✓ Richiesta inviata. Ti chiamiamo entro 24 ore.'; form.reset();
-        } else {
-          const body = Object.entries(payload).filter(([k])=>k!=='access_key').map(([k,v])=>`${k}: ${v}`).join('%0D%0A');
-          window.location.href = `mailto:${LEAD_EMAIL}?subject=${encodeURIComponent(payload.subject)}&body=${body}`;
-          fst.classList.add('success'); fst.textContent = '✓ Si apre il tuo programma di posta. Oppure scrivici su WhatsApp.';
-        }
-      } catch(err){
-        fst.classList.add('error'); fst.textContent = 'Invio non riuscito. Scrivici su WhatsApp o chiama il 338 844 9030.';
-      }
+      btn.disabled = true; btn.textContent = 'Invio in corso…';
+      const r = await window.Casa20.submitLead(payload);
       btn.disabled = false; btn.innerHTML = label;
+      if(r.ok){
+        document.getElementById('vdone-name').textContent = payload.nome;
+        form.hidden = true; document.getElementById('vprog').hidden = true;
+        const done = document.getElementById('vdone'); done.hidden = false; done.focus();
+        done.scrollIntoView({ behavior:'smooth', block:'center' });
+      } else if(r.offline){
+        window.Casa20.mailtoFallback('Richiesta valutazione — ' + payload.nome + ' ' + payload.cognome + ' — ' + payload.indirizzo,
+          ['Indirizzo: ' + payload.indirizzo, 'Tipologia: ' + (payload.tipologia || '—'), 'Superficie: ' + (payload.mq || '—') + ' mq',
+           'Anno: ' + (payload.anno || '—'), 'Locali: ' + (payload.locali || '—'), 'Piano: ' + (payload.piano || '—'), 'Stato: ' + (payload.stato || '—'), '',
+           'Nome: ' + payload.nome + ' ' + payload.cognome, 'Email: ' + payload.email, 'Telefono: ' + payload.telefono, '', 'Note: ' + (payload.note || '—')]);
+        say('Il nostro server non risponde: si è aperta la tua email con la richiesta già pronta, premi “Invia”. Oppure chiamaci al 338 844 9030.', 'error');
+      } else { say(r.error || 'Controlla i dati inseriti.', 'error'); if(r.field) mark(r.field); }
     });
   })();
 </script>

@@ -2,5 +2,7 @@ User-agent: *
 Allow: /
 Disallow: /audit/
 Disallow: /uploads/
+Disallow: /admin
+Disallow: /api/
 
 Sitemap: https://www.casaduepuntozero.net/sitemap.xml

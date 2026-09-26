@@ -99,13 +99,28 @@
     });
   });
 
-  /* ---------- CONTACT FORM ----------
-     Lead delivery without a backend:
-     1. If WEB3FORMS_KEY is set → POST to web3forms (free, no server). Lead arrives by email.
-     2. Otherwise → fall back to mailto: so a lead is NEVER silently lost.
-     To go live: create a free key at https://web3forms.com and paste it below. */
-  const WEB3FORMS_KEY = ''; // <-- incolla qui la access key di web3forms per l'invio automatico
-  const LEAD_EMAIL    = 'info@casaduepuntozero.net';
+  /* ---------- INVIO RICHIESTE (contatti + valutazione) ----------
+     1. POST a /api/lead → salvata nel database D1 + notifica all'agenzia
+     2. solo se il server non è raggiungibile → email già compilata (la richiesta non si perde mai)
+     Il messaggio di conferma compare SOLO quando la richiesta è davvero salvata. */
+  const LEAD_EMAIL = 'info@casaduepuntozero.net';
+  async function submitLead(payload){
+    try{
+      const res = await fetch('/api/lead', { method:'POST', headers:{ 'Content-Type':'application/json', Accept:'application/json' },
+        body: JSON.stringify({ ...payload, pagina: location.pathname }) });
+      const data = await res.json().catch(()=>({}));
+      if(res.ok && data.ok) return { ok:true, id:data.id };
+      if(res.status === 422 || res.status === 429) return { ok:false, error:data.error, field:data.field };
+      return { ok:false, offline:true };
+    }catch(e){ return { ok:false, offline:true }; }
+  }
+  function mailtoFallback(subject, lines){
+    const body = encodeURIComponent(lines.filter(Boolean).join('\n'));
+    window.location.href = `mailto:${LEAD_EMAIL}?subject=${encodeURIComponent(subject)}&body=${body}`;
+  }
+  window.Casa20 = window.Casa20 || {};
+  window.Casa20.submitLead = submitLead;
+  window.Casa20.mailtoFallback = mailtoFallback;
 
   const form    = document.getElementById('contact-form');
   const fstatus = document.getElementById('form-status');
@@ -118,15 +133,20 @@
         email:   (f.get('email')   || '').trim(),
         tel:     (f.get('telefono')|| '').trim(),
         msg:     (f.get('messaggio')|| '').trim(),
-        news:    f.get('newsletter') ? 'Sì' : 'No',
-        privacy: f.get('privacy')
+        news:    !!f.get('newsletter'),
+        privacy: !!f.get('privacy'),
+        website: (f.get('website') || '')
       };
     };
+    const say = (msg, type) => { fstatus.className = 'form-status' + (type ? ' ' + type : ''); fstatus.textContent = msg; };
+    const mark = (name) => { const el = form.elements[name]; if(el){ el.setAttribute('aria-invalid','true'); el.focus(); } };
+    form.addEventListener('input', e => e.target.removeAttribute('aria-invalid'));
     const validate = (d) => {
-      fstatus.className = 'form-status'; fstatus.textContent = '';
-      if(!d.nome || !d.cognome){ fstatus.classList.add('error'); fstatus.textContent = 'Inserisci nome e cognome.'; return false; }
-      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email)){ fstatus.classList.add('error'); fstatus.textContent = 'Inserisci un’email valida.'; return false; }
-      if(!d.privacy){ fstatus.classList.add('error'); fstatus.textContent = 'Accetta la privacy policy per continuare.'; return false; }
+      say('');
+      if(!d.nome){ say('Inserisci il nome.', 'error'); mark('nome'); return false; }
+      if(!d.cognome){ say('Inserisci il cognome.', 'error'); mark('cognome'); return false; }
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(d.email)){ say('Inserisci un’email valida.', 'error'); mark('email'); return false; }
+      if(!d.privacy){ say('Per inviare serve il consenso alla privacy.', 'error'); mark('privacy'); return false; }
       return true;
     };
 
@@ -135,45 +155,23 @@
       const d = readFields();
       if(!validate(d)) return;
       const btn = form.querySelector('[type="submit"]');
-      const reset = () => { if(btn){ btn.disabled = false; btn.innerHTML = btn.dataset.label; } };
-      if(btn){ btn.dataset.label = btn.innerHTML; btn.disabled = true; btn.textContent = 'Invio…'; }
-
-      // Webhook routing parallelo (n8n/Make) — best-effort
-      if(window.Casa20 && window.Casa20.sendLead){
-        window.Casa20.sendLead({ form:'contatti', ...d });
+      const label = btn ? btn.innerHTML : '';
+      if(btn){ btn.disabled = true; btn.textContent = 'Invio in corso…'; }
+      const r = await submitLead({ form:'contatti', nome:d.nome, cognome:d.cognome, email:d.email, telefono:d.tel,
+        messaggio:d.msg, newsletter:d.news, privacy:d.privacy, website:d.website });
+      if(btn){ btn.disabled = false; btn.innerHTML = label; }
+      if(r.ok){
+        say('Richiesta ricevuta. Ti ricontattiamo entro 24 ore.', 'success');
+        form.reset();
+        form.classList.add('is-sent');
+      } else if(r.offline){
+        mailtoFallback('Richiesta dal sito — ' + d.nome + ' ' + d.cognome,
+          [`Nome: ${d.nome} ${d.cognome}`, `Email: ${d.email}`, `Telefono: ${d.tel || '—'}`, `Newsletter: ${d.news ? 'Sì' : 'No'}`, '', 'Messaggio:', d.msg || '—']);
+        say('Il nostro server non risponde: si è aperta la tua email con il messaggio già pronto, premi “Invia”. Oppure chiamaci al 338 844 9030.', 'error');
+      } else {
+        say(r.error || 'Controlla i dati inseriti.', 'error');
+        if(r.field) mark(r.field);
       }
-
-      // Path 1 — web3forms (no backend, recapito email automatico)
-      if(WEB3FORMS_KEY){
-        try{
-          const res = await fetch('https://api.web3forms.com/submit', {
-            method:'POST', headers:{'Content-Type':'application/json', Accept:'application/json'},
-            body: JSON.stringify({
-              access_key: WEB3FORMS_KEY,
-              subject: `Nuova richiesta dal sito — ${d.nome} ${d.cognome}`,
-              from_name: `${d.nome} ${d.cognome}`,
-              email: d.email, telefono: d.tel, newsletter: d.news, messaggio: d.msg
-            })
-          });
-          if(res.ok){
-            fstatus.classList.add('success');
-            fstatus.textContent = '✓ Richiesta inviata! Ti ricontattiamo entro 24 ore.';
-            form.reset();
-          } else throw new Error('bad response');
-        }catch(err){
-          fstatus.classList.add('error');
-          fstatus.textContent = 'Invio non riuscito. Scrivici su WhatsApp o chiama il 338 844 9030.';
-        }
-        reset();
-        return;
-      }
-
-      // Path 2 — mailto fallback (il lead non si perde mai)
-      const body = encodeURIComponent(`Nome: ${d.nome} ${d.cognome}\nEmail: ${d.email}\nTelefono: ${d.tel || '—'}\nNewsletter: ${d.news}\n\nMessaggio:\n${d.msg || '—'}`);
-      window.location.href = `mailto:${LEAD_EMAIL}?subject=${encodeURIComponent('Richiesta dal sito — '+d.nome+' '+d.cognome)}&body=${body}`;
-      fstatus.classList.add('success');
-      fstatus.textContent = 'Si è aperta la tua app di posta con il messaggio già pronto: premi “Invia” per completare. Oppure scrivici su WhatsApp.';
-      reset();
     });
 
     // WhatsApp quick-send: porta i dati del form direttamente in chat
@@ -247,7 +245,7 @@
      eccetto valuta + contattaci (dove l'utente è già in conversione) */
   (function(){
     const path = location.pathname;
-    if(/\/(valuta|contattaci)\.html$/i.test(path)) return;
+    if(/\/(valuta|contattaci|admin)(\.html)?\/?$/i.test(path)) return;   /* Cloudflare serve anche /valuta senza .html */
     if(document.querySelector('.fab')) return; // idempotente
     const fab = document.createElement('div');
     fab.className = 'fab is-expanded';
@@ -281,7 +279,7 @@
   (function(){
     const fine = window.matchMedia('(hover:hover) and (pointer:fine)').matches;
     if(!fine) return;
-    if(/\/(valuta|contattaci|privacy|cookie)\.html$/i.test(location.pathname)) return;
+    if(/\/(valuta|contattaci|privacy|cookie|admin)(\.html)?\/?$/i.test(location.pathname)) return;
     let last = 0; try{ last = Number(localStorage.getItem('casa2_exit_at') || 0); }catch(e){}
     if(Date.now() - last < 14*24*3600*1000) return;
     let shown = false, engaged = false, lastY = null, lastT = 0, upSpeed = 0;
@@ -386,30 +384,9 @@
   /* ---------- ANNO CORRENTE NEL FOOTER ---------- */
   document.querySelectorAll('[data-year]').forEach(el => { el.textContent = new Date().getFullYear(); });
 
-  window.Casa20 = {
-    persistTweak(edits){
-      try{ window.parent.postMessage({type:'__edit_mode_set_keys', edits}, '*'); }catch(e){}
-    },
-    /* WEBHOOK LEAD ROUTING — quando tu metti l'URL n8n/Make qui sotto,
-       OGNI lead viene anche replicato a quel webhook (oltre a web3forms/mailto).
-       Esempi:
-         window.CASA2_WEBHOOK = 'https://hook.eu1.make.com/abc123';   // Make.com
-         window.CASA2_WEBHOOK = 'https://n8n.tuo-dominio.com/webhook/casa2'; // n8n
-       Vedi src/N8N_SETUP.md per la guida workflow. */
-    async sendLead(payload){
-      const url = window.CASA2_WEBHOOK || '';
-      if(!url) return false;
-      try{
-        await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({
-          ...payload,
-          source: location.pathname,
-          page_title: document.title,
-          timestamp: new Date().toISOString(),
-          referrer: document.referrer || null
-        })});
-        return true;
-      }catch(e){ return false; }
-    }
+  /* La copia verso Make/n8n ora la fa il server (/api/lead, variabile LEAD_WEBHOOK_URL): nessun URL esposto nel browser. */
+  window.Casa20.persistTweak = function(edits){
+    try{ window.parent.postMessage({type:'__edit_mode_set_keys', edits}, '*'); }catch(e){}
   };
 
   /* ---------- ANALYTICS GATED (carica solo dopo consenso esplicito) ----------
