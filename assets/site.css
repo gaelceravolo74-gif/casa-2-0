@@ -27,15 +27,15 @@
   --primary-soft:   #CFE6F1;
   --navy:           #182A4E;
   --navy-soft:      #26406A;
-  --beige:          #F5ECE8;
-  --paper:          #FAF7F4;
+  --beige:          #E3ECF2;
+  --paper:          #EEF4F8;   /* nebbia fredda del brand: si distingue dal bianco, non è il beige del vecchio marchio */
   /* Il rosso non appartiene al brand (e comunica urgenza/allarme): l'accento ora è il blu del logo.
      Il nome della variabile resta per compatibilità con le pagine. */
   --red-accent:     #0A6C98;
   --accent-on-dark: #5BB8E0;   /* accento leggibile su navy (contrasto > 5:1) */
   --white:          #FFFFFF;
   --text-dark:      #1C1C1E;
-  --text-muted:     #6B7280;
+  --text-muted:     #56606E;   /* leggibile anche sulla nebbia (AA) */
   --hairline:       rgba(24,42,78,0.10);
 
   /* Display = Newsreader (optical size: a grande dimensione diventa più raffinato) · Body = Satoshi */
@@ -332,7 +332,7 @@ h1 em, h2 em, h3 em, h4 em, blockquote em{
   margin: 30px auto 0;
   font-size: clamp(15px, 1.1vw, 17px);
   color: rgba(255,255,255,0.85);
-  font-weight:300;
+  font-weight:400;
   line-height:1.7;
 }
 .hero__cta{ margin-top: 44px; }
@@ -814,3 +814,46 @@ body.cookie-active{ padding-bottom: 120px; }
 .boss__btn, .vmember__cta, .immo__cta, .not-found .btn,
 .cta-banner .btn, #cookie-banner, #cookie-banner button{ border-radius: 6px !important; }
 .immo__cta::before{ display:none !important; }      /* niente pulsazione continua: distrae, non convince */
+
+/* ============================================================
+   FAB: su desktop la "Valutazione gratuita" è già fissa nella barra in alto.
+   Un secondo bottone uguale copriva i contenuti: resta solo WhatsApp.
+   ============================================================ */
+@media (min-width: 961px){
+  .fab a.fab--primary{ display:none; }
+}
+
+/* titoli senza parole orfane ("zero / stress.") */
+h1, h2, h3, .section-head h2{ text-wrap: balance; }
+p{ text-wrap: pretty; }
+
+/* Footer più profondo del navy delle sezioni: quando una CTA navy precede il footer,
+   i due blocchi restano distinti (come la barra scura del prototipo) */
+footer.site-footer{ background: var(--ink); box-shadow: inset 0 6px 0 rgba(0,0,0,0.18); }
+
+/* ============================================================
+   MOBILE: i due bottoni flottanti impilati coprivano il testo.
+   Diventano una barra fissa in basso, nella zona del pollice:
+   posizione prevedibile, due scelte chiare, nessun contenuto nascosto.
+   ============================================================ */
+@media (max-width: 960px){
+  .fab{
+    left:0; right:0; bottom:0;
+    flex-direction: row; align-items: stretch; gap: 8px;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+    background: rgba(255,255,255,0.97);
+    border-top: 1px solid var(--hairline);
+    box-shadow: 0 -8px 24px rgba(24,42,78,0.08);
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  }
+  .fab a, .fab a.fab--primary, .fab a.fab--wa{
+    flex: 1 1 0; justify-content: center;
+    border-radius: 6px; box-shadow: none;
+    padding: 13px 10px; font-size: 12px; letter-spacing: 0.05em;
+  }
+  .fab a.fab--primary{ flex-grow: 1.6; }
+  .fab a.fab--wa{ box-shadow: inset 0 0 0 1px var(--primary); color: var(--primary); }
+  .fab a:hover{ transform:none; }
+  body.cookie-active .fab{ display:none; }
+  footer.site-footer{ padding-bottom: 96px; }
+}
