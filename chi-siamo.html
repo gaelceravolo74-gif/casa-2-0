@@ -18,7 +18,7 @@
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
 <link rel="preload" href="assets/fonts/Newsreader-Variable.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/Satoshi-Variable.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="assets/site.css?v=31">
+<link rel="stylesheet" href="assets/site.css?v=33">
 <script>document.documentElement.classList.add('js')</script>
 
 <style>
@@ -100,11 +100,15 @@
   }
   .story-pill--scroll svg{ stroke:#fff; }
   .story-pill--scroll:hover{ background:var(--primary-light); transform:translateY(3px); }
+  /* telefono: una sola riga compatta, niente bottone freccia (andava a capo e ingombrava) */
   @media (max-width:680px){
-    .story-pills{ flex-wrap:wrap; justify-content:center; bottom:24px; width:calc(100% - 32px); border-radius:20px; }
-    .story-pill{ padding:8px 12px; font-size:10.5px; letter-spacing:0.1em; }
-    .hero--story .word{ }
+    .story-pills{ flex-wrap:nowrap; bottom:22px; width:auto; max-width:calc(100% - 24px); padding:4px 6px; border-radius:100px; }
+    .story-pill{ padding:7px 9px; gap:6px; font-size:9.5px; letter-spacing:0.08em; }
+    .story-pill svg{ width:12px; height:12px; }
+    .story-pill__sep{ height:12px; }
+    .story-pill--scroll, .story-pill__sep:nth-last-of-type(1){ display:none; }
   }
+  @media (max-width:360px){ .story-pill{ padding:6px 6px; font-size:8.5px; letter-spacing:0.05em; } }
   .hero--story .word{
     position:relative;
     display:inline-block;
