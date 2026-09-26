@@ -25,7 +25,12 @@
       try { document.documentElement.scrollIntoView({ block: 'start', behavior: 'instant' }); } catch (e) {}
     };
     top();
-    window.addEventListener('load', top, { once: true });
+    /* al "load" (immagini e mappa arrivate) si torna su SOLO se la persona non ha ancora
+       iniziato a scorrere: prima la riportava in cima mentre stava leggendo */
+    let moved = false;
+    const mark = () => { moved = true; };
+    ['wheel', 'touchstart', 'keydown', 'mousedown'].forEach(ev => addEventListener(ev, mark, { once: true, passive: true }));
+    window.addEventListener('load', () => { if (!moved && window.scrollY < 40) top(); }, { once: true });
   })();
 
   /* ---------- NAV SCROLL STATE ---------- */
@@ -44,6 +49,8 @@
     const closeOverlay = () => {
       burger.classList.remove('open');
       overlay.classList.remove('open');
+      document.getElementById('nav')?.classList.remove('menu-open');
+      document.body.classList.remove('menu-open');
       burger.setAttribute('aria-expanded', 'false');
       document.body.style.overflow = '';
     };
@@ -51,11 +58,15 @@
       const open = !burger.classList.contains('open');
       burger.classList.toggle('open', open);
       overlay.classList.toggle('open', open);
+      document.getElementById('nav')?.classList.toggle('menu-open', open);
+      document.body.classList.toggle('menu-open', open);
       burger.setAttribute('aria-expanded', String(open));
       document.body.style.overflow = open ? 'hidden' : '';
     });
     document.getElementById('overlay-close')?.addEventListener('click', closeOverlay);
     overlay.querySelectorAll('a').forEach(a => a.addEventListener('click', closeOverlay));
+    const here = (location.pathname.split('/').pop() || 'index.html').replace(/\.html$/, '');
+    overlay.querySelectorAll('a:not(.btn)').forEach(a => { if ((a.getAttribute('href') || '').replace(/\.html$/, '') === (here || 'index')) a.setAttribute('aria-current', 'page'); });
   }
 
   /* ---------- REVEAL OBSERVER (base + direzionali + stagger + line) ---------- */

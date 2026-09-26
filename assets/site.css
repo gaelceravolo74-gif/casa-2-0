@@ -859,3 +859,62 @@ footer.site-footer{ background: var(--ink); box-shadow: inset 0 6px 0 rgba(0,0,0
   body.cookie-active .fab{ display:none; }
   footer.site-footer{ padding-bottom: 96px; }
 }
+
+/* ============================================================
+   MENU MOBILE — pannello che scende sotto la barra, non uno schermo intero
+   con scritte giganti: voci a misura di testo, allineate, un bottone normale.
+   ============================================================ */
+@media (max-width: 960px){
+  .nav__overlay{
+    inset: var(--nav-h) 0 auto 0;
+    background: #fff;
+    display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start;
+    gap: 0; padding: 8px 22px 22px;
+    border-top: 1px solid var(--hairline);
+    box-shadow: 0 24px 40px rgba(44,79,102,0.14), 0 0 0 100vmax rgba(35,63,82,0.28);
+    transform: translateY(-8px);
+    transition: opacity .25s ease, transform .25s ease;
+    max-height: calc(100vh - var(--nav-h)); overflow:auto;
+  }
+  .nav__overlay.open{ transform: none; }
+  #overlay-close{ display:none; }
+  .nav__overlay a{
+    font-family: var(--font-body); font-size: 16px; font-weight: 500; letter-spacing: 0;
+    color: var(--navy); padding: 15px 2px;
+    border-bottom: 1px solid var(--hairline);
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .nav__overlay a:not(.btn)::after{ content:"›"; color: var(--primary); font-size: 20px; line-height:1; }
+  .nav__overlay a[aria-current="page"]{ color: var(--primary); }
+  .nav__overlay a.btn, .nav__overlay a.btn--lg{
+    margin-top: 18px; border: 0; justify-content:center;
+    font-size: 13px; letter-spacing: 0.08em; padding: 15px 20px; border-radius: 6px;
+    color:#fff;
+  }
+  /* a menu aperto la barra diventa bianca anche sopra la foto dell'hero */
+  .nav.menu-open{ background:#fff !important; box-shadow: none !important; }
+  .nav.menu-open .logo img{ filter: none !important; }
+  .nav.menu-open .nav__burger span{ background: var(--primary) !important; }
+  body.menu-open{ overflow: hidden; }
+}
+
+/* ============================================================
+   TELEFONO — proporzioni da sito, non da "telefono per anziani":
+   titoli più contenuti, bottoni snelli, spazi regolari tra i blocchi.
+   ============================================================ */
+@media (max-width: 560px){
+  body{ font-size: 15.5px; }
+  .section{ padding: 72px 0; }
+  h1:not(.hero h1){ font-size: clamp(32px, 9vw, 38px) !important; line-height: 1.1 !important; }
+  h2{ font-size: clamp(26px, 7.2vw, 30px) !important; line-height: 1.16 !important; }
+  .section-head{ margin-bottom: 44px; }
+  .section-head .lead, .lead{ font-size: 15.5px; }
+  .btn{ font-size: 12px; letter-spacing: 0.08em; padding: 13px 20px; }
+  .btn--lg, .btn--xl{ font-size: 12.5px; padding: 15px 22px; }
+  .hero__cta .btn{ width: 100%; }
+  .cta-banner__buttons .btn{ width: 100%; }
+  .micro-label{ font-size: 10.5px; }
+  p{ line-height: 1.65; }
+}
+body.menu-open .fab{ display:none; }
+footer.site-footer a[href^="mailto"]{ overflow-wrap:anywhere; }

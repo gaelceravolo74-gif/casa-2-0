@@ -18,7 +18,7 @@
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
 <link rel="preload" href="assets/fonts/Newsreader-Variable.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/Satoshi-Variable.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="assets/site.css?v=29">
+<link rel="stylesheet" href="assets/site.css?v=31">
 <script>document.documentElement.classList.add('js')</script>
 
 <style>
@@ -170,49 +170,23 @@
   /* ============================================================
      "Non hai trovato quello che cerchi?"
      ============================================================ */
+  /* Fondo celeste chiaro (non il blu pieno): chiude la pagina con calma e resta nella palette */
   .not-found{
-    background: var(--primary);
-    color: #fff;
+    background: var(--sky);
+    color: var(--navy);
     text-align:center;
-    padding: 130px 40px;
-    position:relative;
-    overflow:hidden;
+    padding: 110px 24px;
+    border-top: 1px solid var(--hairline);
   }
-  .not-found::before{
-    content:""; position:absolute;
-    width: 700px; height: 700px;
-    border-radius: 50%;
-    bottom: -300px; right: -300px;
-    background: radial-gradient(circle, rgba(255,255,255,0.08), transparent 60%);
-    pointer-events:none;
-  }
+  .not-found .micro-label{ color: var(--primary) !important; }
   .not-found h2{
-    font-size: clamp(36px, 4.6vw, 60px);
-    line-height:1.1;
-    margin: 0 auto 26px;
-    max-width: 22ch;
-    color: #fff;
-    font-weight: 600;
-    letter-spacing: -0.015em;
+    font-size: clamp(32px, 4vw, 52px);
+    line-height:1.1; margin: 0 auto 22px; max-width: 20ch;
+    color: var(--navy); font-weight: 600; letter-spacing: -0.012em;
   }
-  .not-found h2 em{ font-style: italic; font-weight:500; color: rgba(255,255,255,0.85); }
-  .not-found p{
-    max-width: 56ch;
-    margin: 0 auto 44px;
-    font-size: 17px;
-    color: rgba(255,255,255,0.85);
-    line-height: 1.7;
-    font-weight:400;
-  }
-  .not-found .btn{
-    background:#fff;
-    color: var(--primary);
-  }
-  .not-found .btn:hover{
-    background: var(--navy);
-    color: #fff;
-    box-shadow: 0 0 24px rgba(0,0,0,0.3);
-  }
+  .not-found p{ max-width: 56ch; margin: 0 auto 36px; font-size: 16.5px; color: var(--text-muted); line-height: 1.7; }
+  .not-found .btn{ background: var(--primary); color:#fff; }
+  .not-found .btn:hover{ background: var(--navy); color:#fff; }
 
   /* ============================================================
      MACBOOK SCROLL — intro cinematografica al portale
@@ -295,9 +269,13 @@
     border-radius: 0 0 8px 8px;
   }
 
+  /* su telefono niente animazione "bloccata" allo scroll: il MacBook è già aperto, si scorre libero */
   @media (max-width: 760px){
-    .mac-stage{ min-height: 130vh; padding: 40px 0 30px; }
-    .mac{ width: 92vw; }
+    .mac-stage{ min-height: auto; padding: 56px 0 48px; }
+    .mac-sticky{ position: static; height: auto; }
+    .mac{ width: 92vw; --p: 1; }
+    .immo__cta{ padding: 16px 22px; font-size: 12.5px; gap: 10px; border-radius: 6px; }
+    .immo__cta svg.house{ display:none; }
   }
   @media (prefers-reduced-motion: reduce){
     .mac-stage{ min-height: auto; }
@@ -726,7 +704,7 @@
      ========================================================= -->
 <section class="not-found">
   <div class="container">
-    <span class="micro-label reveal" style="color:rgba(255,255,255,0.85); letter-spacing:0.22em;">Ricerca su misura</span>
+    <span class="micro-label reveal">Ricerca su misura</span>
     <h2 class="reveal" data-delay="1" style="margin-top:24px;">Non hai trovato<br/>quello che <em>cerchi</em>?</h2>
     <p class="reveal" data-delay="2">
       Il mercato di Tivoli si muove velocemente. Molti immobili vengono venduti prima ancora di essere pubblicati online.
@@ -788,7 +766,7 @@
   </div>
 </footer>
 
-<script src="assets/site.js?v=14"></script>
+<script src="assets/site.js?v=15"></script>
 <script>
   /* MacBook scroll — apertura cinematografica sopra al CTA portale */
   (function(){
@@ -796,7 +774,7 @@
     const mac   = document.getElementById('mac');
     if(!stage || !mac) return;
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if(reduce){ mac.style.setProperty('--p','1'); return; }
+    if(reduce || matchMedia('(max-width: 760px)').matches){ mac.style.setProperty('--p','1'); return; }
     let ticking=false;
     function update(){
       const r = stage.getBoundingClientRect();

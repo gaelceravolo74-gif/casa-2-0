@@ -83,7 +83,7 @@
 </script>
 <link rel="preload" href="assets/fonts/Newsreader-Variable.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/Satoshi-Variable.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="assets/site.css?v=29">
+<link rel="stylesheet" href="assets/site.css?v=31">
 <script>document.documentElement.classList.add('js')</script>
 <style>
   /* =========================================================
@@ -91,22 +91,23 @@
      ========================================================= */
   /* METODO — come nel prototipo: testata su fondo tinto, poi una FASCIA BIANCA a tutta
      larghezza divisa in tre colonne. Blocchi netti, lettura centrata, nessun elemento decorativo. */
-  #metodo{ padding-bottom: 0; }
   #metodo .section-head{ margin-bottom: 72px; }
-  .pillars-band{ background:#fff; border-top:1px solid var(--hairline); border-bottom:1px solid var(--hairline); }
+  /* titolo e colonne sulla STESSA superficie beige: è un'unica sezione, non due */
+  #metodo{ padding-bottom: 120px; }
+  .pillars-band{ padding: 0 24px; }
   .pillars{
     max-width: var(--max); margin: 0 auto;
     display:grid; grid-template-columns: repeat(3, minmax(0,1fr));
   }
   .pillar{
-    padding: 64px 44px 60px; text-align:center;
+    padding: 12px 44px 8px; text-align:center;
     border-left:1px solid var(--hairline);
     display:flex; flex-direction:column; align-items:center;
     position:relative;
   }
   .pillar:first-child{ border-left:none; }
   /* al passaggio la colonna si "accende" dal basso: una barra del colore del logo */
-  .pillar::after{ content:""; position:absolute; left:0; right:0; bottom:-1px; height:3px; background: var(--primary-light); transform: scaleX(0); transition: transform .45s var(--ease-out, ease); }
+  .pillar::after{ content:""; position:absolute; left:30%; right:30%; bottom:-22px; height:3px; background: var(--primary-light); transform: scaleX(0); transition: transform .45s var(--ease-out, ease); }
   .pillar:hover::after{ transform: scaleX(1); }
   .pillar__icon{ color: var(--navy); margin-bottom: 26px; height: 52px; }
   .pillar__icon svg{ width:52px; height:52px; stroke: currentColor; fill: none; stroke-width: 1.6; }
@@ -328,7 +329,9 @@
   /* Responsive */
   @media (max-width: 960px){
     .pillars{ grid-template-columns: 1fr; }
-    .pillar{ border-left:none; border-top:1px solid var(--hairline); padding: 48px 24px 44px; }
+    .pillar{ border-left:none; border-top:1px solid var(--hairline); padding: 40px 8px 36px; }
+    .pillar::after{ display:none; }
+    #metodo{ padding-bottom: 72px; }
     .pillar:first-child{ border-top:none; }
     .brand-proof li{ padding: 0 10px; }
     .showcase{ grid-template-columns: 1fr; padding: 90px 32px; gap: 50px;}
@@ -603,7 +606,7 @@
   </div>
 </footer>
 
-<script src="assets/site.js?v=14"></script>
+<script src="assets/site.js?v=15"></script>
 <script>
   /* ---------- HERO HEADLINE STAGGER ---------- */
   const heroLines = document.querySelectorAll('#hero-headline .hero__h-line');
