@@ -14,11 +14,11 @@
 <meta property="og:image" content="https://www.casaduepuntozero.net/assets/tivoli/tivoli-06.jpg" />
 <meta property="og:url" content="https://www.casaduepuntozero.net/chi-siamo.html" />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="theme-color" content="#182A4E" />
+<meta name="theme-color" content="#2C4F66" />
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
 <link rel="preload" href="assets/fonts/Newsreader-Variable.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/Satoshi-Variable.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="assets/site.css?v=28">
+<link rel="stylesheet" href="assets/site.css?v=29">
 <script>document.documentElement.classList.add('js')</script>
 
 <style>
@@ -181,7 +181,7 @@
     overflow:hidden;
     display:grid;
     grid-template-columns: 340px 1fr;
-    box-shadow: 0 40px 90px rgba(24,42,78,0.18);
+    box-shadow: 0 40px 90px rgba(44,79,102,0.18);
   }
   .founder__photo{
     background: #0F1B27;
@@ -272,7 +272,7 @@
   .founder__cta:hover{
     background: var(--primary-light);
     transform: translateY(-2px);
-    box-shadow: 0 0 24px rgba(10,108,152,0.4);
+    box-shadow: 0 0 24px rgba(43,120,156,0.4);
   }
   .founder__cta svg{ width:14px; height:14px; }
 
@@ -292,14 +292,14 @@
     background: #fff;
     border-radius: 4px;
     overflow:hidden;
-    box-shadow: 0 14px 40px rgba(24,42,78,0.06);
+    box-shadow: 0 14px 40px rgba(44,79,102,0.06);
     transition: transform 300ms ease, box-shadow 300ms ease;
   }
-  .member:hover{ transform: translateY(-6px); box-shadow: 0 26px 60px rgba(24,42,78,0.12);}
+  .member:hover{ transform: translateY(-6px); box-shadow: 0 26px 60px rgba(44,79,102,0.12);}
   .member__photo{
     aspect-ratio: 4/5;
     background:
-      repeating-linear-gradient(135deg, rgba(10,108,152,0.08) 0 12px, transparent 12px 24px),
+      repeating-linear-gradient(135deg, rgba(43,120,156,0.08) 0 12px, transparent 12px 24px),
       linear-gradient(180deg, #E9DED8, #F5ECE8);
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     color: var(--primary); position:relative;
@@ -307,7 +307,7 @@
   }
   .member__photo .silhouette{
     width: 56px; height:56px; border-radius:50%;
-    border:1.5px solid rgba(10,108,152,0.3);
+    border:1.5px solid rgba(43,120,156,0.3);
     display:flex; align-items:center; justify-content:center;
   }
   .member__photo .silhouette svg{ width:28px; height:28px;}
@@ -418,11 +418,11 @@
   .volti{
     position:relative;
     background: var(--paper);
-    padding: 0 clamp(0px, 3.2vw, 56px);
+    padding: 0 clamp(0px, 1.2vw, 20px);
   }
   .volti__panel{
     position:relative; overflow:hidden;
-    max-width: 1360px; margin: 0 auto;
+    max-width: none; margin: 0 auto;
     background: #fff;
     border-left: 1px solid var(--hairline); border-right: 1px solid var(--hairline);
     padding: 88px 0 120px;
@@ -530,13 +530,13 @@
     position:relative; width:100%; min-height: 340px;
     background: linear-gradient(135deg, var(--ink) 0%, var(--navy) 100%);
     border-radius: 6px; overflow:hidden; display:grid; grid-template-columns: 40% 1fr;
-    box-shadow: 0 30px 70px rgba(15,29,56,0.35); border:1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 30px 70px rgba(35,63,82,0.35); border:1px solid rgba(255,255,255,0.08);
     transition: box-shadow .5s ease, transform .15s ease;
     transform-style: preserve-3d;
   }
   .boss__glow{
     position:absolute; inset:0; z-index:3; pointer-events:none; opacity:0;
-    background: radial-gradient(600px circle at var(--mx,50%) var(--my,50%), rgba(8,140,191,0.22), transparent 42%);
+    background: radial-gradient(600px circle at var(--mx,50%) var(--my,50%), rgba(90,175,211,0.22), transparent 42%);
     transition: opacity .4s ease; mix-blend-mode: screen;
   }
   .boss-wrap:hover .boss__glow{ opacity:1; }
@@ -596,17 +596,17 @@
   .vteam-grid{ display:grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap:22px; max-width: 900px; margin: 0 auto; }
   .vmember{
     background:#fff; border-radius:6px; overflow:hidden;
-    box-shadow: 0 14px 40px rgba(24,42,78,0.07); border-bottom:3px solid transparent;
+    box-shadow: 0 14px 40px rgba(44,79,102,0.07); border-bottom:3px solid transparent;
     transition: transform .4s var(--ease-out), box-shadow .4s ease, border-color .4s ease;
     display:flex; flex-direction:column;
   }
-  .vmember:hover{ transform: translateY(-8px); box-shadow:0 28px 60px rgba(24,42,78,0.14); border-bottom-color: var(--red-accent); }
+  .vmember:hover{ transform: translateY(-8px); box-shadow:0 28px 60px rgba(44,79,102,0.14); border-bottom-color: var(--red-accent); }
   .vmember__photo{
     aspect-ratio:4/5; position:relative; overflow:hidden;
-    background: repeating-linear-gradient(135deg, rgba(10,108,152,0.07) 0 12px, transparent 12px 24px), linear-gradient(180deg,#DCE8F0,#EEF4F8);
+    background: repeating-linear-gradient(135deg, rgba(43,120,156,0.07) 0 12px, transparent 12px 24px), linear-gradient(180deg,#DCE8F0,#EEF4F8);
     display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; color: var(--primary);
   }
-  .vmember__photo .silhouette{ width:58px; height:58px; border-radius:50%; border:1.5px solid rgba(10,108,152,0.3); display:flex; align-items:center; justify-content:center; }
+  .vmember__photo .silhouette{ width:58px; height:58px; border-radius:50%; border:1.5px solid rgba(43,120,156,0.3); display:flex; align-items:center; justify-content:center; }
   .vmember__photo .silhouette svg{ width:28px; height:28px; }
   .vmember__photo .ph-tag{ font-size:10px; letter-spacing:0.2em; text-transform:uppercase; opacity:.6; }
   .vmember__photo .badge{ position:absolute; left:0; bottom:0; background: var(--navy); color:#fff; font-size:10px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; padding:5px 11px; border-top-right-radius:8px; }
@@ -867,7 +867,7 @@
   </div>
 </footer>
 
-<script src="assets/site.js?v=13"></script>
+<script src="assets/site.js?v=14"></script>
 <script>
   /* =========================================================
      HERO TYPEWRITER — cycle (prefix, word) pairs
@@ -1272,15 +1272,15 @@
       sctx = sheet.getContext('2d');
       sctx.setTransform(DPR,0,0,DPR,0,0);
       const hc = document.createElement('canvas'); hc.width = hc.height = 6;
-      const hx = hc.getContext('2d'); hx.strokeStyle = 'rgba(10,108,152,0.45)'; hx.lineWidth = 1;
+      const hx = hc.getContext('2d'); hx.strokeStyle = 'rgba(43,120,156,0.16)'; hx.lineWidth = 1;
       hx.beginPath(); hx.moveTo(0,6); hx.lineTo(6,0); hx.stroke();
       const pat = sctx.createPattern(hc, 'repeat');
-      sctx.lineJoin = 'round'; sctx.lineWidth = 1; sctx.strokeStyle = 'rgba(10,108,152,0.85)';
+      sctx.lineJoin = 'round'; sctx.lineWidth = 0.9; sctx.strokeStyle = 'rgba(43,120,156,0.26)';
       for(const o of parcels){
         path(sctx, o.p); sctx.stroke();
         if(o.house){ path(sctx, o.p, 0.42 + ((o.a % 7)/7)*0.12, o.c); sctx.fillStyle = pat; sctx.fill(); sctx.stroke(); }
       }
-      sctx.fillStyle = 'rgba(24,42,78,0.75)'; sctx.textAlign = 'center'; sctx.textBaseline = 'middle';
+      sctx.fillStyle = 'rgba(44,79,102,0.32)'; sctx.textAlign = 'center'; sctx.textBaseline = 'middle';
       sctx.font = '600 10px Satoshi, sans-serif';
       for(const o of parcels){ if(o.num && !o.house) sctx.fillText(o.num, o.c[0], o.c[1]); }
     }
@@ -1298,26 +1298,26 @@
       ctx.drawImage(sheet, 0, 0);
       ctx.globalCompositeOperation = 'destination-in';
       const g = ctx.createRadialGradient(mx, my, 0, mx, my, R*DPR);
-      g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(0.55, 'rgba(0,0,0,0.85)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+      g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(0.45, 'rgba(0,0,0,0.6)'); g.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = g; ctx.fillRect(0,0,canvas.width,canvas.height);
       ctx.globalCompositeOperation = 'source-over';
       ctx.setTransform(DPR,0,0,DPR,0,0);
       /* 2. la particella sotto il puntatore */
       if(hover){
         path(ctx, hover.p);
-        ctx.fillStyle = 'rgba(8,140,191,0.16)'; ctx.fill();
-        ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(10,108,152,1)'; ctx.stroke();
+        ctx.fillStyle = 'rgba(90,175,211,0.08)'; ctx.fill();
+        ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(43,120,156,0.45)'; ctx.stroke();
       }
       /* 3. mirino + coordinate, come un rilievo topografico */
-      ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(10,108,152,0.9)';
+      ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(43,120,156,0.45)';
       ctx.beginPath(); ctx.arc(mouse[0], mouse[1], 7, 0, Math.PI*2); ctx.stroke();
       const label = hover && hover.num ? 'Part. ' + hover.num + '  ·  x ' + Math.round(mouse[0]) + '  y ' + Math.round(mouse[1])
                                        : 'x ' + Math.round(mouse[0]) + '  y ' + Math.round(mouse[1]);
       ctx.font = '600 10.5px Satoshi, sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
       const tw = ctx.measureText(label).width, lx = mouse[0] + 14, ly = mouse[1] + 18;
-      ctx.fillStyle = 'rgba(255,255,255,0.95)'; ctx.fillRect(lx - 6, ly - 10, tw + 12, 20);
-      ctx.strokeStyle = 'rgba(10,108,152,0.35)'; ctx.lineWidth = 1; ctx.strokeRect(lx - 6 + .5, ly - 10 + .5, tw + 11, 19);
-      ctx.fillStyle = 'rgba(10,108,152,1)'; ctx.fillText(label, lx, ly);
+      ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.fillRect(lx - 6, ly - 10, tw + 12, 20);
+      ctx.strokeStyle = 'rgba(43,120,156,0.18)'; ctx.lineWidth = 1; ctx.strokeRect(lx - 6 + .5, ly - 10 + .5, tw + 11, 19);
+      ctx.fillStyle = 'rgba(43,120,156,0.7)'; ctx.fillText(label, lx, ly);
     }
     /* la torcia si accende e si spegne dolcemente */
     let lit = 0, litTarget = 0, litRaf = 0;

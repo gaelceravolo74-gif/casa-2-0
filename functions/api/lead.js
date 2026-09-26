@@ -86,7 +86,7 @@ async function notify(env, lead, id) {
     : `Nuovo contatto dal sito — ${lead.nome} ${lead.cognome}`;
   const jobs = [];
   if (env.RESEND_API_KEY && env.LEAD_TO) {
-    const html = `<h2 style="font-family:Georgia,serif;color:#182A4E">${esc(subject)}</h2>
+    const html = `<h2 style="font-family:Georgia,serif;color:#2C4F66">${esc(subject)}</h2>
       <table cellpadding="6" style="border-collapse:collapse;font-family:Arial,sans-serif;font-size:14px">
       ${rows.map(([k, v]) => `<tr><td style="color:#6B7280;border-bottom:1px solid #eee">${esc(k)}</td><td style="border-bottom:1px solid #eee"><b>${esc(v)}</b></td></tr>`).join('')}
       </table><p style="font-family:Arial,sans-serif;font-size:12px;color:#6B7280">Richiesta n. ${id} — salvata nel database.</p>`;

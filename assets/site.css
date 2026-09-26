@@ -22,21 +22,22 @@
 :root{
   /* Palette allineata al LOGO: tetto ceruleo #088CBF + scritta navy.
      Il primario è lo stesso ceruleo scurito quanto basta per il contrasto AA col testo bianco. */
-  --primary:        #0A6C98;
-  --primary-light:  #088CBF;   /* ceruleo esatto del logo */
-  --primary-soft:   #CFE6F1;
-  --navy:           #182A4E;
-  --navy-soft:      #26406A;
-  --beige:          #E3ECF2;
-  --paper:          #EEF4F8;   /* nebbia fredda del brand: si distingue dal bianco, non è il beige del vecchio marchio */
+  --primary:        #2B789C;   /* celeste profondo, meno saturo (AA su bianco 4.9:1) */
+  --primary-light:  #5AAFD3;   /* celeste del logo, schiarito */
+  --primary-soft:   #D6ECF6;
+  --navy:           #2C4F66;   /* blu-ardesia: scuro ma non notte */
+  --navy-soft:      #3A6580;
+  --beige:          #EFE4DA;
+  --paper:          #F7F1EB;   /* beige caldo: complementare del celeste sulla ruota (30° vs 199°) */
+  --sky:            #EAF4F9;   /* celeste chiarissimo */
   /* Il rosso non appartiene al brand (e comunica urgenza/allarme): l'accento ora è il blu del logo.
      Il nome della variabile resta per compatibilità con le pagine. */
-  --red-accent:     #0A6C98;
-  --accent-on-dark: #5BB8E0;   /* accento leggibile su navy (contrasto > 5:1) */
+  --red-accent:     #2B789C;
+  --accent-on-dark: #9ED3EA;   /* celeste leggibile sui fondi scuri (5.4:1) */
   --white:          #FFFFFF;
   --text-dark:      #1C1C1E;
-  --text-muted:     #56606E;   /* leggibile anche sulla nebbia (AA) */
-  --hairline:       rgba(24,42,78,0.10);
+  --text-muted:     #5E6872;
+  --hairline:       rgba(44,79,102,0.12);
 
   /* Display = Newsreader (optical size: a grande dimensione diventa più raffinato) · Body = Satoshi */
   --font-display: "Newsreader", Georgia, "Times New Roman", serif;
@@ -44,8 +45,8 @@
   --font-body:    "Satoshi", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
   /* superfici scure: navy profondo del brand, non più quasi-nero */
-  --ink:            #0F1D38;
-  --ink-2:          #16284A;
+  --ink:            #233F52;
+  --ink-2:          #28475B;
 
   --max: 1240px;
   --nav-h: 84px;
@@ -125,8 +126,8 @@ h1 em, h2 em, h3 em, h4 em, blockquote em{
   background:rgba(255,255,255,0.9);
   backdrop-filter: blur(18px) saturate(140%);
   -webkit-backdrop-filter: blur(18px) saturate(140%);
-  box-shadow: 0 1px 0 rgba(24,42,78,0.06), 0 10px 30px rgba(24,42,78,0.04);
-  border-bottom-color: rgba(24,42,78,0.05);
+  box-shadow: 0 1px 0 rgba(44,79,102,0.06), 0 10px 30px rgba(44,79,102,0.04);
+  border-bottom-color: rgba(44,79,102,0.05);
 }
 .nav__inner{
   width:100%; max-width:var(--max); margin:0 auto;
@@ -187,7 +188,7 @@ h1 em, h2 em, h3 em, h4 em, blockquote em{
 }
 .btn:hover{
   transform: translateY(-2px);
-  box-shadow: 0 0 24px rgba(10,108,152,0.35), 0 14px 30px rgba(10,108,152,0.22);
+  box-shadow: 0 0 24px rgba(43,120,156,0.35), 0 14px 30px rgba(43,120,156,0.22);
   background: var(--primary-light);
 }
 .btn--lg{ font-size:13px; padding:18px 38px; }
@@ -392,6 +393,7 @@ h1 em, h2 em, h3 em, h4 em, blockquote em{
 .section--beige{ background: var(--paper); }
 .section--navy { background: var(--navy); color:#fff; }
 .section--white{ background: var(--white); }
+.section--sky{ background: var(--sky); }
 
 .section-head{
   text-align:center;
@@ -498,9 +500,9 @@ html:not(.js) .reveal--up, html:not(.js) .reveal--scale, html:not(.js) .stagger 
    ============================================================ */
 .ph{
   background:
-    repeating-linear-gradient(135deg, rgba(10,108,152,0.06) 0 12px, rgba(10,108,152,0.02) 12px 24px),
+    repeating-linear-gradient(135deg, rgba(43,120,156,0.06) 0 12px, rgba(43,120,156,0.02) 12px 24px),
     var(--paper);
-  border:1px dashed rgba(10,108,152,0.3);
+  border:1px dashed rgba(43,120,156,0.3);
   color: var(--primary);
   display:flex; align-items:center; justify-content:center;
   font-family: var(--font-body);
@@ -517,7 +519,7 @@ html:not(.js) .reveal--up, html:not(.js) .reveal--scale, html:not(.js) .stagger 
 .tweaks{
   position:fixed; bottom:24px; right:24px;
   width: 280px;
-  background: rgba(24,42,78,0.97);
+  background: rgba(44,79,102,0.97);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border-radius: 16px;
@@ -585,8 +587,8 @@ html:not(.js) .reveal--up, html:not(.js) .reveal--scale, html:not(.js) .stagger 
    ============================================================ */
 .section--navy{
   background:
-    radial-gradient(120% 90% at 50% -10%, rgba(8,140,191,0.16) 0%, transparent 55%),
-    radial-gradient(80% 60% at 110% 120%, rgba(8,140,191,0.10) 0%, transparent 55%),
+    radial-gradient(120% 90% at 50% -10%, rgba(90,175,211,0.16) 0%, transparent 55%),
+    radial-gradient(80% 60% at 110% 120%, rgba(90,175,211,0.10) 0%, transparent 55%),
     var(--navy);
 }
 .section--navy::before{
@@ -689,11 +691,11 @@ a:focus-visible, button:focus-visible, .btn:focus-visible{
   font-family: var(--font-body); font-weight:600; font-size: 13px;
   letter-spacing: 0.06em; text-transform: uppercase;
   background: var(--navy); color:#fff;
-  box-shadow: 0 16px 36px rgba(24,42,78,0.35), 0 0 0 1px rgba(255,255,255,0.06) inset;
+  box-shadow: 0 16px 36px rgba(44,79,102,0.35), 0 0 0 1px rgba(255,255,255,0.06) inset;
   transition: transform .25s var(--ease-out), background .25s ease, box-shadow .25s ease;
   cursor:pointer; white-space:nowrap;
 }
-.fab a:hover{ transform: translateY(-3px); background: var(--primary); box-shadow: 0 22px 44px rgba(10,108,152,0.42); }
+.fab a:hover{ transform: translateY(-3px); background: var(--primary); box-shadow: 0 22px 44px rgba(43,120,156,0.42); }
 .fab a svg{ width:16px; height:16px; }
 .fab a.fab--primary{
   background: var(--primary);
@@ -702,7 +704,7 @@ a:focus-visible, button:focus-visible, .btn:focus-visible{
 .fab a.fab--primary:hover{ background: var(--navy); }
 .fab a.fab--wa{
   background:#fff; color: var(--navy); padding: 12px 18px; font-size: 12px;
-  box-shadow: 0 12px 30px rgba(24,42,78,0.22), 0 0 0 1px rgba(24,42,78,0.10) inset;
+  box-shadow: 0 12px 30px rgba(44,79,102,0.22), 0 0 0 1px rgba(44,79,102,0.10) inset;
 }
 .fab a.fab--wa:hover{ background: var(--navy); color:#fff; }
 /* Se cookie banner attivo, alza il FAB */
@@ -843,7 +845,7 @@ footer.site-footer{ background: var(--ink); box-shadow: inset 0 6px 0 rgba(0,0,0
     padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
     background: rgba(255,255,255,0.97);
     border-top: 1px solid var(--hairline);
-    box-shadow: 0 -8px 24px rgba(24,42,78,0.08);
+    box-shadow: 0 -8px 24px rgba(44,79,102,0.08);
     -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
   }
   .fab a, .fab a.fab--primary, .fab a.fab--wa{

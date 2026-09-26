@@ -11,6 +11,23 @@
   'use strict';
   document.documentElement.classList.add('js');
 
+  /* ---------- OGNI PAGINA NUOVA PARTE DALL'ALTO ----------
+     Aprendo un'altra pagina (o ricaricando) il browser, o la cornice che ospita
+     l'anteprima, poteva lasciarti a metà o in fondo. Si torna in cima, tranne
+     quando il link punta a un'ancora (#sezione) o si usa "indietro". */
+  (function(){
+    const nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+    if (nav && nav.type === 'back_forward') return;
+    if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+    if (location.hash) return;
+    const top = () => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      try { document.documentElement.scrollIntoView({ block: 'start', behavior: 'instant' }); } catch (e) {}
+    };
+    top();
+    window.addEventListener('load', top, { once: true });
+  })();
+
   /* ---------- NAV SCROLL STATE ---------- */
   const nav = document.getElementById('nav');
   if(nav){
