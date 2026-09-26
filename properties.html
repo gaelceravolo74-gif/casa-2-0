@@ -18,7 +18,7 @@
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
 <link rel="preload" href="assets/fonts/Newsreader-Variable.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/Satoshi-Variable.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="assets/site.css?v=33">
+<link rel="stylesheet" href="assets/site.css?v=35">
 <script>document.documentElement.classList.add('js')</script>
 
 <style>
@@ -272,7 +272,10 @@
   /* su telefono niente animazione "bloccata" allo scroll: il MacBook è già aperto, si scorre libero */
   @media (max-width: 760px){
     .mac-stage{ min-height: auto; padding: 56px 0 48px; }
-    .mac-sticky{ position: static; height: auto; }
+    .mac-sticky{ position: static; height: auto; flex-direction: column; gap: 28px; }
+    .mac-eyebrow{ position: static; transform: none; text-align: center; letter-spacing: 0.16em; padding: 0 24px; }
+    .mac-eyebrow::before, .mac-eyebrow::after{ display: none; }
+    .reel__eyebrow{ letter-spacing: 0.16em !important; padding: 0 24px; text-wrap: balance; }
     .mac{ width: 92vw; --p: 1; }
     .immo__cta{ padding: 16px 22px; font-size: 12.5px; gap: 10px; border-radius: 6px; }
     .immo__cta svg.house{ display:none; }
@@ -646,7 +649,7 @@
      CASA 1 CAROUSEL — esempi di immobili
      ========================================================= -->
 <section class="reel" aria-label="Esempi di immobili">
-  <p class="reel__eyebrow">— alcuni immobili che abbiamo trattato —</p>
+  <p class="reel__eyebrow">Alcuni immobili che abbiamo trattato</p>
   <div class="reel__rail">
     <div class="reel__track">
       <div class="reel__card"><span class="frame-y"></span><img src="assets/tivoli/casa1-01.jpg" alt="" loading="lazy"></div>
