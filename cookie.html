@@ -7,11 +7,10 @@
 <meta name="description" content="Informativa sui cookie utilizzati dal sito di Casa 2.0, agenzia immobiliare a Tivoli." />
 <meta name="robots" content="noindex, follow" />
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preload" href="assets/fonts/Zodiak-Variable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/Newsreader-Variable.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/Satoshi-Variable.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="assets/site.css?v=23">
+<link rel="stylesheet" href="assets/site.css?v=24">
+<script>document.documentElement.classList.add('js')</script>
 <style>
   .legal-hero{ background:var(--navy); color:#fff; padding: calc(var(--nav-h) + 70px) 0 70px; text-align:center; }
   .legal-hero .micro-label{ color:var(--primary-light); display:inline-flex; gap:12px; align-items:center; margin-bottom:18px; }
@@ -29,6 +28,9 @@
   .legal table{ width:100%; border-collapse:collapse; margin:0 0 24px; font-size:14px; }
   .legal th{ background:var(--primary); color:#fff; padding:12px 16px; text-align:left; font-weight:500; font-family:var(--font-body); letter-spacing:0.02em; }
   .legal td{ padding:12px 16px; border-bottom:1px solid var(--hairline); color:var(--text-muted); }
+  .table-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; margin:0 0 24px; }
+  .table-wrap table{ margin:0; min-width:520px; }
+  @media (max-width:560px){ .legal{ padding:60px 22px 90px; } }
 </style>
 </head>
 <body class="solid-nav">
@@ -61,7 +63,7 @@
   <div class="container">
     <span class="micro-label">Informativa</span>
     <h1>Cookie Policy</h1>
-    <p>Ultimo aggiornamento: 30 maggio 2026</p>
+    <p>Ultimo aggiornamento: 26 settembre 2026</p>
   </div>
 </header>
 
@@ -70,18 +72,20 @@
   <p>I cookie sono piccoli file di testo che i siti web salvano sul tuo dispositivo durante la navigazione. Permettono al sito di ricordare le tue preferenze e migliorare l'esperienza utente.</p>
 
   <h2>Cookie che utilizziamo</h2>
-  <table>
+  <div class="table-wrap"><table>
     <thead>
       <tr><th>Nome</th><th>Tipo</th><th>Scopo</th><th>Durata</th></tr>
     </thead>
     <tbody>
-      <tr><td>cookie-consent</td><td>Tecnico</td><td>Memorizza la scelta del consenso cookie</td><td>12 mesi</td></tr>
+      <tr><td>casa2_cookie</td><td>Tecnico</td><td>Memorizza nel browser la tua scelta sul consenso</td><td>Finché non la cancelli</td></tr>
+      <tr><td>casa2_exit_at</td><td>Tecnico</td><td>Evita di mostrarti più volte l'invito alla valutazione</td><td>14 giorni</td></tr>
     </tbody>
-  </table>
+  </table></div>
 
   <h2>Cookie di terze parti</h2>
-  <p>Il sito utilizza Google Fonts per il caricamento dei caratteri tipografici. Google può impostare cookie tecnici. Per maggiori informazioni: <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google Privacy Policy</a>.</p>
-  <p>Il sito non utilizza Google Analytics o altri strumenti di profilazione senza il tuo consenso esplicito.</p>
+  <p>I caratteri tipografici sono ospitati direttamente sul nostro server: non usiamo Google Fonts.</p>
+  <p>Nella pagina Contatti è presente una mappa di Google Maps: quando viene caricata, Google può impostare propri cookie. Per maggiori informazioni: <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google Privacy Policy</a>.</p>
+  <p>Strumenti di statistica (Google Analytics, Microsoft Clarity) vengono attivati solo se accetti i cookie dal banner. Non usiamo cookie di profilazione.</p>
 
   <h2>Come gestire i cookie</h2>
   <p>Puoi gestire o rifiutare i cookie tramite le impostazioni del tuo browser. La disabilitazione dei cookie tecnici potrebbe compromettere il funzionamento del sito.</p>
@@ -98,12 +102,12 @@
 <footer class="site-footer">
   <div class="container">
     <div class="footer__bottom" style="border-top:1px solid rgba(255,255,255,0.08); padding-top:32px;">
-      <span>© 2025 Casa 2.0 — Gael Ceravolo</span>
+      <span>© <span data-year>2026</span> Casa 2.0 — Gael Ceravolo</span>
       <span><a href="privacy.html">Privacy Policy</a> · <a href="cookie.html">Cookie Policy</a> · <a href="index.html">Torna al sito</a></span>
     </div>
   </div>
 </footer>
 
-<script src="assets/site.js?v=11"></script>
+<script src="assets/site.js?v=12"></script>
 </body>
 </html>

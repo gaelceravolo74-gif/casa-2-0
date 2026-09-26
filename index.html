@@ -6,8 +6,6 @@
 <title>Casa 2.0 — Agenzia Immobiliare a Tivoli dal 1994</title>
 <meta name="description" content="Casa 2.0, agenzia immobiliare di Tivoli dal 1994. Valutazioni oneste, marketing trasparente, esperienza sul territorio. Richiedi una valutazione gratuita." />
 <link rel="canonical" href="https://www.casaduepuntozero.net/" />
-<link rel="alternate" hreflang="it" href="https://www.casaduepuntozero.net/" />
-<link rel="alternate" hreflang="en" href="https://www.casaduepuntozero.net/investors.html" />
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
 <meta property="og:type" content="website" />
 <meta property="og:locale" content="it_IT" />
@@ -17,7 +15,7 @@
 <meta property="og:image" content="https://www.casaduepuntozero.net/assets/tivoli-aerial.jpg" />
 <meta property="og:url" content="https://www.casaduepuntozero.net/" />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="theme-color" content="#1A2A3C" />
+<meta name="theme-color" content="#182A4E" />
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -83,11 +81,10 @@
   "publisher": { "@id": "https://www.casaduepuntozero.net/#agency" }
 }
 </script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preload" href="assets/fonts/Zodiak-Variable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/Newsreader-Variable.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/Satoshi-Variable.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="assets/site.css?v=23">
+<link rel="stylesheet" href="assets/site.css?v=24">
+<script>document.documentElement.classList.add('js')</script>
 <style>
   /* =========================================================
      HOME-SPECIFIC
@@ -163,7 +160,7 @@
     font-weight: 600;
     letter-spacing:-0.01em;
   }
-  .trust__num em{ font-style:italic; color: var(--primary); font-weight:600;}
+  .trust__num em{ font-style:normal; color: var(--primary); font-weight:600;}
   .trust__label{
     margin-top: 12px;
     font-size: 11px;
@@ -180,8 +177,8 @@
     text-transform: uppercase;
     letter-spacing: 0.16em;
     color: var(--red-accent);
-    background: rgba(192,57,43,0.08);
-    border:1px solid rgba(192,57,43,0.25);
+    background: rgba(8,140,191,0.08);
+    border:1px solid rgba(8,140,191,0.25);
     padding: 3px 7px;
     border-radius: 999px;
     vertical-align: middle;
@@ -204,7 +201,7 @@
     position:relative;
     aspect-ratio: 4/5;
     overflow:hidden;
-    box-shadow: 0 40px 80px rgba(26,42,60,0.20);
+    box-shadow: 0 40px 80px rgba(24,42,78,0.20);
   }
   .showcase__media img{
     width:100%; height:100%; object-fit: cover;
@@ -213,7 +210,7 @@
   .showcase__media:hover img{ transform: scale(1.05); }
   .showcase__media::after{
     content:""; position:absolute; inset:0;
-    background: linear-gradient(180deg, transparent 60%, rgba(26,42,60,0.5));
+    background: linear-gradient(180deg, transparent 60%, rgba(24,42,78,0.5));
     pointer-events:none;
   }
   .showcase__caption{
@@ -293,19 +290,19 @@
   }
   .quote-section::before{
     top:-260px; left:-260px;
-    background: radial-gradient(circle, rgba(74,143,163,0.16), transparent 60%);
+    background: radial-gradient(circle, rgba(8,140,191,0.16), transparent 60%);
   }
   .quote-section::after{
     bottom:-260px; right:-260px;
-    background: radial-gradient(circle, rgba(192,57,43,0.08), transparent 60%);
+    background: radial-gradient(circle, rgba(8,140,191,0.08), transparent 60%);
   }
   .quote-section .micro-label{
-    color: var(--red-accent);
+    color: var(--accent-on-dark);
     display:inline-flex; align-items:center; gap:14px;
   }
   .quote-section .micro-label::before,
   .quote-section .micro-label::after{
-    content:""; width:30px; height:1px; background: var(--red-accent); opacity:.5;
+    content:""; width:30px; height:1px; background: var(--accent-on-dark); opacity:.5;
   }
   .brand-mark{
     margin: 38px auto 42px;
@@ -316,13 +313,13 @@
     font-weight: 600;
     font-size: clamp(64px, 9vw, 120px);
     line-height: 1;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.012em;
     color: #fff;
     display:inline-flex;
     align-items: baseline;
     gap: 0.18em;
   }
-  .brand-wordmark .two{ color: var(--red-accent); font-weight: 600; }
+  .brand-wordmark .two{ color: var(--accent-on-dark); font-weight: 600; }
   .quote-section blockquote{
     font-family: var(--font-display);
     font-style: italic;
@@ -340,7 +337,7 @@
     font-size: 12px;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    border-bottom:1px solid rgba(74,143,163,0.35);
+    border-bottom:1px solid rgba(8,140,191,0.35);
     padding-bottom: 6px;
     transition: gap 200ms ease, color 200ms ease, border-color 200ms ease;
   }
@@ -456,7 +453,6 @@
       <li><a href="properties.html">Immobili</a></li>
       <li><a href="contattaci.html">Contattaci</a></li>
     </ul>
-    <a href="investors.html" class="nav__lang" title="English version">EN</a>
     <a href="valuta.html" class="btn nav__cta-desktop">Valutazione Gratuita</a>
     <button class="nav__burger" id="burger" aria-label="Apri menu" aria-expanded="false">
       <span></span><span></span><span></span>
@@ -497,7 +493,7 @@
       Trent'anni di esperienza sul territorio, valutazioni oneste basate sui dati reali di Tivoli.
     </p>
     <div class="hero__cta hero__fade d3">
-      <a href="contattaci.html" class="btn btn--lg">
+      <a href="valuta.html" class="btn btn--lg">
         Richiedi una valutazione gratuita
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
       </a>
@@ -584,12 +580,12 @@
         <div class="trust__label">Anni a Tivoli</div>
       </div>
       <div>
-        <div class="trust__num"><em>100</em>%</div>
-        <div class="trust__label">Valutazioni oneste</div>
+        <div class="trust__num"><em>0</em> €</div>
+        <div class="trust__label">Costi anticipati</div>
       </div>
       <div>
-        <div class="trust__num"><em>0</em></div>
-        <div class="trust__label">Sorprese sul prezzo</div>
+        <div class="trust__num"><em>3</em> min</div>
+        <div class="trust__label">Per chiedere la valutazione</div>
       </div>
       <div>
         <div class="trust__num"><em>24</em>h</div>
@@ -624,7 +620,7 @@
         </li>
         <li>
           <span class="n">III</span>
-          <span><strong>Supporto burocratico end-to-end</strong>: notaio, mutuo, conformità urbanistica.</span>
+          <span><strong>Supporto burocratico completo</strong>: notaio, mutuo, conformità urbanistica.</span>
         </li>
       </ul>
       <a href="chi-siamo.html" class="btn btn--outline">Scopri chi siamo</a>
@@ -666,7 +662,7 @@
   <div class="container">
     <span class="micro-label reveal" style="color:var(--red-accent); display:inline-block;">Pronto a iniziare?</span>
     <h2 class="reveal">Una valutazione <em>onesta</em><br/>vale più di mille promesse.</h2>
-    <p class="reveal" data-delay="1">Veniamo noi a vedere la tua casa. Tempo per te, dati per noi, una proposta chiara sul tavolo. Senza obblighi, in 24 ore.</p>
+    <p class="reveal" data-delay="1">Ti ricontattiamo entro 24 ore, veniamo noi a vedere la casa e ti diamo una stima chiara, basata sulle vendite reali della zona. Senza obblighi.</p>
     <div class="cta-banner__buttons reveal" data-delay="2">
       <a href="valuta.html" class="btn btn--lg">Richiedi valutazione gratuita</a>
       <a href="properties.html" class="btn btn--outline btn--lg">Sfoglia gli immobili</a>
@@ -718,39 +714,13 @@
       </div>
     </div>
     <div class="footer__bottom">
-      <span>© 2025 Casa 2.0 — Gael Ceravolo · Tivoli (RM)</span>
+      <span>© <span data-year>2026</span> Casa 2.0 — Gael Ceravolo · Tivoli (RM)</span>
       <span><a href="privacy.html">Privacy Policy</a> · <a href="cookie.html">Cookie Policy</a></span>
     </div>
   </div>
 </footer>
 
-<!-- =========================================================
-     TWEAKS PANEL
-     ========================================================= -->
-<aside class="tweaks" id="tweaks">
-  <div class="tweaks__title">
-    <span>Tweaks · Home</span>
-    <button id="tweaks-close" aria-label="Chiudi tweaks">×</button>
-  </div>
-  <div class="tweaks__row">
-    <label>Headline</label>
-    <div class="tweaks__chips" id="tk-headline">
-      <button class="tweaks__chip active" data-v="0">Originale</button>
-      <button class="tweaks__chip" data-v="1">Diretta</button>
-      <button class="tweaks__chip" data-v="2">Emotiva</button>
-    </div>
-  </div>
-  <div class="tweaks__row">
-    <label>Tinta celeste hero <span id="tk-tint-val" style="opacity:.6">22%</span></label>
-    <input type="range" id="tk-tint" min="0" max="60" step="2" value="22"/>
-  </div>
-  <div class="tweaks__row">
-    <label>Scurire base hero <span id="tk-bot-val" style="opacity:.6">85%</span></label>
-    <input type="range" id="tk-bottom" min="40" max="100" step="5" value="85"/>
-  </div>
-</aside>
-
-<script src="assets/site.js?v=11"></script>
+<script src="assets/site.js?v=12"></script>
 <script>
   /* ---------- CTA PRINT PARALLAX (chiave editoriale) ---------- */
   (function(){
@@ -784,47 +754,6 @@
     });
   });
 
-  /* ---------- PAGE-SPECIFIC TWEAKS ---------- */
-  const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
-    "headlineVariant": 0,
-    "heroTint": 16,
-    "heroBottom": 95
-  }/*EDITMODE-END*/;
-
-  const HEADLINES = [
-    ['Vendi casa a Tivoli,', 'al <em>giusto</em> prezzo', 'e senza preoccupazioni.'],
-    ['La tua casa, venduta.', 'Al prezzo <em>giusto</em>.', 'In tempi reali.'],
-    ['A Tivoli, vendere casa', 'è un\u2019arte di <em>fiducia</em>,', 'non di formule.']
-  ];
-
-  const state = { ...TWEAK_DEFAULTS };
-
-  function applyTweaks(){
-    const lines = document.querySelectorAll('#hero-headline .hero__h-line');
-    const v = HEADLINES[state.headlineVariant] || HEADLINES[0];
-    lines.forEach((el, i) => { if(v[i] !== undefined) el.innerHTML = v[i]; });
-    document.documentElement.style.setProperty('--hero-tint',   (state.heroTint/100).toFixed(2));
-    document.documentElement.style.setProperty('--hero-bottom', (state.heroBottom/100).toFixed(2));
-    const tv = document.getElementById('tk-tint-val'); if(tv) tv.textContent = state.heroTint + '%';
-    const bv = document.getElementById('tk-bot-val');  if(bv) bv.textContent = state.heroBottom + '%';
-    const tk = document.getElementById('tk-tint');     if(tk) tk.value = state.heroTint;
-    const bk = document.getElementById('tk-bottom');   if(bk) bk.value = state.heroBottom;
-    document.querySelectorAll('#tk-headline .tweaks__chip').forEach(b=>{
-      b.classList.toggle('active', parseInt(b.dataset.v,10) === state.headlineVariant);
-    });
-  }
-  applyTweaks();
-
-  function persist(edits){
-    Object.assign(state, edits);
-    window.Casa20.persistTweak(edits);
-    applyTweaks();
-  }
-  document.querySelectorAll('#tk-headline .tweaks__chip').forEach(btn=>{
-    btn.addEventListener('click', ()=>{ persist({ headlineVariant: parseInt(btn.dataset.v,10) }); });
-  });
-  document.getElementById('tk-tint').addEventListener('input',  e=> persist({ heroTint:   parseInt(e.target.value,10) }));
-  document.getElementById('tk-bottom').addEventListener('input', e=> persist({ heroBottom: parseInt(e.target.value,10) }));
 </script>
 </body>
 </html>

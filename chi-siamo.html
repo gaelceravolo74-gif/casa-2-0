@@ -14,14 +14,12 @@
 <meta property="og:image" content="https://www.casaduepuntozero.net/assets/tivoli/tivoli-06.jpg" />
 <meta property="og:url" content="https://www.casaduepuntozero.net/chi-siamo.html" />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="theme-color" content="#1A2A3C" />
+<meta name="theme-color" content="#182A4E" />
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preload" href="assets/fonts/Zodiak-Variable.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="assets/fonts/Zodiak-VariableItalic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/Newsreader-Variable.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/Satoshi-Variable.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="assets/site.css?v=23">
+<link rel="stylesheet" href="assets/site.css?v=24">
+<script>document.documentElement.classList.add('js')</script>
 
 <style>
   /* ============================================================
@@ -56,7 +54,7 @@
     font-size: clamp(64px, 11vw, 150px);
     font-weight: 800;
     line-height: 0.92;
-    letter-spacing: -0.04em;
+    letter-spacing: -0.012em;
     color: #fff;
     text-shadow: 0 10px 60px rgba(0,0,0,0.45);
     display:flex;
@@ -69,12 +67,7 @@
   .hero--story .word .live{
     -webkit-text-fill-color: #fff;
   }
-  .hero--story .word .live.emotion{
-    background: linear-gradient(180deg, #FF7E6B 0%, var(--red-accent) 75%);
-    -webkit-background-clip: text; background-clip: text;
-    -webkit-text-fill-color: transparent;
-    filter: drop-shadow(0 6px 50px rgba(205,92,92,0.6));
-  }
+  .hero--story .word .live.emotion{ -webkit-text-fill-color:#fff; }
 
   /* TRUST PILL BAR (sostituisce la scroll-cue su chi-siamo) */
   .story-pills{
@@ -135,10 +128,7 @@
     transition: background .3s ease, box-shadow .3s ease;
   }
   /* quando la parola è emozionale il cursore diventa rosso */
-  .hero--story .word .live.emotion::after{
-    background: var(--red-accent);
-    box-shadow: 0 0 24px var(--red-accent);
-  }
+
   @keyframes caretBreathe{ 0%,100%{opacity:1;} 50%{opacity:0.35;} }
 
   /* Philosophy section */
@@ -162,7 +152,7 @@
     line-height: 1;
     color: var(--navy);
     font-weight: 500;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.012em;
   }
   .philosophy h2 em{ color: var(--primary); font-style: normal; font-weight: 700; }
   .philosophy p{
@@ -191,7 +181,7 @@
     overflow:hidden;
     display:grid;
     grid-template-columns: 340px 1fr;
-    box-shadow: 0 40px 90px rgba(26,42,60,0.18);
+    box-shadow: 0 40px 90px rgba(24,42,78,0.18);
   }
   .founder__photo{
     background: #0F1B27;
@@ -282,7 +272,7 @@
   .founder__cta:hover{
     background: var(--primary-light);
     transform: translateY(-2px);
-    box-shadow: 0 0 24px rgba(50,98,115,0.4);
+    box-shadow: 0 0 24px rgba(10,108,152,0.4);
   }
   .founder__cta svg{ width:14px; height:14px; }
 
@@ -302,14 +292,14 @@
     background: #fff;
     border-radius: 4px;
     overflow:hidden;
-    box-shadow: 0 14px 40px rgba(26,42,60,0.06);
+    box-shadow: 0 14px 40px rgba(24,42,78,0.06);
     transition: transform 300ms ease, box-shadow 300ms ease;
   }
-  .member:hover{ transform: translateY(-6px); box-shadow: 0 26px 60px rgba(26,42,60,0.12);}
+  .member:hover{ transform: translateY(-6px); box-shadow: 0 26px 60px rgba(24,42,78,0.12);}
   .member__photo{
     aspect-ratio: 4/5;
     background:
-      repeating-linear-gradient(135deg, rgba(50,98,115,0.08) 0 12px, transparent 12px 24px),
+      repeating-linear-gradient(135deg, rgba(10,108,152,0.08) 0 12px, transparent 12px 24px),
       linear-gradient(180deg, #E9DED8, #F5ECE8);
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     color: var(--primary); position:relative;
@@ -317,7 +307,7 @@
   }
   .member__photo .silhouette{
     width: 56px; height:56px; border-radius:50%;
-    border:1.5px solid rgba(50,98,115,0.3);
+    border:1.5px solid rgba(10,108,152,0.3);
     display:flex; align-items:center; justify-content:center;
   }
   .member__photo .silhouette svg{ width:28px; height:28px;}
@@ -373,7 +363,7 @@
 
   /* CTA bottom — near-black */
   .cta-banner{
-    background: radial-gradient(120% 120% at 50% 0%, var(--ink-2) 0%, #07090C 70%);
+    background: var(--navy);
     color: #fff;
     text-align:center;
     padding: 120px 40px;
@@ -452,7 +442,7 @@
   /* micro-stripe tra logo e boss card */
   .volti__stripe{
     display:flex; align-items:center; gap: clamp(20px, 4vw, 48px);
-    margin: -20px 0 18px;
+    margin: 8px 0 28px;
     color: var(--text-dark);
   }
   .volti__stripe-item{ display:flex; flex-direction:column; align-items:center; line-height:1; }
@@ -471,7 +461,7 @@
   }
   .volti__stripe-sep{ width:1px; height: 28px; background: var(--hairline); }
   @media (max-width: 620px){
-    .volti__stripe{ gap: 18px; margin: -12px 0 14px; }
+    .volti__stripe{ gap: 18px; margin: 4px 0 22px; }
     .volti__stripe-item strong{ font-size: 18px; }
   }
   .volti__canvas{
@@ -495,7 +485,7 @@
   }
   .volti__intro h2{
     font-size: clamp(44px, 6vw, 80px); line-height:1; color: var(--navy);
-    font-weight:500; letter-spacing:-0.02em; margin:0;
+    font-weight:500; letter-spacing: -0.012em; margin:0;
   }
   .volti__intro h2 em{ color: var(--primary); font-style:italic; font-weight:600; }
   .volti__intro p{
@@ -510,10 +500,11 @@
   .brand-grain{
     position:relative;
     width:100%;
-    max-width: 1480px;
-    margin: 0 auto;
-    aspect-ratio: 21/9;          /* più largo e basso = logo più imponente */
+    max-width: 560px;            /* prima 1480px: creava un vuoto di ~630px sotto la hero */
+    margin: 56px auto 0;
+    aspect-ratio: 21/9;
   }
+  @media (max-width: 620px){ .brand-grain{ margin-top: 36px; max-width: 86%; } }
   .brand-grain canvas{
     display:block; width:100%; height:100%;
     image-rendering: auto;
@@ -526,15 +517,15 @@
   .boss-wrap{ width:100%; max-width: 720px; perspective: 1800px; }
   .boss{
     position:relative; width:100%; min-height: 340px;
-    background: linear-gradient(135deg, #07090C 0%, var(--ink) 55%, var(--ink-2) 100%);
+    background: linear-gradient(135deg, var(--ink) 0%, var(--navy) 100%);
     border-radius: 6px; overflow:hidden; display:grid; grid-template-columns: 40% 1fr;
-    box-shadow: 0 30px 70px rgba(7,9,12,0.4); border:1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 30px 70px rgba(15,29,56,0.35); border:1px solid rgba(255,255,255,0.08);
     transition: box-shadow .5s ease, transform .15s ease;
     transform-style: preserve-3d;
   }
   .boss__glow{
     position:absolute; inset:0; z-index:3; pointer-events:none; opacity:0;
-    background: radial-gradient(600px circle at var(--mx,50%) var(--my,50%), rgba(74,143,163,0.22), transparent 42%);
+    background: radial-gradient(600px circle at var(--mx,50%) var(--my,50%), rgba(8,140,191,0.22), transparent 42%);
     transition: opacity .4s ease; mix-blend-mode: screen;
   }
   .boss-wrap:hover .boss__glow{ opacity:1; }
@@ -568,8 +559,8 @@
     line-height:1; margin:0; letter-spacing:-0.01em;
     background: linear-gradient(to right, #fff, #B8C6DB); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
   }
-  .boss__role{ color: var(--primary-light); font-size:11.5px; font-weight:600; letter-spacing:0.22em; text-transform:uppercase; margin:10px 0 22px; }
-  .boss__bio{ color: rgba(255,255,255,0.78); font-size:15px; line-height:1.7; font-weight:300; border-left:2px solid var(--red-accent); padding-left:20px; margin:0 0 28px; max-width:46ch; }
+  .boss__role{ color: var(--accent-on-dark); font-size:11.5px; font-weight:600; letter-spacing:0.22em; text-transform:uppercase; margin:10px 0 22px; }
+  .boss__bio{ color: rgba(255,255,255,0.78); font-size:15px; line-height:1.7; font-weight:300; border-left:2px solid var(--primary-light); padding-left:20px; margin:0 0 28px; max-width:46ch; }
   .boss__btn{
     align-self:flex-start; display:inline-flex; align-items:center; gap:14px;
     background: rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.2); color:#fff;
@@ -594,17 +585,17 @@
   .vteam-grid{ display:grid; grid-template-columns: repeat(3,1fr); gap:28px; }
   .vmember{
     background:#fff; border-radius:6px; overflow:hidden;
-    box-shadow: 0 14px 40px rgba(26,42,60,0.07); border-bottom:3px solid transparent;
+    box-shadow: 0 14px 40px rgba(24,42,78,0.07); border-bottom:3px solid transparent;
     transition: transform .4s var(--ease-out), box-shadow .4s ease, border-color .4s ease;
     display:flex; flex-direction:column;
   }
-  .vmember:hover{ transform: translateY(-8px); box-shadow:0 28px 60px rgba(26,42,60,0.14); border-bottom-color: var(--red-accent); }
+  .vmember:hover{ transform: translateY(-8px); box-shadow:0 28px 60px rgba(24,42,78,0.14); border-bottom-color: var(--red-accent); }
   .vmember__photo{
     aspect-ratio:4/5; position:relative; overflow:hidden;
-    background: repeating-linear-gradient(135deg, rgba(50,98,115,0.07) 0 12px, transparent 12px 24px), linear-gradient(180deg,#E9DED8,#F5ECE8);
+    background: repeating-linear-gradient(135deg, rgba(10,108,152,0.07) 0 12px, transparent 12px 24px), linear-gradient(180deg,#E9DED8,#F5ECE8);
     display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; color: var(--primary);
   }
-  .vmember__photo .silhouette{ width:58px; height:58px; border-radius:50%; border:1.5px solid rgba(50,98,115,0.3); display:flex; align-items:center; justify-content:center; }
+  .vmember__photo .silhouette{ width:58px; height:58px; border-radius:50%; border:1.5px solid rgba(10,108,152,0.3); display:flex; align-items:center; justify-content:center; }
   .vmember__photo .silhouette svg{ width:28px; height:28px; }
   .vmember__photo .ph-tag{ font-size:10px; letter-spacing:0.2em; text-transform:uppercase; opacity:.6; }
   .vmember__photo .badge{ position:absolute; left:0; bottom:0; background: var(--navy); color:#fff; font-size:10px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; padding:5px 11px; border-top-right-radius:8px; }
@@ -640,7 +631,6 @@
       <li><a href="properties.html">Immobili</a></li>
       <li><a href="contattaci.html">Contattaci</a></li>
     </ul>
-    <a href="investors.html" class="nav__lang" title="English version">EN</a>
     <a href="valuta.html" class="btn nav__cta-desktop">Valutazione Gratuita</a>
     <button class="nav__burger" id="burger" aria-label="Apri menu" aria-expanded="false">
       <span></span><span></span><span></span>
@@ -726,7 +716,7 @@
         <div class="boss__glow"></div>
         <div class="boss__photo" id="boss-photo">
           <canvas></canvas>
-          <img src="assets/gael.jpg" alt="Gael Ceravolo, titolare di Casa 2.0" id="boss-photo-img" />
+          <img src="assets/gael.jpg" alt="L'ufficio Casa 2.0 in Via Colsereno 45, Tivoli" id="boss-photo-img" />
         </div>
         <div class="boss__body">
           <span class="boss__pill">Titolare</span>
@@ -801,12 +791,13 @@
      ========================================================= -->
 <section class="cta-banner">
   <div class="container">
-    <span class="micro-label reveal" style="color:var(--red-accent); display:inline-block;">Iniziamo insieme</span>
+    <span class="micro-label reveal" style="color:var(--accent-on-dark); display:inline-block;">Iniziamo insieme</span>
     <h2 class="reveal">Mettiamo la nostra <em>faccia</em><br/>su ogni promessa.</h2>
     <p class="reveal" data-delay="1">Una chiacchierata onesta, senza fretta. Vieni in ufficio, scrivici su WhatsApp, o lascia che veniamo noi da te.</p>
     <div class="reveal" data-delay="2" style="display:flex; gap:14px; justify-content:center; flex-wrap:wrap;">
       <a href="valuta.html" class="btn btn--lg">Richiedi valutazione gratuita</a>
       <a href="https://wa.me/393388449030" target="_blank" rel="noopener" class="btn btn--whatsapp btn--lg">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91C21.96 6.45 17.5 2 12.04 2zm5.8 14.06c-.24.68-1.42 1.31-1.96 1.36-.5.05-.96.23-3.23-.67-2.72-1.07-4.45-3.84-4.58-4.02-.13-.18-1.1-1.46-1.1-2.79s.7-1.98.94-2.25c.24-.27.53-.34.7-.34h.5c.16.01.38-.06.59.45.24.58.81 2 .88 2.15.07.14.12.31.02.49-.09.18-.14.29-.27.45-.14.16-.29.36-.41.48-.14.14-.28.29-.12.56.16.27.71 1.17 1.53 1.9 1.05.94 1.94 1.23 2.21 1.37.27.14.43.12.59-.07.16-.18.68-.79.86-1.06.18-.27.36-.23.61-.14.25.09 1.6.75 1.87.89.27.14.45.2.52.31.07.12.07.66-.17 1.34z"/></svg>
         Scrivici su WhatsApp
       </a>
     </div>
@@ -857,13 +848,13 @@
       </div>
     </div>
     <div class="footer__bottom">
-      <span>© 2025 Casa 2.0 — Gael Ceravolo · Tivoli (RM)</span>
+      <span>© <span data-year>2026</span> Casa 2.0 — Gael Ceravolo · Tivoli (RM)</span>
       <span><a href="privacy.html">Privacy Policy</a> · <a href="cookie.html">Cookie Policy</a></span>
     </div>
   </div>
 </footer>
 
-<script src="assets/site.js?v=11"></script>
+<script src="assets/site.js?v=12"></script>
 <script>
   /* =========================================================
      HERO TYPEWRITER — cycle (prefix, word) pairs
@@ -1116,7 +1107,7 @@
           x: cx + Math.cos(ang)*rad,
           y: cy + Math.sin(ang)*rad,
           tx: t.tx, ty: t.ty,
-          size: (Math.random()*1.1 + 0.7) * DPR,
+          size: 1.35 * DPR,
           alpha: 0,
           delay: Math.random() * 380  // arrivi sfalsati
         };
@@ -1136,7 +1127,7 @@
         const y = p.y + (p.ty - p.y) * e;
         const a = Math.min(0.92, localT * 1.4);
         // colore: navy del brand
-        ctx.fillStyle = `rgba(26, 42, 60, ${a})`;
+        ctx.fillStyle = `rgba(24, 42, 78, ${a})`;
         ctx.fillRect(x, y, p.size, p.size);
         if(localT < 1) allDone = false;
       }
@@ -1152,7 +1143,7 @@
       if(started) return; started = true;
       if(reduce){
         // render statico: solo target
-        for(const t of targets){ ctx.fillStyle = 'rgba(26,42,60,0.9)'; ctx.fillRect(t.tx, t.ty, 1.4*DPR, 1.4*DPR); }
+        for(const t of targets){ ctx.fillStyle = 'rgba(24,42,78,0.9)'; ctx.fillRect(t.tx, t.ty, 1.4*DPR, 1.4*DPR); }
         wrap.classList.add('is-done');
         return;
       }
@@ -1169,7 +1160,7 @@
         if('IntersectionObserver' in window){
           const io = new IntersectionObserver((es)=>{
             es.forEach(e=>{ if(e.isIntersecting){ start(); io.disconnect(); } });
-          }, { threshold: 0.35 });
+          }, { threshold: 0.15 });
           io.observe(wrap);
         } else { start(); }
       });
@@ -1187,8 +1178,10 @@
   })();
 
   /* =========================================================
-     BLUEPRINT CANVAS — griglia tecnica reattiva al mouse
-     (scoped alla sezione .volti, redraw solo on-demand)
+     MAPPA CATASTALE — particelle irregolari come su una cartina del catasto
+     (isolati separati da strade, lotti più fitti verso il "centro storico",
+     fabbricati tratteggiati, numeri di particella). Al passaggio del mouse
+     si accende la particella sotto il puntatore, nel blu del logo.
      ========================================================= */
   (function(){
     const section = document.getElementById('filosofia');
@@ -1196,48 +1189,127 @@
     if(!section || !canvas) return;
     const ctx = canvas.getContext('2d');
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const STEP = 76, RADAR = 240;
-    let W=0, H=0, mouse={x:-9999,y:-9999};
+    const fine = window.matchMedia('(hover:hover) and (pointer:fine)').matches;
+    let W=0, H=0, DPR=1, parcels=[], hover=null;
 
-    function size(){
-      W = canvas.width  = section.offsetWidth;
-      H = canvas.height = section.offsetHeight;
-      draw();
+    function rng(seed){ return function(){ seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+    function area(p){ let a=0; for(let i=0,j=p.length-1;i<p.length;j=i++) a += (p[j][0]+p[i][0])*(p[j][1]-p[i][1]); return Math.abs(a/2); }
+    function centroid(p){ let x=0,y=0; for(const v of p){ x+=v[0]; y+=v[1]; } return [x/p.length, y/p.length]; }
+    function clip(p, nx, ny, c, keepLess){
+      const out=[];
+      for(let i=0;i<p.length;i++){
+        const a=p[i], b=p[(i+1)%p.length];
+        const da=nx*a[0]+ny*a[1]-c, db=nx*b[0]+ny*b[1]-c;
+        const ina = keepLess ? da<=0 : da>=0, inb = keepLess ? db<=0 : db>=0;
+        if(ina) out.push(a);
+        if(ina!==inb){ const t=da/(da-db); out.push([a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t]); }
+      }
+      return out.length>2 ? out : null;
+    }
+    function inside(pt, p){
+      let c=false;
+      for(let i=0,j=p.length-1;i<p.length;j=i++){
+        if(((p[i][1]>pt[1])!==(p[j][1]>pt[1])) && (pt[0] < (p[j][0]-p[i][0])*(pt[1]-p[i][1])/(p[j][1]-p[i][1])+p[i][0])) c=!c;
+      }
+      return c;
+    }
+    function build(){
+      const R = rng(1994);
+      const cx = W*0.58, cy = H*0.3;
+      const maxD = Math.hypot(Math.max(cx, W-cx), Math.max(cy, H-cy));
+      const base = W < 700 ? 2400 : 3200;
+      const out = [];
+      (function split(p, depth){
+        const a = area(p), c = centroid(p);
+        const d = Math.hypot(c[0]-cx, c[1]-cy) / maxD;
+        const target = base * (0.45 + 3.2*Math.pow(d, 1.5)) * (0.6 + R()*0.9);
+        if((a < target && depth > 2) || depth > 16){ out.push(p); return; }
+        let li=0, lm=0;
+        for(let i=0;i<p.length;i++){ const q=p[(i+1)%p.length]; const l=Math.hypot(q[0]-p[i][0], q[1]-p[i][1]); if(l>lm){ lm=l; li=i; } }
+        const e0=p[li], e1=p[(li+1)%p.length];
+        const ux=(e1[0]-e0[0])/lm, uy=(e1[1]-e0[1])/lm;
+        const ang=(R()-0.5)*0.42;
+        const nx=ux*Math.cos(ang)-uy*Math.sin(ang), ny=ux*Math.sin(ang)+uy*Math.cos(ang);
+        let mn=Infinity, mx=-Infinity;
+        for(const v of p){ const pr=nx*v[0]+ny*v[1]; if(pr<mn) mn=pr; if(pr>mx) mx=pr; }
+        const cut = mn + (mx-mn)*(0.34 + R()*0.32);
+        const street = depth < 4 ? [16,11,8,6][depth] : (R() < 0.08 ? 4 : 0);
+        const A = clip(p, nx, ny, cut - street/2, true);
+        const B = clip(p, nx, ny, cut + street/2, false);
+        if(A) split(A, depth+1);
+        if(B) split(B, depth+1);
+      })([[-30,-30],[W+30,-30],[W+30,H+30],[-30,H+30]], 0);
+      parcels = out.map(p=>{
+        const a = area(p), c = centroid(p);
+        const xs = p.map(v=>v[0]), ys = p.map(v=>v[1]);
+        return { p, a, c, box:[Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)],
+                 house: a > 700 && a < 9000 && R() < 0.3,
+                 num: R() < 0.3 && a > 1400 ? String(Math.floor(R()*2400)+11) : null };
+      });
+    }
+    let pattern = null;
+    function hatch(){
+      const c = document.createElement('canvas'); c.width = c.height = 6;
+      const x = c.getContext('2d'); x.strokeStyle = 'rgba(10,108,152,0.11)'; x.lineWidth = 1;
+      x.beginPath(); x.moveTo(0,6); x.lineTo(6,0); x.stroke();
+      return ctx.createPattern(c, 'repeat');
+    }
+    function path(p, s, c){
+      ctx.beginPath();
+      p.forEach((v,i)=>{ const x = c ? c[0]+(v[0]-c[0])*s : v[0], y = c ? c[1]+(v[1]-c[1])*s : v[1]; i ? ctx.lineTo(x,y) : ctx.moveTo(x,y); });
+      ctx.closePath();
     }
     function draw(){
+      ctx.setTransform(DPR,0,0,DPR,0,0);
       ctx.clearRect(0,0,W,H);
-      for(let y=0; y<=H+STEP; y+=STEP){
-        for(let x=0; x<=W+STEP; x+=STEP){
-          const d = Math.hypot(mouse.x-x, mouse.y-y);
-          const near = d < RADAR;
-          const a = near ? (1 - d/RADAR)*0.6 : 0;
-          // linee
-          ctx.lineWidth = near ? 1.3 : 0.5;
-          ctx.strokeStyle = near ? `rgba(192,57,43,${a+0.05})` : 'rgba(50,98,115,0.06)';
-          ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+STEP,y); ctx.stroke();
-          ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x,y+STEP); ctx.stroke();
-          // croce
-          const s = near ? 5 : 3;
-          ctx.strokeStyle = near ? `rgba(192,57,43,${a+0.12})` : 'rgba(50,98,115,0.10)';
-          ctx.beginPath();
-          ctx.moveTo(x-s,y); ctx.lineTo(x+s,y);
-          ctx.moveTo(x,y-s); ctx.lineTo(x,y+s);
-          ctx.stroke();
+      if(!pattern) pattern = hatch();
+      ctx.lineWidth = 0.8; ctx.lineJoin = 'round';
+      ctx.strokeStyle = 'rgba(10,108,152,0.09)';
+      for(const o of parcels){
+        path(o.p); ctx.stroke();
+        if(o.house){
+          path(o.p, 0.42 + ((o.a % 7)/7)*0.12, o.c);
+          ctx.fillStyle = 'rgba(10,108,152,0.035)'; ctx.fill();
+          ctx.fillStyle = pattern; ctx.fill(); ctx.stroke();
         }
       }
+      ctx.fillStyle = 'rgba(24,42,78,0.18)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = '500 9px Satoshi, sans-serif';
+      for(const o of parcels){ if(o.num && !o.house) ctx.fillText(o.num, o.c[0], o.c[1]); }
+      if(hover){
+        path(hover.p);
+        ctx.fillStyle = 'rgba(8,140,191,0.10)'; ctx.fill();
+        ctx.lineWidth = 1.3; ctx.strokeStyle = 'rgba(8,140,191,0.6)'; ctx.stroke();
+      }
+    }
+    function size(){
+      const w = section.offsetWidth, h = section.offsetHeight;
+      if(w === W && h === H) return;
+      W = w; H = h; DPR = Math.min(window.devicePixelRatio || 1, W < 700 ? 1.5 : 2);
+      canvas.width = W*DPR; canvas.height = H*DPR;
+      canvas.style.width = W+'px'; canvas.style.height = H+'px';
+      build(); draw();
     }
     let ticking=false;
-    if(!reduce){
+    if(!reduce && fine){
       section.addEventListener('mousemove', e=>{
-        const r = section.getBoundingClientRect();
-        mouse.x = e.clientX - r.left; mouse.y = e.clientY - r.top;
-        if(!ticking){ ticking=true; requestAnimationFrame(()=>{ draw(); ticking=false; }); }
+        if(ticking) return; ticking = true;
+        requestAnimationFrame(()=>{
+          ticking = false;
+          const r = section.getBoundingClientRect();
+          const pt = [e.clientX - r.left, e.clientY - r.top];
+          let hit = null;
+          for(const o of parcels){ const b=o.box; if(pt[0]<b[0]||pt[0]>b[2]||pt[1]<b[1]||pt[1]>b[3]) continue; if(inside(pt, o.p)){ hit=o; break; } }
+          if(hit !== hover){ hover = hit; draw(); }
+        });
       }, {passive:true});
-      section.addEventListener('mouseleave', ()=>{ mouse={x:-9999,y:-9999}; draw(); });
+      section.addEventListener('mouseleave', ()=>{ hover = null; draw(); });
     }
-    window.addEventListener('resize', size);
+    let rt;
+    window.addEventListener('resize', ()=>{ clearTimeout(rt); rt = setTimeout(size, 200); });
     size();
-    setTimeout(size, 600); // dopo reveal/layout
+    setTimeout(size, 600);   /* dopo reveal/layout */
+    if(document.fonts && document.fonts.ready) document.fonts.ready.then(draw);
   })();
 
   /* =========================================================

@@ -7,3 +7,7 @@ https://www.casa2.it/* https://www.casaduepuntozero.net/:splat 301
 /valutazione /valuta.html 301
 /contatti /contattaci.html 301
 /about /chi-siamo.html 301
+
+# Sezione inglese rimossa: i vecchi link portano alla home
+/investors.html / 301
+/investors / 301

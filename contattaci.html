@@ -14,21 +14,20 @@
 <meta property="og:image" content="https://www.casaduepuntozero.net/assets/tivoli/tivoli-06.jpg" />
 <meta property="og:url" content="https://www.casaduepuntozero.net/contattaci.html" />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="theme-color" content="#1A2A3C" />
+<meta name="theme-color" content="#182A4E" />
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preload" href="assets/fonts/Zodiak-Variable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/Newsreader-Variable.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/Satoshi-Variable.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="assets/site.css?v=23">
+<link rel="stylesheet" href="assets/site.css?v=24">
+<script>document.documentElement.classList.add('js')</script>
 
 <style>
   /* Page wraps the nav in navy by default — use solid nav */
   body{ background: var(--navy); color:#fff; }
 
   /* Nav must stay readable on top of navy bg from the start */
-  .nav{ background: rgba(26,42,60,0.4); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
-  .nav.scrolled{ background: rgba(26,42,60,0.85); }
+  .nav{ background: rgba(24,42,78,0.4); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+  .nav.scrolled{ background: rgba(24,42,78,0.85); }
   .nav__links a{ color: rgba(255,255,255,0.92); }
   .nav__links a::after{ background:#fff;}
   /* Logo sempre bianco su contattaci (body navy in entrambi gli stati nav) */
@@ -59,12 +58,12 @@
   /* LEFT — info */
   .contact__left{ color: #fff; padding-top: 12px; }
   .contact__left .micro-label{
-    color: var(--red-accent);
+    color: var(--accent-on-dark);
     display:inline-flex; align-items:center; gap:14px;
     margin-bottom: 30px;
   }
   .contact__left .micro-label::before{
-    content:""; width:30px; height:1px; background: var(--red-accent); opacity:.5;
+    content:""; width:30px; height:1px; background: var(--accent-on-dark); opacity:.5;
   }
   .contact__left blockquote{
     font-family: var(--font-accent);
@@ -123,20 +122,20 @@
     display:inline-flex;
     align-items:center; gap: 14px;
     padding: 18px 28px;
-    background: #25D366;
-    color:#fff;
+    background: #fff;
+    color: var(--navy);
     border-radius: 100px;
     font-weight: 600;
     font-size: 14px;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     transition: all 250ms ease;
-    box-shadow: 0 14px 36px rgba(37,211,102,0.25);
+    box-shadow: 0 14px 36px rgba(0,0,0,0.18);
   }
   .wa-cta:hover{
     transform: translateY(-3px);
-    background: #1FB855;
-    box-shadow: 0 0 30px rgba(37,211,102,0.45), 0 18px 40px rgba(37,211,102,0.32);
+    background: var(--primary-soft);
+    box-shadow: 0 18px 40px rgba(0,0,0,0.22);
   }
   .wa-cta svg{ width: 22px; height: 22px; }
 
@@ -206,7 +205,7 @@
   }
   .field input, .field textarea{
     font-family: var(--font-body);
-    font-size: 15px;
+    font-size: 16px;
     color: var(--text-dark);
     padding: 12px 0;
     background: transparent;
@@ -278,7 +277,7 @@
   }
   .form-status.error{ color: var(--red-accent); }
   .form-status.success{
-    color: #1FB855;
+    color: #1F7A4D;
     font-weight: 600;
   }
 
@@ -330,7 +329,7 @@
   }
   .office-strip__photo::after{
     content:""; position:absolute; inset:0;
-    background: linear-gradient(180deg, transparent 70%, rgba(26,42,60,0.4));
+    background: linear-gradient(180deg, transparent 70%, rgba(24,42,78,0.4));
   }
   .office-strip__caption{
     position:absolute; bottom: 24px; left:24px;
@@ -366,7 +365,6 @@
       <li><a href="properties.html">Immobili</a></li>
       <li><a href="contattaci.html" class="active">Contattaci</a></li>
     </ul>
-    <a href="investors.html" class="nav__lang" title="English version">EN</a>
     <a href="valuta.html" class="btn nav__cta-desktop">Valutazione Gratuita</a>
     <button class="nav__burger" id="burger" aria-label="Apri menu" aria-expanded="false">
       <span></span><span></span><span></span>
@@ -402,7 +400,7 @@
         </span>
         <div>
           <div class="info-label">Ufficio</div>
-          <div class="info-value">Via Colsereno 45, Tivoli (RM) <span style="color:rgba(255,255,255,0.4); font-size:12px; margin-left:8px;">— indirizzo da confermare</span></div>
+          <div class="info-value">Via Colsereno 45, Tivoli (RM)</div>
         </div>
       </li>
       <li>
@@ -576,7 +574,7 @@
   }
   .find-us__copy h2{
     font-size: clamp(34px, 4vw, 52px); color: var(--navy); font-weight: 500;
-    letter-spacing: -0.025em; line-height: 1.05; margin: 0 0 22px;
+    letter-spacing: -0.012em; line-height: 1.05; margin: 0 0 22px;
   }
   .find-us__copy h2 em{ color: var(--primary); font-style: italic; font-weight: 500; }
   .find-us__copy > p{
@@ -601,7 +599,7 @@
     aspect-ratio: 4/3;
     border-radius: 8px;
     overflow:hidden;
-    box-shadow: 0 30px 60px rgba(26,42,60,0.18), 0 0 0 1px var(--hairline);
+    box-shadow: 0 30px 60px rgba(24,42,78,0.18), 0 0 0 1px var(--hairline);
   }
   .find-us__map iframe{
     position:absolute; inset:0; width:100%; height:100%; border:0;
@@ -661,41 +659,12 @@
       </div>
     </div>
     <div class="footer__bottom">
-      <span>© 2025 Casa 2.0 — Gael Ceravolo · Tivoli (RM)</span>
+      <span>© <span data-year>2026</span> Casa 2.0 — Gael Ceravolo · Tivoli (RM)</span>
       <span><a href="privacy.html">Privacy Policy</a> · <a href="cookie.html">Cookie Policy</a></span>
     </div>
   </div>
 </footer>
 
-<script src="assets/site.js?v=11"></script>
-<script>
-  /* =========================================================
-     CONTACT FORM — client-side validation only
-     (da collegare a backend / Formspree / etc lato Claude Code)
-     ========================================================= */
-  const form = document.getElementById('contact-form');
-  const status = document.getElementById('form-status');
-  form.addEventListener('submit', (e)=>{
-    e.preventDefault();
-    status.className = 'form-status';
-    status.textContent = '';
-    const f = new FormData(form);
-    const nome = (f.get('nome')||'').trim();
-    const cognome = (f.get('cognome')||'').trim();
-    const email = (f.get('email')||'').trim();
-    const privacy = f.get('privacy');
-
-    if(!nome || !cognome){ status.classList.add('error'); status.textContent='Inserisci nome e cognome.'; return; }
-    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){
-      status.classList.add('error'); status.textContent='Email non valida.'; return;
-    }
-    if(!privacy){ status.classList.add('error'); status.textContent='Devi accettare la Privacy Policy.'; return; }
-
-    // simulate success — replace with actual submit endpoint in Claude Code phase
-    status.classList.add('success');
-    status.textContent = 'Grazie! Ti ricontatteremo entro 24 ore.';
-    form.reset();
-  });
-</script>
+<script src="assets/site.js?v=12"></script>
 </body>
 </html>

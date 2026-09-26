@@ -10,10 +10,11 @@
 <meta property="og:title" content="Valutazione gratuita immobile — Casa 2.0 Tivoli" />
 <meta property="og:description" content="Dati reali del mercato di Tivoli. Risposta entro 24 ore. Senza obblighi." />
 <meta property="og:image" content="https://www.casaduepuntozero.net/assets/tivoli-aerial.jpg" />
-<meta name="theme-color" content="#1A2A3C" />
-<link rel="preload" href="assets/fonts/Zodiak-Variable.woff2" as="font" type="font/woff2" crossorigin>
+<meta name="theme-color" content="#182A4E" />
+<link rel="preload" href="assets/fonts/Newsreader-Variable.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/Satoshi-Variable.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="assets/site.css?v=23">
+<link rel="stylesheet" href="assets/site.css?v=24">
+<script>document.documentElement.classList.add('js')</script>
 
 <style>
   body{ background: var(--paper); }
@@ -31,14 +32,15 @@
   }
   .valuta-hero h1{
     font-size: clamp(40px, 5vw, 72px);
-    color: var(--navy); font-weight: 600; letter-spacing:-0.025em; line-height: 1.05;
+    color: var(--navy); font-weight: 600; letter-spacing: -0.012em; line-height: 1.05;
   }
   .valuta-hero h1 em{ color: var(--primary); }
   .valuta-hero .lead{
     margin: 22px auto 0; max-width: 56ch; color: var(--text-muted);
     font-size: 17px; line-height: 1.7; font-weight: 300;
   }
-  .valuta-wrap{ max-width: 920px; margin: 40px auto 100px; padding: 0 24px; display:grid; grid-template-columns: 1fr 1.2fr; gap: 48px; align-items: start; }
+  .valuta-wrap{ max-width: 920px; margin: 40px auto 100px; padding: 0 24px; display:grid; grid-template-columns: minmax(0,1fr) minmax(0,1.2fr); gap: 48px; align-items: start; }
+  .valuta-wrap > *{ min-width: 0; }
   .valuta-side{ position: sticky; top: 110px; }
   .valuta-side h3{ font-family: var(--font-display); font-weight: 500; font-size: 22px; color: var(--navy); margin: 0 0 16px; }
   .valuta-side ul{ list-style:none; padding:0; margin:0; display:grid; gap:14px; }
@@ -51,7 +53,7 @@
   .valuta-card{
     background:#fff; border-radius: 4px;
     padding: 40px 40px 36px;
-    box-shadow: 0 20px 50px rgba(26,42,60,0.08), 0 0 0 1px var(--hairline);
+    box-shadow: 0 20px 50px rgba(24,42,78,0.08), 0 0 0 1px var(--hairline);
   }
   .valuta-card h2{ font-family: var(--font-display); font-size: 26px; font-weight: 500; color: var(--navy); margin: 0 0 4px; letter-spacing: -0.01em; }
   .valuta-card .sub{ font-size: 13px; color: var(--text-muted); margin-bottom: 26px; }
@@ -62,15 +64,16 @@
   .field label{ font-size:12px; letter-spacing:0.04em; color: var(--text-dark); font-weight:500; }
   .field input, .field select, .field textarea{
     border:1px solid var(--hairline); border-radius: 4px;
-    padding: 12px 14px; font-family: var(--font-body); font-size: 14px; color: var(--text-dark);
+    padding: 12px 14px; font-family: var(--font-body); font-size: 16px; color: var(--text-dark);
     background:#fff; transition: border-color .2s ease, box-shadow .2s ease;
   }
   .field input:focus, .field select:focus, .field textarea:focus{
     outline:none; border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(50,98,115,0.12);
+    box-shadow: 0 0 0 3px rgba(10,108,152,0.12);
   }
   .field textarea{ min-height: 90px; resize: vertical; font-family: inherit; }
-  .grid-2{ display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
+  .field input:not([type="radio"]):not([type="checkbox"]), .field select, .field textarea{ width: 100%; min-width: 0; }
+  .grid-2{ display:grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap:16px; }
   .pill-group{ display:flex; gap:8px; flex-wrap: wrap; }
   .pill-group input[type="radio"]{ position: absolute; opacity:0; pointer-events:none; }
   .pill-group label{
@@ -90,9 +93,9 @@
   .form-status.error{ color: var(--red-accent); }
   .form-status.success{ color: #1F7A4D; }
   @media (max-width: 760px){
-    .valuta-wrap{ grid-template-columns: 1fr; gap: 32px; }
+    .valuta-wrap{ grid-template-columns: minmax(0,1fr); gap: 32px; }
     .valuta-side{ position:static; }
-    .grid-2{ grid-template-columns: 1fr; }
+    .grid-2{ grid-template-columns: minmax(0,1fr); }
     .valuta-card{ padding: 28px 22px; }
   }
 </style>
@@ -200,7 +203,7 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
         </button>
         <a href="https://wa.me/393388449030" target="_blank" rel="noopener" class="btn btn--whatsapp">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91C21.96 6.45 17.5 2 12.04 2z"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91C21.96 6.45 17.5 2 12.04 2zm5.8 14.06c-.24.68-1.42 1.31-1.96 1.36-.5.05-.96.23-3.23-.67-2.72-1.07-4.45-3.84-4.58-4.02-.13-.18-1.1-1.46-1.1-2.79s.7-1.98.94-2.25c.24-.27.53-.34.7-.34h.5c.16.01.38-.06.59.45.24.58.81 2 .88 2.15.07.14.12.31.02.49-.09.18-.14.29-.27.45-.14.16-.29.36-.41.48-.14.14-.28.29-.12.56.16.27.71 1.17 1.53 1.9 1.05.94 1.94 1.23 2.21 1.37.27.14.43.12.59-.07.16-.18.68-.79.86-1.06.18-.27.36-.23.61-.14.25.09 1.6.75 1.87.89.27.14.45.2.52.31.07.12.07.66-.17 1.34z"/></svg>
           WhatsApp
         </a>
       </div>
@@ -213,13 +216,13 @@
 <footer class="site-footer">
   <div class="container">
     <div class="footer__bottom" style="border-top:1px solid rgba(255,255,255,0.08); padding-top:32px;">
-      <span>© 2025 Casa 2.0 — Gael Ceravolo · Tivoli (RM)</span>
+      <span>© <span data-year>2026</span> Casa 2.0 — Gael Ceravolo · Tivoli (RM)</span>
       <span><a href="privacy.html">Privacy Policy</a> · <a href="cookie.html">Cookie Policy</a> · <a href="index.html">Home</a></span>
     </div>
   </div>
 </footer>
 
-<script src="assets/site.js?v=11"></script>
+<script src="assets/site.js?v=12"></script>
 <script>
   /* Form valutazione — riusa la stessa logica web3forms/mailto del form contatti */
   (function(){
