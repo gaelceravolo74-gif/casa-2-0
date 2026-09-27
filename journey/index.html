@@ -69,21 +69,44 @@ const hash = (a, b = 0) => {
 
 // ---------------------------------------------------------------- colour
 // Casa 2.0 design tokens (site.css / page styles)
-const COL = {
-  navy:     [26, 42, 60],     // --navy #1A2A3C
-  deep:     [15, 27, 39],     // #0F1B27 founder card
-  ink:      [14, 17, 22],     // --ink #0E1116
-  primary:  [50, 98, 115],    // --primary #326273
-  primaryL: [74, 143, 163],   // --primary-light #4A8FA3
-  steel:    [184, 198, 219],  // #B8C6DB name gradient
-  paper:    [250, 247, 244],  // --paper #FAF7F4
-  beige:    [233, 222, 216],  // #E9DED8 section--beige
-  beigeL:   [245, 236, 232],  // #F5ECE8
-  red:      [192, 57, 43],    // --red-accent #C0392B
-  coral:    [255, 126, 107],  // #FF7E6B emotion gradient
-  coralD:   [232, 103, 79],   // --accent-warm #E8674F
+const COL = {                 // brand tokens: assets/site.css (live palette, aligned to the logo)
+  navy:     [44, 79, 102],    // --navy #2C4F66 (blu-ardesia)
+  deep:     [35, 63, 82],     // --ink #233F52
+  ink:      [24, 42, 56],     // shadow tone of --ink
+  primary:  [43, 120, 156],   // --primary #2B789C
+  primaryL: [90, 175, 211],   // --primary-light #5AAFD3
+  steel:    [158, 211, 234],  // --accent-on-dark #9ED3EA
+  paper:    [247, 241, 235],  // --paper #F7F1EB
+  beige:    [239, 228, 218],  // --beige #EFE4DA
+  beigeL:   [234, 244, 249],  // --sky #EAF4F9
+  red:      [8, 140, 191],    // logo roof cerulean #088CBF (the site's accent; red was retired)
+  coral:    [236, 206, 184],  // warm beige light (sunrise)
+  coralD:   [224, 186, 160],
+  cobalt:   [36, 83, 139],    // the office feature wall (casa-ufficio.jpg)
   white:    [255, 255, 255],
 };
+// the Casa 2.0 mark (assets/logo.png, 276 × 110 units): thick left pitch, thin right pitch,
+// chimney, eave line running right, "CASA 2.0" in navy under the roof
+const LOGO = {
+  wedge: [[0, 68], [110, 2], [136, 20], [128, 27], [0, 105], [0, 68]],
+  pitch: [[122, 14], [226, 77], [276, 77]],
+  chimney: [[180, 50], [180, 16], [200, 16], [200, 62]],
+};
+function drawLogo(c, ox, oy, s, o = {}) {
+  const P = q => [ox + q[0] * s, oy + q[1] * s], a = o.a === undefined ? 1 : o.a;
+  const roof = o.roof || COL.red, ink = o.ink || COL.navy, pw = o.wedge === undefined ? 1 : o.wedge, pl = o.line === undefined ? 1 : o.line;
+  if (pw > 0) {
+    c.save(); c.beginPath(); c.rect(ox - 2, oy - 2 * s, (138 * pw) * s, 112 * s); c.clip();
+    fillP(c, LOGO.wedge.map(P), roof, a); c.restore();
+  }
+  c.lineCap = 'butt'; c.lineJoin = 'miter';
+  if (pl > 0) {
+    strokeP(c, LOGO.pitch.map(P), roof, a, 5.5 * s, 0, pl);
+    fillP(c, LOGO.chimney.map(P).map((q, i) => [q[0], lerp(oy + 50 * s + (i === 3 ? 12 * s : 0), q[1], clamp(pl * 1.6 - 0.3))]), roof, a);
+  }
+  if (o.text !== false) drawText(c, 'CASA 2.0', ox + 50 * s, oy + 104 * s, 27 * s, { track: 1 * s, lw: 3 * s, col: ink, a, prog: o.prog, each: o.each });
+  c.lineCap = 'round'; c.lineJoin = 'round';
+}
 const mix = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 const rgba = (c, a = 1) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a <= 0 ? 0 : a >= 1 ? 1 : a.toFixed(3)})`;
 
@@ -652,7 +675,10 @@ function drawFacade(c, t) {
     c.save(); openingPath(c); c.clip();
     const g = c.createRadialGradient(0, 470, 10, 0, 430, 260);
     g.addColorStop(0, rgba(mix(COL.beigeL, COL.coral, 0.25), 0.42 * glow)); g.addColorStop(0.6, rgba(COL.coral, 0.12 * glow)); g.addColorStop(1, rgba(COL.coral, 0));
-    c.fillStyle = g; c.fillRect(-100, 240, 200, 330); c.restore();
+    c.fillStyle = g; c.fillRect(-100, 240, 200, 330);
+    c.fillStyle = rgba(COL.cobalt, 0.85 * glow); c.fillRect(-58, 360, 116, 150);
+    drawLogo(c, -44, 402, 0.32, { roof: COL.paper, ink: COL.paper, a: 0.9 * glow });
+    c.restore();
     for (const cx of [-265, 265]) {
       const g2 = c.createRadialGradient(cx, 420, 5, cx, 400, 150);
       g2.addColorStop(0, rgba(COL.beigeL, 0.16 * glow * fa)); g2.addColorStop(1, rgba(COL.beigeL, 0));
@@ -678,9 +704,7 @@ function drawFacade(c, t) {
   c.setLineDash([]);
   // sign: CASA 2.0 (the "2.0" in the brand red), plaque 45
   const sp = ep(1.2, 2.1, t, E.inOutSine);
-  const tw = textWidth('CASA 2.0', 26, 10), x0 = -tw / 2;
-  drawText(c, 'CASA ', x0, 205, 26, { track: 10, lw: 3 * wmul, col: COL.paper, a: 0.95 * fa, prog: clamp(sp * 1.6) });
-  drawText(c, '2.0', x0 + textWidth('CASA ', 26, 10) + 10, 205, 26, { track: 10, lw: 3 * wmul, col: COL.red, a: fa, prog: clamp(sp * 1.6 - 0.6) });
+  drawLogo(c, -69, 169, 0.46, { roof: COL.red, ink: COL.paper, a: fa, wedge: clamp(sp * 1.5), line: clamp(sp * 1.5 - 0.3), prog: clamp(sp * 1.4 - 0.4) });
   drawText(c, '45', 131, 311, 13, { align: 'center', track: 2, lw: 1.6 * wmul, col: COL.paper, a: 0.9 * fa, prog: ep(1.8, 2.3, t) });
   drawText(c, 'VIA COLSERENO 45', 0, 686, 15, { align: 'center', track: 7, lw: 1.5 * wmul, col: COL.steel, a: 0.8 * fa * (1 - ss(2.4, 3.0, t)), prog: ep(1.7, 2.4, t, E.inOutSine) });
   // sliding glass doors part as we approach
@@ -736,10 +760,7 @@ function contractPose(t) {                           // desk position of the con
 function drawPaperHalf(c, t, half, inkA) {           // content of the mandate, local coords (560 × 792)
   const navy = COL.navy;
   if (half < 0) {
-    c.strokeStyle = rgba(navy, inkA); c.lineWidth = 1.6; c.lineJoin = 'round';
-    c.beginPath(); c.moveTo(-232, -330); c.lineTo(-232, -346); c.lineTo(-221, -356); c.lineTo(-210, -346); c.lineTo(-210, -330); c.closePath(); c.stroke();
-    drawText(c, 'CASA ', -200, -331, 13, { track: 3, lw: 1.7, col: navy, a: inkA });
-    drawText(c, '2.0', -200 + textWidth('CASA ', 13, 3) + 3, -331, 13, { track: 3, lw: 1.7, col: COL.red, a: inkA });
+    drawLogo(c, -232, -372, 0.36, { a: inkA });
     c.lineCap = 'round'; c.lineWidth = 3; c.strokeStyle = rgba(navy, 0.18 * inkA);
     c.beginPath(); c.moveTo(120, -344); c.lineTo(230, -344); c.moveTo(160, -330); c.lineTo(230, -330); c.stroke();
     drawText(c, 'MANDATO', 0, -250, 36, { align: 'center', track: 12, lw: 3.2, col: navy, a: inkA });
@@ -832,8 +853,7 @@ function drawDesk(c, t) {
   // business card
   c.save(); c.translate(-330, 560); c.rotate(-0.14);
   c.fillStyle = rgba(COL.paper, 0.95 * a); c.fillRect(-90, -52, 180, 104);
-  drawText(c, 'CASA ', -70, 4, 16, { track: 4, lw: 2, col: COL.navy, a });
-  drawText(c, '2.0', -70 + textWidth('CASA ', 16, 4) + 4, 4, 16, { track: 4, lw: 2, col: COL.red, a });
+  drawLogo(c, -70, -38, 0.42, { a });
   c.fillStyle = rgba(COL.navy, 0.25 * a); c.fillRect(-70, 22, 90, 3); c.fillRect(-70, 32, 60, 3);
   c.restore();
   c.restore();
@@ -1343,64 +1363,40 @@ function dissolve(c, p, t, col, a, lw, seed) {
 // =====================================================================
 //  V · THE NEW HOME — the bow's little house grows into the home
 // =====================================================================
-const HOME = {
-  outline: [[370, 950], [370, 720], [540, 540], [710, 720], [710, 950], [370, 950]],
-  oculus: [540, 652], door: { x: 540, top: 866, r: 34, base: 950 },
-};
-const homeBob = t => -6 * Math.sin((t - T.dis1) * 1.6) * ss(T.dis1, T.dis1 + 1.2, t);
+const LS = 2.3, LOX = CX - 138 * LS, LOY = 660;                 // the mark on the end card
+const homeBob = t => -5 * Math.sin((t - T.dis1) * 1.5) * ss(T.dis1, T.dis1 + 1.2, t);
 function drawHome(c, t) {
   if (t < T.dis0) return;
   c.setTransform(K, 0, 0, K, 0, 0);
-  const u = E.inOutCubic(inv(T.dis0 + 0.1, T.dis1, t)), B = bowCenter(Math.min(t, T.dis0)), by = homeBob(t);
+  const u = E.inOutCubic(inv(T.dis0 + 0.1, T.dis1 - 0.2, t)), B = bowCenter(Math.min(t, T.dis0)), by = homeBob(t);
   c.lineCap = 'round'; c.lineJoin = 'round';
-  // shadow on the ground, breathing with the float
-  const sa = ss(T.dis1 - 0.6, T.dis1 + 0.4, t);
-  if (sa > 0) {
-    c.fillStyle = rgba(COL.navy, 0.1 * sa); c.beginPath(); c.ellipse(540, 1000, 190 + by * 1.5, 14, 0, 0, TAU); c.fill();
+  // the little house in the key's bow grows into the roof of the Casa 2.0 mark
+  const small = resample(KEY.house.map(q => [B[0] + q[0], B[1] + q[1]]), 90);
+  const wedge = resample(LOGO.wedge.map(q => [LOX + q[0] * LS, LOY + q[1] * LS + by]), 90);
+  const out = lerpPath(small, wedge, u);
+  const bowA = 1 - ss(T.dis0, T.dis0 + 0.5, t);          // the bow disc fades as the roof leaves it
+  if (bowA > 0.01) { c.fillStyle = rgba(COL.paper, bowA); c.beginPath(); c.arc(B[0], B[1], 84 * (1 - 0.4 * u), 0, TAU); c.fill(); c.strokeStyle = rgba(COL.red, bowA); c.lineWidth = 5; c.stroke(); }
+  fillP(c, out, COL.red, ss(0.35, 0.95, u));
+  strokeP(c, out, COL.red, 1, lerp(5, 1, u));
+  // impact: the mark locks in, light ring
+  const hit = inv(T.dis1, T.dis1 + 0.9, t);
+  if (hit > 0 && hit < 1) {
+    c.strokeStyle = rgba(COL.red, 0.45 * (1 - hit)); c.lineWidth = 3 * (1 - hit) + 1;
+    c.beginPath(); c.ellipse(CX, LOY + 55 * LS + by, 330 + 260 * E.outCubic(hit), 140 + 110 * E.outCubic(hit), 0, 0, TAU); c.stroke();
   }
-  // outline: small house (bow) → home
-  const small = KEY.house.map(q => [B[0] + q[0], B[1] + q[1]]);
-  const out = lerpPath(small, HOME.outline, u).map(q => [q[0], q[1] + by * u]);
-  const fa = ss(T.dis0 + 0.6, T.dis1, t);
-  if (fa > 0) fillP(c, out, COL.paper, 0.92 * fa);
-  // bow ring → oculus
-  const oc = [lerp(B[0], HOME.oculus[0], u), lerp(B[1], HOME.oculus[1], u) + by * u], R = lerp(84, 26, u);
-  if (u < 0.2) { c.fillStyle = rgba(COL.ink, 0.22 * (1 - u / 0.2)); c.beginPath(); c.arc(oc[0] + 4, oc[1] + 8, R, 0, TAU); c.fill(); }
-  c.fillStyle = rgba(COL.paper); c.beginPath(); c.arc(oc[0], oc[1], R, 0, TAU); c.fill();
-  c.strokeStyle = rgba(COL.red); c.lineWidth = lerp(5, 4, u); c.stroke();
-  strokeP(c, out, mix(COL.red, COL.navy, ss(0.3, 0.9, u)), 1, lerp(5, 6, u));
-  const ma = ss(T.dis1 - 0.3, T.dis1 + 0.3, t);
-  if (ma > 0) {
-    c.strokeStyle = rgba(COL.navy, 0.8 * ma); c.lineWidth = 2; c.beginPath();
-    c.moveTo(oc[0] - R + 4, oc[1]); c.lineTo(oc[0] + R - 4, oc[1]); c.moveTo(oc[0], oc[1] - R + 4); c.lineTo(oc[0], oc[1] + R - 4); c.stroke();
-  }
-  // details draw in: arched door, chimney, eaves, ground line
-  const dp = ep(T.dis1 - 0.4, T.dis1 + 0.5, t);
-  if (dp > 0) {
-    const d = HOME.door, yb = by;
-    const door = G.join(G.line(d.x - d.r, d.base + yb, d.x - d.r, d.top + yb), G.arc(d.x, d.top + yb, d.r, Math.PI, TAU, 24), G.line(d.x + d.r, d.top + yb, d.x + d.r, d.base + yb));
-    c.fillStyle = rgba(COL.primary, 0.9 * dp); c.beginPath(); c.moveTo(door[0][0], door[0][1]); for (const q of door) c.lineTo(q[0], q[1]); c.closePath(); c.fill();
-    strokeP(c, door, COL.navy, 1, 4, 0, dp);
-    c.fillStyle = rgba(COL.paper, dp); c.beginPath(); c.arc(d.x + 17, 912 + yb, 3.8, 0, TAU); c.fill();
-    strokeP(c, G.poly(630, 635 + yb, 630, 590 + yb, 664, 590 + yb, 664, 671 + yb), COL.navy, 1, 5, 0, dp);
-    strokeP(c, G.line(370, 720 + yb, 342, 748 + yb), COL.navy, 1, 5, 0, dp);
-    strokeP(c, G.line(710, 720 + yb, 738, 748 + yb), COL.navy, 1, 5, 0, dp);
-    strokeP(c, G.line(540, 950 + yb, 316, 950 + yb), COL.navy, 0.9, 3, 0, dp);
-    strokeP(c, G.line(540, 950 + yb, 764, 950 + yb), COL.navy, 0.9, 3, 0, dp);
-  }
-  // type — fades in with a vertical glide
-  const glide = (t0, step, dur) => (i) => { const g = E.outCubic(inv(t0 + step * i, t0 + step * i + dur, t)); return { dy: 38 * (1 - g), a: g }; };
-  const g1 = glide(T.type0, 0.06, 1.0);
-  drawText(c, 'CASA 2.0', CX, 1172, 88, { align: 'center', track: 26, lw: 7.5, col: COL.navy,
-    each: (i) => Object.assign(g1(i), i >= 5 ? { col: COL.red } : {}) });
-  drawText(c, 'La tua casa, il nostro impegno.', CX, 1272, 40, { align: 'center', track: 1.5, lw: 3, col: COL.navy, a: 0.85, each: glide(T.type0 + 0.7, 0.018, 1.0) });
-  const ma2 = ss(35.3, 36.1, t), tw = textWidth('TIVOLI · DAL 1994', 20, 8);
+  const pl = ep(T.dis1 - 0.35, T.dis1 + 0.35, t, E.outCubic);
+  const g = (t0, step, dur) => (i) => { const q = E.outCubic(inv(t0 + step * i, t0 + step * i + dur, t)); return { dy: 30 * (1 - q), a: q }; };
+  if (pl > 0) drawLogo(c, LOX, LOY + by, LS, { wedge: 0, line: pl, each: g(T.type0 - 0.1, 0.07, 0.9) });
+  const tg = g(T.type0 + 0.9, 0.016, 1.0);
+  drawText(c, 'La tua casa, il nostro impegno.', CX, 1062, 40, { align: 'center', track: 1.5, lw: 3, col: COL.navy, a: 0.9, each: tg });
+  const ma2 = ss(35.2, 36.0, t);
   if (ma2 > 0) {
-    const y = 1366 + 14 * (1 - ma2);
-    drawText(c, 'TIVOLI · DAL 1994', CX, y, 20, { align: 'center', track: 8, lw: 2.2, col: COL.red, a: ma2 });
-    c.strokeStyle = rgba(COL.red, 0.55 * ma2); c.lineWidth = 1.3; c.beginPath();
+    const y = 1160 + 14 * (1 - ma2), s2 = 'AGENZIA IMMOBILIARE · TIVOLI', tw = textWidth(s2, 19, 7);
+    drawText(c, s2, CX, y, 19, { align: 'center', track: 7, lw: 2.2, col: COL.primary, a: ma2 });
+    c.strokeStyle = rgba(COL.primary, 0.55 * ma2); c.lineWidth = 1.3; c.beginPath();
     c.moveTo(CX - tw / 2 - 18, y - 8); c.lineTo(CX - tw / 2 - 18 - 36 * ma2, y - 8);
     c.moveTo(CX + tw / 2 + 18, y - 8); c.lineTo(CX + tw / 2 + 18 + 36 * ma2, y - 8); c.stroke();
+    drawText(c, 'DAL 1994', CX, y + 52, 15, { align: 'center', track: 8, lw: 1.8, col: COL.navy, a: 0.7 * ma2 });
   }
 }
 
@@ -1549,6 +1545,31 @@ const Sound = (() => {
     g.gain.setValueAtTime(0.0001, when); g.gain.linearRampToValueAtTime(0.55 * vel, when + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, when + 0.6);
     o.connect(g); send(g, 1, 0.2); o.start(when); o.stop(when + 0.7);
   }
+  function hat(when, vel = 0.2) {                      // shaker tick
+    const n = noiseSrc(when, 0.05), hp = filt('highpass', 7000, 0.7), g = ac.createGain();
+    g.gain.setValueAtTime(0.25 * vel, when); g.gain.exponentialRampToValueAtTime(0.0001, when + 0.035);
+    n.connect(hp); hp.connect(g); send(pan(g, (Math.random() - 0.5) * 0.4), 1, 0.1);
+  }
+  function riser(when, dur) {                          // filtered air + rising tone, cut dead for the breath
+    const n = noiseSrc(when, dur), bp = filt('bandpass', 400, 1.1), g = ac.createGain();
+    bp.frequency.setValueAtTime(400, when); bp.frequency.exponentialRampToValueAtTime(7000, when + dur);
+    g.gain.setValueAtTime(0.0001, when); g.gain.exponentialRampToValueAtTime(0.3, when + dur - 0.02); g.gain.linearRampToValueAtTime(0.0001, when + dur + 0.03);
+    n.connect(bp); bp.connect(g); send(g, 1, 0.35);
+    const o = ac.createOscillator(), og = ac.createGain(); o.type = 'triangle';
+    o.frequency.setValueAtTime(mtof(57), when); o.frequency.exponentialRampToValueAtTime(mtof(81), when + dur);
+    og.gain.setValueAtTime(0.0001, when); og.gain.exponentialRampToValueAtTime(0.05, when + dur - 0.02); og.gain.linearRampToValueAtTime(0.0001, when + dur + 0.03);
+    o.connect(og); send(og, 1, 0.4); o.start(when); o.stop(when + dur + 0.1);
+  }
+  function boom(when, vel = 1) {                       // the reveal: deep round impact + air
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.frequency.setValueAtTime(95, when); o.frequency.exponentialRampToValueAtTime(36, when + 0.7);
+    g.gain.setValueAtTime(0.0001, when); g.gain.linearRampToValueAtTime(0.9 * vel, when + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, when + 1.6);
+    o.connect(g); send(g, 1, 0.25); o.start(when); o.stop(when + 1.7);
+    const n = noiseSrc(when, 1.2), lp = filt('lowpass', 900, 0.6), ng = ac.createGain();
+    lp.frequency.setValueAtTime(2400, when); lp.frequency.exponentialRampToValueAtTime(200, when + 1.1);
+    ng.gain.setValueAtTime(0.35 * vel, when); ng.gain.exponentialRampToValueAtTime(0.0001, when + 1.1);
+    n.connect(lp); lp.connect(ng); send(ng, 1, 0.6);
+  }
   function pad(when, notes, dur, vel = 0.3) {          // warm, slow air for the sunrise
     const g = ac.createGain(), lp = filt('lowpass', 1500, 0.4), a = 0.022 * vel;
     g.gain.setValueAtTime(0.0001, when); g.gain.linearRampToValueAtTime(a, when + Math.min(1.4, dur * 0.5));
@@ -1572,7 +1593,7 @@ const Sound = (() => {
     [[0.1, 'Dmaj9', 0.5, 3.9], [4.0, 'Bm11', 0.48, 3.0], [7.0, 'Gmaj9', 0.48, 4.0], [11.0, 'Em9', 0.45, 2.0], [13.0, 'A9sus', 0.45, 1.2],
      [14.2, 'Dmaj9', 0.62, 2.8], [17.0, 'Bm9', 0.42, 1.0], [18.0, 'Gmaj9', 0.52, 2.5], [20.5, 'Em9', 0.44, 1.0], [21.5, 'A13', 0.44, 1.0],
      [22.5, 'Dmaj9', 0.6, 1.5], [24.0, 'Bm11', 0.45, 2.0], [26.0, 'Gmaj9', 0.5, 1.8], [27.8, 'DF', 0.56, 2.2], [30.0, 'Em9', 0.44, 1.0],
-     [31.0, 'A13', 0.46, 1.0], [32.0, 'Dmaj9', 0.5, 2.0], [34.0, 'Gmaj9', 0.45, 2.0], [36.0, 'D69', 0.55, 3.2]].forEach(a => harm(...a));
+     [31.0, 'A9sus', 0.5, 1.3], [32.3, 'A13', 0.56, 1.1], [33.7, 'Dmaj9', 0.85, 2.3], [36.0, 'D69', 0.55, 3.2]].forEach(a => harm(...a));
     at(36.0, w => bass(w, 50, 3.2, 0.35));
     // I · facade drawing, door, desk, mandate, signature
     [74, 78, 81, 83, 86, 83, 81, 78].forEach((m, i) => at(0.3 + i * 0.25, w => mar(w, m, 0.3 + 0.03 * (i % 3), (i % 2 ? 0.35 : -0.35))));
@@ -1619,10 +1640,19 @@ const Sound = (() => {
     // V · dissolve into the home, the name, the promise
     at(T.dis0, w => whoosh(w, 1.7, 0.22, 500, 3200));
     [74, 76, 78, 81, 83, 86, 88, 90, 93, 95, 98].forEach((m, i) => at(T.dis0 + 0.05 + i * 0.11, w => mar(w, m, 0.16 + i * 0.012, Math.sin(i) * 0.5)));
-    at(T.dis1, w => { wood(w, 460, 0.35, 0, 0.08); mar(w + 0.01, 74, 0.35); mar(w + 0.04, 81, 0.3); });
-    at(32.0, w => pad(w, [66, 69, 73, 76], 2.1, 1)); at(34.0, w => pad(w, [67, 71, 74, 78], 2.1, 1)); at(36.0, w => pad(w, [66, 69, 73, 76, 81], 4, 1.1));
-    [[T.type0 + 0.05, 81], [T.type0 + 0.35, 78], [T.type0 + 0.65, 74]].forEach(([tt, m]) => at(tt, w => mar(w, m, 0.22)));
-    at(35.35, w => wood(w, 2400, 0.12, 0));
+    // ---- the escalation: pulse → ostinato → riser → breath → impact on the logo ----
+    const B = 0.625;                                   // 96 BPM, bar-locked to the reveal at T.dis1
+    for (let tt = T.dis1 - 9 * B; tt < T.dis1 - 0.3; tt += B) { const k = inv(28, 33.4, tt); at(tt, w => thump(w, 0.25 + 0.5 * k)); }
+    for (let tt = T.dis1 - 7 * B; tt < T.dis1 - 0.3; tt += B / 2) { const k = inv(29.3, 33.4, tt); at(tt, w => hat(w, 0.12 + 0.25 * k)); }
+    for (let tt = T.dis1 - 4 * B; tt < T.dis1 - 0.3; tt += B / 4) at(tt, w => hat(w, 0.2));
+    [74, 69, 78, 69].forEach((m, i) => { for (let r = 0; r < 3; r++) { const tt = T.dis1 - 6 * B + (r * 4 + i) * B / 2; if (tt < T.dis1 - 0.3) at(tt, w => mar(w, m + (r === 2 ? 12 : 0), 0.22 + 0.08 * r, i % 2 ? 0.3 : -0.3)); } });
+    at(T.dis1 - 4 * B, w => bass(w, 33, 4 * B - 0.3, 0.9));
+    at(T.dis1 - 4 * B, w => riser(w, 4 * B - 0.3));
+    at(T.dis1, w => { boom(w, 1); bass(w, 38, 2.4, 1); wood(w, 420, 0.5, 0, 0.1); epNote(w + 0.02, 86, 0.35, 2, -0.2); epNote(w + 0.05, 90, 0.3, 2, 0.2); epNote(w + 0.08, 93, 0.25, 2, 0); });
+    at(T.dis1, w => chord(w, [50, 57, 62, 66, 69, 74, 78], 0.7, 2.2, 0.012));
+    [[0, 74], [0.22, 78], [0.44, 81], [0.8, 86]].forEach(([d, m]) => at(T.type0 + 0.05 + d, w => mar(w, m, 0.42, 0)));
+    at(31.0, w => pad(w, [64, 69, 71, 74], 2.4, 1.1)); at(33.7, w => pad(w, [62, 66, 69, 73, 78], 2.3, 1.4)); at(36.0, w => pad(w, [66, 69, 73, 76, 81], 4, 1.1));
+        at(35.35, w => wood(w, 2400, 0.12, 0));
     ev.sort((a, b) => a.t - b.t);
     return ev;
   }
