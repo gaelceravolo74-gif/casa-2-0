@@ -55,14 +55,17 @@
    film loops cleanly on the feed. Captions stay clear of TikTok/Reels UI.
 
    SOUND — the foley tells the story and a cinematic underscore holds the
-   tension under it, on the same cue table T as the picture (100 BPM). Where a
-   sound effect speaks (the ticking reels and months, the pumps and the rubber,
-   the price cuts, the data points, the props, the stamps, the notifications,
-   the keys, the shop bell) the strings hold a quiet bed and duck under it;
-   the orchestra leads only at the turning points: the hook, "Noi no.", SOLD,
-   the view of Tivoli, GRATIS and the logo, where the four-note sonic logo
-   plays once. B minor for the problem, D major from "Noi no."; tension grows
-   by swells and short silences, not by extra notes.
+   tension under it, on the same cue table T as the picture (100 BPM). The
+   underscore is one continuous performance: a string section plays from the
+   first frame to the last, legato from chord to chord, and nothing ducks,
+   gates or mutes it. Where a sound effect speaks (the ticking reels and
+   months, the pumps and the rubber, the price cuts, the data points, the
+   props, the stamps, the notifications, the keys, the shop bell, the tap) the
+   section plays softer, darker or with fewer desks, and the pulse rests on
+   the effect. The orchestra leads only at the turning points: the hook, "Noi
+   no.", SOLD, the view of Tivoli, GRATIS and the logo, where the four-note
+   sonic logo plays once. It reaches each one with a crescendo and settles as
+   the hit decays. B minor for the problem, D major from "Noi no.".
 
    EXPORT — "Scarica il video" on the poster records in real time. For the
    frame-exact 60 fps MP4 (H.264 + AAC) run node masterpiece/export-mp4.js:
@@ -3274,12 +3277,17 @@ function render(t) {
 // ================================================================== audio
 // The sound is synthesised here on the cue table T that drives the picture, so
 // every accent lands on a cut or a word. The foley tells the story; a cinematic
-// underscore of strings, timpani and piano holds the tension under it and takes
-// the lead only at the turning points. B minor for the problem, D major from
-// "Noi no." to the logo, where the four-note sonic logo plays once.
-// Graph: piano / strings / percussion → the level ride → the duck under the
-// foley → the stop-down gate → master; impacts and foley go straight to the
-// master: 30 Hz high-pass → presence and air → glue compressor → soft clipper.
+// underscore holds the tension under it and takes the lead only at the turning
+// points. B minor for the problem, D major from "Noi no." to the logo, where the
+// four-note sonic logo plays once.
+// The underscore is one continuous performance. A string section plays from the
+// first frame to the last, and it makes room for the foley the way an orchestra
+// does: it plays softer, darker, lower or with fewer desks. Nothing turns it down
+// or mutes it.
+// Graph: the section, strings, piano and percussion → the music bus; the foley
+// beside it, the impacts through their own compressor → master: 30 Hz high-pass
+// → presence and air → soft clipper. No compressor sits across the music, so
+// no hit or sound effect pumps it.
 const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
 function makeNoise(ac, sec) {
   const b = ac.createBuffer(1, Math.floor(ac.sampleRate * sec), ac.sampleRate), d = b.getChannelData(0), r = rng(123);
@@ -3309,46 +3317,43 @@ function bus(G, name, dest, level) {
   return g;
 }
 function audioGraph(ac, t0 = 0) {
-  const G = { ac, nr: rng(99), t0, bus: {} };
+  // live: the sources that run the whole film, stopped when playback restarts
+  const G = { ac, nr: rng(99), t0, bus: {}, live: [] };
   // master: 30 Hz high-pass → presence and air (phones live between 300 Hz and 6 kHz) →
-  // glue → a soft clipper, linear to 0.6 with a smooth knee that never passes 0.95
+  // a soft clipper, linear to 0.6 with a smooth knee that never passes 0.95
   G.out = ac.createGain(); G.out.gain.value = 1.07;
   const hp = filt(G, 'highpass', 30, 0.7), pres = filt(G, 'peaking', 3000, 0.6), air = filt(G, 'highshelf', 8000);
   pres.gain.value = 2; air.gain.value = 1.5;
-  const glue = ac.createDynamicsCompressor();
-  glue.threshold.value = -14; glue.knee.value = 10; glue.ratio.value = 2; glue.attack.value = 0.015; glue.release.value = 0.25;
   const clipIn = ac.createGain(), clip = ac.createWaveShaper();
   clipIn.gain.value = 0.5;
   clip.curve = curveOf(u => { const x = 2 * u, a = Math.abs(x); return Math.sign(x) * (a < 0.6 ? a : 0.6 + 0.35 * Math.tanh((a - 0.6) / 0.35)); });
   G.post = ac.createGain(); G.post.gain.value = 0.94;
-  G.out.connect(hp); hp.connect(pres); pres.connect(air); air.connect(glue); glue.connect(clipIn); clipIn.connect(clip); clip.connect(G.post); G.post.connect(ac.destination);
-  // stop-down gate ← the duck under the foley ← the level ride of the film ← the orchestra
-  G.gate = ac.createGain(); G.gate.connect(G.out);
-  G.hush = ac.createGain(); G.hush.connect(G.gate);
-  G.ride = ac.createGain(); G.ride.connect(G.hush);
-  // the fader: a quiet promise, the turning points on top, the office close and intimate
-  [[0, 0.95], [3.6, 0.78], [5.9, 1], [6.0, 0.9], [9.6, 1.05], [12.0, 1], [19.2, 1.06], [24.0, 1.08], [25.2, 1], [28.8, 0.9],
-   [30.3, 0.9], [31.2, 0.95], [31.21, 0.85], [33.45, 1], [33.6, 1.08], [36.0, 1.05]].forEach(([tt, v], i, arr) => {
-    const w = t0 + tt;
-    if (i === 0 || tt - arr[i - 1][0] < 0.05) G.ride.gain.setValueAtTime(v, w);
-    else G.ride.gain.linearRampToValueAtTime(v, w);
-  });
-  G.keys = bus(G, 'keys', G.ride, 0.9);
-  G.strings = bus(G, 'strings', G.ride, 0.95);
-  G.perc = bus(G, 'perc', G.ride, 0.62);
-  G.music = bus(G, 'music', G.ride, 0.7);
-  G.hits = bus(G, 'hits', G.out, 0.7);
-  G.sfx = bus(G, 'sfx', G.out, 1.25);
+  G.out.connect(hp); hp.connect(pres); pres.connect(air); air.connect(clipIn); clipIn.connect(clip); clip.connect(G.post); G.post.connect(ac.destination);
+  // the orchestra's bus: its loudness is what the players play, nothing rides it; the
+  // orchestra and the foley share a fixed gain, and their peaks are left to the clipper
+  G.body = ac.createGain(); G.body.gain.value = 1.2; G.body.connect(G.out);
+  G.mus = ac.createGain(); G.mus.connect(G.body);
+  // the impacts are levelled on their own, so their peaks never pull the music down
+  const hitComp = ac.createDynamicsCompressor();
+  hitComp.threshold.value = -12; hitComp.knee.value = 6; hitComp.ratio.value = 3; hitComp.attack.value = 0.002; hitComp.release.value = 0.15;
+  hitComp.connect(G.out);
+  G.sec = bus(G, 'sec', G.mus, 1);
+  G.keys = bus(G, 'keys', G.mus, 0.9);
+  G.strings = bus(G, 'strings', G.mus, 0.95);
+  G.perc = bus(G, 'perc', G.mus, 0.62);
+  G.music = bus(G, 'music', G.mus, 0.7);
+  G.hits = bus(G, 'hits', hitComp, 0.63);
+  G.sfx = bus(G, 'sfx', G.body, 1.25);
   G.rev = ac.createConvolver(); G.rev.buffer = makeIR(ac, 2.8, 3);
   G.revIn = ac.createGain(); G.revIn.connect(G.rev);
   const revHp = filt(G, 'highpass', 180), revOut = ac.createGain(); revOut.gain.value = 0.6; G.bus.rev = revOut;
-  G.rev.connect(revHp); revHp.connect(revOut); revOut.connect(G.ride);
+  G.rev.connect(revHp); revHp.connect(revOut); revOut.connect(G.mus);
   // stereo ping-pong delay, dotted eighths, as eight feed-forward taps: left,
   // right, -8.9 dB every second repeat. A feedback loop sounds the same, but the
   // browser may run it a render quantum apart, so two exports would not match.
   G.dlyIn = ac.createGain();
   const dlp = filt(G, 'lowpass', 3200); G.dlyIn.connect(dlp);
-  const oL = pan(G, G.ride, -0.75), oR = pan(G, G.ride, 0.75);
+  const oL = pan(G, G.mus, -0.75), oR = pan(G, G.mus, 0.75);
   for (let k = 0; k < 8; k++) {
     const dt = BEAT * 0.75 * (k + 1), d = ac.createDelay(dt + 0.1), g = ac.createGain();
     d.delayTime.value = dt; g.gain.value = 0.26 * Math.pow(0.36, k >> 1);
@@ -3384,17 +3389,112 @@ function send(G, node, rev = 0, dly = 0) {
   if (rev > 0) { const g = G.ac.createGain(); g.gain.value = rev; node.connect(g); g.connect(G.revIn); }
   if (dly > 0) { const g = G.ac.createGain(); g.gain.value = dly; node.connect(g); g.connect(G.dlyIn); }
 }
-// a breath of silence before a turning point: the orchestra and its tails stop, then come back on the hit
-// the orchestra steps back while a sound effect speaks, then returns
-function hush(G, t, depth = 0.5, dur = 0.3) {
-  const g = G.hush.gain;
-  g.setTargetAtTime(1 - depth, Math.max(0, t - 0.03), 0.012);
-  g.setTargetAtTime(1, t + dur, 0.09);
+// keyframes [time, value, shape] → a function of time. The shape is that of the move that
+// ends on the keyframe: 'cos' an S-curve (the default), 'build' slow then fast (into a hit),
+// 'fall' fast then slow (after one), 'lin' straight. With db, values move in decibels, the way
+// a player's loudness moves, and a keyframe at 0 means silence.
+function keyframes(k, db) {
+  return t => {
+    if (t <= k[0][0]) return k[0][1];
+    for (let i = 1; i < k.length; i++) {
+      if (t >= k[i][0]) continue;
+      const [ta, va] = k[i - 1], [tb, vb, sh] = k[i];
+      let u = (t - ta) / (tb - ta);
+      u = sh === 'build' ? u * u : sh === 'fall' ? 1 - (1 - u) * (1 - u) : sh === 'lin' ? u : (1 - Math.cos(Math.PI * u)) / 2;
+      if (!db) return va + (vb - va) * u;
+      const la = Math.log(Math.max(va, 1e-3)), lb = Math.log(Math.max(vb, 1e-3)), v = Math.exp(la + (lb - la) * u);
+      return v < 1.001e-3 ? 0 : v;
+    }
+    return k[k.length - 1][1];
+  };
 }
-function stopDown(G, t, t1) {
-  const g = G.gate.gain;
-  g.setValueAtTime(1, t); g.linearRampToValueAtTime(0, t + 0.03);
-  g.setValueAtTime(0, t1 - 0.003); g.linearRampToValueAtTime(1, t1);
+// ---------------------------------------------------------- the string section
+// The body of the underscore: six desks (basses, celli, violas, second and first violins and a
+// divisi above them) that play from the first frame to the last. The score does not strike
+// notes on them, it moves them the way a conductor shapes a phrase. Each desk goes legato to
+// its next note: slurred on a step, with a new bow on a leap. The section's loudness, colour,
+// tremolo and vibrato follow written curves. A desk rests only with a release, and comes back
+// with an attack.
+const SEC_RATE = 400;                      // curve points per second
+// one desk's part as curves: its pitch in cents from d.ref, and its envelope
+// d.notes: [time, MIDI, attack] starts or moves to a note, [time, null, release] rests
+function deskTracks(d, f0, n) {
+  const ph = [];
+  for (const [t, m, x] of d.notes) {
+    const cur = ph[ph.length - 1], open = cur && cur.t1 === Infinity;
+    if (m === null) { if (open) { cur.t1 = t; cur.r = x || 0.5; } }
+    else if (open) cur.notes.push([t, m]);
+    else ph.push({ t0: t, a: x || 0.3, t1: Infinity, r: 0.5, notes: [[t, m]] });
+  }
+  const cents = new Float32Array(n), env = new Float32Array(n);
+  let pi = 0;
+  for (let i = 0; i < n; i++) {
+    const t = f0 + i / SEC_RATE;
+    while (pi < ph.length - 1 && t >= ph[pi].t1 + ph[pi].r) pi++;
+    const p = ph[pi];
+    let e = 0;
+    if (t >= p.t0) {
+      e = t < p.t0 + p.a ? sm((t - p.t0) / p.a) : 1;
+      if (t >= p.t1) { const u = Math.min(1, (t - p.t1) / p.r); e *= (1 - u) * (1 - u); }
+    }
+    // before a phrase starts, the desk already sits on its first note, so an entry never glides.
+    // A step is slurred (a 60 ms glide, the bow barely eases); a leap takes a new bow: the
+    // pitch moves in 20 ms at the bottom of a short dip, so it is heard as a change, not a slide
+    let m = p.notes[0][1], dip = 0;
+    for (let j = 1; j < p.notes.length; j++) {
+      const [tc, m1] = p.notes[j], m0 = p.notes[j - 1][1], leap = Math.abs(m1 - m0) > 2, g = leap ? 0.02 : 0.06;
+      if (t >= tc - g / 2) m = m0 + (m1 - m0) * sm(Math.min(1, (t - tc + g / 2) / g));
+      const x = (t - tc) / (leap ? 0.03 : 0.035);
+      if (x > -3 && x < 3) dip = Math.max(dip, (leap ? 0.6 : 0.12) * Math.exp(-x * x));
+    }
+    cents[i] = (m - d.ref) * 100; env[i] = e * (1 - dip);
+  }
+  return { cents, env };
+}
+// S: { end, desks, dyn, colour, trem }; dyn in the level units of strings(), colour scales
+// each desk's low-pass, trem is the tremolo depth. Starts at context time w, from the
+// matching film time, so a render may begin anywhere.
+function section(G, w, S) {
+  const ac = G.ac, f0 = Math.max(0, w - G.t0);
+  if (f0 >= S.end) return;
+  const n = Math.ceil((S.end - f0) * SEC_RATE) + 1, span = (n - 1) / SEC_RATE, stop = w + span + 0.05;
+  const grid = fn => { const a = new Float32Array(n); for (let i = 0; i < n; i++) a[i] = fn(f0 + i / SEC_RATE); return a; };
+  const dyn = grid(S.dyn), col = grid(S.colour), trm = grid(S.trem);
+  const src = (type, f) => { const o = ac.createOscillator(); o.type = type; o.frequency.value = f; o.start(w); o.stop(stop); G.live.push(o); return o; };
+  const bows = [src('sine', 11.3), src('sine', 12.4)];     // two tremolo bows, a little apart
+  S.desks.forEach((d, k) => {
+    const tr = deskTracks(d, f0, n), level = new Float32Array(n), cut = new Float32Array(n), tAmt = new Float32Array(n), tBase = new Float32Array(n), vib = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      level[i] = 0.046 * d.bal * dyn[i] * tr.env[i];
+      cut[i] = clamp(d.cut * col[i], 120, 16000);
+      tAmt[i] = trm[i] * d.trem / 2; tBase[i] = 1 - tAmt[i];
+      vib[i] = d.vib[1] * (0.5 + 0.5 * Math.min(1, dyn[i]));  // wider vibrato as they play out
+    }
+    const pitch = ac.createConstantSource(); pitch.start(w); pitch.stop(stop); G.live.push(pitch);
+    pitch.offset.setValueCurveAtTime(tr.cents, w, span);
+    const vo = src('sine', d.vib[0]), vd = ac.createGain(); vo.connect(vd); vd.gain.setValueCurveAtTime(vib, w, span);
+    const sum = ac.createGain(), lp = filt(G, 'lowpass', d.cut, 0.4), hp = filt(G, 'highpass', d.hp, 0.5), lv = ac.createGain(), tg = ac.createGain(), ta = ac.createGain();
+    // one player carries the note; two more, a few cents off, add only its upper harmonics.
+    // Detuned tones held for seconds beat against each other, and on a fundamental that
+    // beat is a slow swell and fade, so the chorus starts at the third harmonic.
+    const core = ac.createGain(), side = ac.createGain(), shp = filt(G, 'highpass', 200, 0.6), hz = new Float32Array(n);
+    for (let i = 0; i < n; i++) hz[i] = Math.min(16000, 2.5 * mtof(d.ref + tr.cents[i] / 100));
+    shp.frequency.setValueCurveAtTime(hz, w, span);
+    core.gain.value = 1.6; core.connect(sum); side.gain.value = 0.8; side.connect(shp); shp.connect(sum);
+    [[0, 0], [-7, -1], [7, 1]].forEach(([det, p], j) => {
+      const o = src('sawtooth', mtof(d.ref)); o.detune.value = det; pitch.connect(o.detune); vd.connect(o.detune);
+      // the chorus players drift a little on a long note; the note itself stays true, so the
+      // desks' shared partials (a bass an octave under the celli) hold steady instead of beating
+      if (j) { const dr = src('sine', 0.09 + 0.06 * j + 0.021 * k), dg = ac.createGain(); dg.gain.value = 2.5; dr.connect(dg); dg.connect(o.detune); }
+      o.connect(pan(G, j ? side : core, clamp(d.seat + p * d.spread, -1, 1)));
+    });
+    sum.connect(lp); lp.connect(hp); hp.connect(lv); lv.connect(tg); tg.connect(G.sec); send(G, tg, d.rev);
+    bows[k % 2].connect(ta); ta.connect(tg.gain);
+    lp.frequency.setValueCurveAtTime(cut, w, span);
+    lv.gain.setValueCurveAtTime(level, w, span);
+    tg.gain.setValueCurveAtTime(tBase, w, span);
+    ta.gain.setValueCurveAtTime(tAmt, w, span);
+  });
 }
 // ------------------------------------------------------------ the orchestra
 // piano: two strings a note on the piano wave, a felt hammer, a low-pass that closes
@@ -3415,21 +3515,15 @@ function piano(G, t, m, v = 1, dur = 1, p) {
   n.connect(bp); bp.connect(ng);
 }
 function chord(G, t, notes, v = 1, dur = 1.2, spread = 0.012) { notes.forEach((m, j) => piano(G, t + j * spread, m, v, dur)); }
-// the string section: three detuned saws a note, a slow bow, a shared vibrato and a warm
-// low-pass. `cresc` swells from a quarter to full over the note; `trem` bows it in tremolo
+// a struck string chord over the section: three detuned saws a note, a shared vibrato and a
+// warm low-pass, for the accents at the turning points, the stamps and the sonic logo
 function strings(G, t, notes, dur, v = 1, o = {}) {
   const att = o.att === undefined ? 0.25 : o.att, rel = o.rel === undefined ? 0.5 : o.rel, lv = 0.046 * v;
   const lp = filt(G, 'lowpass', o.f || 2600, 0.4), hp = filt(G, 'highpass', 70, 0.5), g = G.ac.createGain();
-  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(o.cresc ? lv * 0.25 : lv, t + att);
-  if (o.cresc) g.gain.linearRampToValueAtTime(lv, t + dur); else g.gain.setValueAtTime(lv, t + dur);
-  g.gain.linearRampToValueAtTime(0, t + dur + rel);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(lv, t + att);
+  g.gain.setValueAtTime(lv, t + dur); g.gain.linearRampToValueAtTime(0, t + dur + rel);
   lp.connect(hp); hp.connect(g);
-  let out = g;
-  if (o.trem) {
-    const tg = G.ac.createGain(), lfo = osc(G, t, 'sine', 11.5, dur + rel), ld = G.ac.createGain();
-    tg.gain.value = 0.6; ld.gain.value = 0.4; lfo.connect(ld); ld.connect(tg.gain); g.connect(tg); out = tg;
-  }
-  out.connect(o.dest || G.strings); send(G, out, o.rev === undefined ? 0.45 : o.rev);
+  g.connect(o.dest || G.strings); send(G, g, o.rev === undefined ? 0.45 : o.rev);
   const vib = osc(G, t, 'sine', 5.2, dur + rel + 0.05), vd = G.ac.createGain(); vd.gain.value = 6; vib.connect(vd);
   const sides = [pan(G, lp, -0.55), lp, pan(G, lp, 0.55)];
   notes.forEach((m, j) => [-8, 1, 9].forEach((d, k) => {
@@ -3640,12 +3734,13 @@ function buzz(G, t, dur, v = 1) {
 function sparkle(G, t, dur, v = 1) { for (let i = 0; i < 12; i++) bellTiny(G, t + G.nr() * dur, 0.6 * v); }
 
 // ------------------------------------------------------------------ score
-// The hierarchy: where a sound effect tells the story (the ticking reels and
+// The hierarchy. Where a sound effect tells the story (the ticking reels and
 // months, the pumps, the price cuts, the data points, the props, the stamps, the
-// notifications, the keys, the shop bell) the orchestra holds a quiet sustained
-// bed and steps back under it; the orchestra leads only at the turning points
-// (the hook, "Noi no.", SOLD, the view of Tivoli, GRATIS, the logo). Tension grows
-// by swells and silences, not by extra notes.
+// notifications, the keys, the shop bell, the tap) the section plays a quiet,
+// dark, held chord under it, and the pulse rests on the effect. The orchestra
+// leads only at the turning points: the hook, "Noi no.", SOLD, the view of
+// Tivoli, GRATIS and the logo. It reaches each one with a crescendo, never
+// with a silence, and afterwards it settles back while the hit decays.
 function monthTimes() {
   const out = [];
   for (let k = 1; k <= 12; k++) { let lo = T.months0, hi = T.months1; for (let i = 0; i < 30; i++) { const mid = (lo + hi) / 2; if (monthsAt(mid) < k) lo = mid; else hi = mid; } out.push(hi); }
@@ -3654,23 +3749,73 @@ function monthTimes() {
 function cutTimes() {
   return STEPS.slice(1).map(([mm]) => { let lo = T.months0, hi = T.months1; for (let i = 0; i < 30; i++) { const mid = (lo + hi) / 2; if (monthsAt(mid) < mm) lo = mid; else hi = mid; } return hi; });
 }
-// voicings (MIDI): the bass, four string notes, the piano chord
+// voicings (MIDI) for the struck chords: the bass, four string notes, the piano chord
 const VO = {
   Bm: { lo: 35, s: [47, 54, 59, 62], p: [59, 62, 66] },
   G: { lo: 31, s: [43, 50, 55, 59], p: [55, 59, 62] },
-  Em: { lo: 28, s: [40, 47, 55, 59], p: [55, 59, 64] },
-  Fs: { lo: 30, s: [42, 49, 54, 58], p: [54, 58, 61] },
-  D: { lo: 38, s: [50, 57, 62, 66], p: [62, 66, 69] },
   A: { lo: 33, s: [45, 52, 57, 61], p: [57, 61, 64] },
+  D: { lo: 38, s: [50, 57, 62, 66], p: [62, 66, 69] },
 };
+// The section's part. Each desk lists [time, MIDI] where it moves and [time, null, release]
+// where it rests; a third number on a note is its attack. Harmony: Bm G Em F♯ under the hook,
+// Bm through the pumps (the first violins climb F♯ G A), after the pop a dark Bsus2 whose
+// celli step down C♯ B A G F♯ with the four price cuts, F♯ major under the rewind; then
+// D A Bm G D A through the method, D at SOLD, D G A over Tivoli, G Em7 in the office, A for
+// the offer, D GRATIS, G A, D for the logo.
+function sectionPart() {
+  const [c1, c2, c3, c4] = cutTimes();
+  const desk = (name, ref, cut, hp, bal, seat, spread, rev, trem, vib, notes) => ({ name, ref, cut, hp, bal, seat, spread, rev, trem, vib, notes });
+  return {
+    end: 40.2,
+    desks: [
+      desk('basses', 35, 900, 40, 0.95, 0.4, 0.15, 0.25, 0, [4.9, 3], [
+        [0, 35, 0.03], [1.8, 31], [2.4, 28], [3.0, 30], [T.promise, 35], [T.rewind, 30], [T.noino, 38], [12.0, 33], [T.house, 35],
+        [T.docs, 31], [T.phone, 38], [T.report, 33], [T.sold, 38], [26.4, 31], [27.6, 33], [T.office, 31], [30.0, 28], [T.cta, 33],
+        [T.gratis, 38], [T.senza, 31], [T.tap, 33], [T.logo, 38]]),
+      desk('celli', 47, 1800, 60, 0.95, 0.3, 0.25, 0.35, 0.35, [5.3, 5], [
+        [0, 47, 0.03], [3.0, 49], [T.promise, 50], [T.pop, 49], [c1, 47], [c2, 45], [c3, 43], [c4, 42], [T.noino, 45], [T.house, 47],
+        [T.phone, 45], [26.4, 47], [27.6, 49], [T.office, 47], [30.0, 43], [T.cta, 45], [T.senza, 47], [T.tap, 49], [T.logo, 50]]),
+      desk('violas', 54, 2600, 70, 0.85, 0.1, 0.3, 0.45, 1, [5.5, 6], [
+        [0, 54, 0.03], [1.8, 55], [3.0, 54], [12.0, 52], [T.house, 54], [T.docs, 55], [T.phone, 54], [T.report, 52], [T.sold, 54],
+        [26.4, 55], [27.6, 52], [T.office, 50], [30.0, 52], [T.gratis, 54], [T.senza, 55], [T.tap, 52], [T.logo, 54]]),
+      desk('violins II', 59, 3200, 80, 0.8, -0.2, 0.3, 0.5, 1, [5.15, 6], [
+        [1.8, 59, 0.45], [3.0, 58], [T.promise, 59], [T.pop, null, 0.35], [T.rewind, 58, 0.2], [T.noino, 57], [T.house, 59], [T.phone, 57],
+        [T.sold + 0.15, null, 0.6], [T.pull, 62, 0.7], [27.6, 64], [T.office, 62], [T.cta, 61], [T.gratis, 62], [T.tap, 64], [T.logo, 66]]),
+      desk('violins I', 62, 3800, 90, 0.85, -0.4, 0.3, 0.5, 1, [5.35, 7], [
+        [1.8, 62, 0.45], [2.4, 64], [3.0, 66], [T.gonfiata, 67], [5.4, 69], [T.pop, null, 0.35], [T.rewind, 61, 0.2], [T.noino, 62],
+        [12.0, 61], [T.house, 62], [T.report, 61], [T.accepted, 64], [T.sold, 66], [T.sold + 0.15, null, 0.6], [T.pull, 69, 0.7],
+        [26.4, 71], [27.6, 73], [T.office, 71], [T.office + 0.2, null, 0.9], [T.cta, 64, 0.6], [T.gratis, 66], [T.senza, 67], [T.tap, 69]]),
+      desk('divisi', 69, 5000, 100, 0.7, -0.1, 0.45, 0.6, 1, [5.6, 7], [
+        [T.trasp, 69, 0.5], [T.sold + 0.15, null, 0.6], [T.pull, 74, 0.9], [27.6, 76], [T.office, null, 0.8], [32.4, 69, 1.0],
+        [T.senza, 71], [T.tap, 73], [T.logo, 74]]),
+    ],
+    // loudness: a crescendo into every turning point, a settle while the hit decays, and quiet
+    // dark stretches under the foley; it never dips and comes back
+    dyn: keyframes([
+      [0, 0.85], [1.2, 0.55], [1.8, 0.4], [3.0, 0.4], [T.promise, 0.5, 'build'], [T.pop - 0.05, 0.8, 'build'], [T.pop + 0.45, 0.36, 'fall'],
+      [c4, 0.45], [T.rewind, 0.45], [T.noino, 0.95, 'build'], [T.noino + 0.9, 0.48, 'fall'], [12.0, 0.53], [T.docs, 0.58], [T.phone, 0.52],
+      [T.trasp, 0.52], [T.accepted, 0.62], [T.sold, 1.0, 'build'], [T.sold + 0.45, 0.42, 'fall'], [T.pull, 0.42], [26.4, 1.12], [27.6, 1.18],
+      [28.4, 1.1], [29.4, 0.45], [T.cta, 0.48], [T.gratis, 1.05, 'build'], [T.gratis + 0.8, 0.8, 'fall'], [T.senza, 0.78], [T.tap, 0.6],
+      [T.logo, 1.1, 'build'], [T.logo + 0.6, 1.0], [38.4, 0.8], [39.9, 0, 'lin']], true),
+    // colour: darker when quiet or under the foley, open at the turning points and over Tivoli
+    colour: keyframes([
+      [0, 0.45], [1.8, 0.55], [3.0, 0.6], [T.promise, 0.7], [T.pop - 0.05, 0.85], [T.pop + 0.4, 0.35], [c4, 0.4], [T.rewind, 0.5],
+      [T.noino, 1.0, 'build'], [T.noino + 0.9, 0.6, 'fall'], [12.0, 0.65], [T.phone, 0.5], [T.report, 0.6], [T.trasp, 0.62],
+      [T.sold, 1.0, 'build'], [T.sold + 0.45, 0.55, 'fall'], [T.pull, 0.6], [26.4, 1.05], [27.6, 1.1], [28.4, 1.0], [29.4, 0.55],
+      [T.cta, 0.6], [T.gratis, 1.05, 'build'], [T.gratis + 0.8, 0.9], [T.tap, 0.72], [T.logo, 1.1, 'build'], [38.4, 0.9], [39.9, 0.5]]),
+    // tremolo only where the tension climbs: the pumps, the rewind, the build to SOLD, the offer
+    trem: keyframes([
+      [0, 0], [3.0, 0], [T.promise, 0.7], [T.pop - 0.05, 0.8], [T.pop + 0.3, 0], [T.rewind, 0], [T.rewind + 0.2, 0.8], [T.noino, 0.8],
+      [T.noino + 0.15, 0], [T.trasp, 0], [T.accepted - 0.1, 0.6], [T.sold, 0.8], [T.sold + 0.15, 0], [32.4, 0], [33.2, 0.6],
+      [T.gratis, 0.8], [T.gratis + 0.15, 0]]),
+  };
+}
 function buildScore() {
   const ev = [], at = (t, fn) => ev.push([t, fn]);
   const e8 = BEAT / 2, s16 = BEAT / 4;
-  // the string section on a chord, with the basses underneath
-  const pad = (t0, dur, ch, v = 0.8, o = {}) => at(t0, (G, w) => {
-    strings(G, w, VO[ch].s, dur, v, o);
-    strings(G, w, [VO[ch].lo, VO[ch].lo + 12], dur, v * 0.95, Object.assign({}, o, { f: 900 }));
-  });
+  // the section plays the whole film; it starts wherever a render starts (a setup event)
+  const part = sectionPart();
+  ev.push([0, (G, w) => section(G, w, part), true]);
   // a turning point: timpani, piano in low octaves, one struck chord, a short string chord
   const tutti = (t0, ch, v = 1, tm) => at(t0, (G, w) => {
     timp(G, w, tm || VO[ch].lo + 12, v);
@@ -3678,160 +3823,125 @@ function buildScore() {
     chord(G, w + 0.01, VO[ch].p, 0.7 * v, 0.9);
     strings(G, w, VO[ch].s.concat([VO[ch].p[0] + 12]), 0.32, 1.1 * v, { att: 0.012, rel: 0.35 });
   });
-  // the pulse: celli bowing one note, eighths or sixteenths, the downbeat leaning
-  const pulse = (t0, n, m, st, v0, v1 = v0) => {
-    for (let i = 0; i < n; i++) { const v = (v0 + (v1 - v0) * (n > 1 ? i / (n - 1) : 0)) * (i % (st === s16 ? 4 : 2) ? 0.7 : 1); at(t0 + i * st, (G, w) => spic(G, w, m, v, 0, 0.14)); }
+  // the pulse: celli bowing one note, eighths or sixteenths, the downbeat leaning. It rests
+  // wherever a sound effect lands ([from, to] windows), so the effect is heard on its own
+  const pulse = (t0, n, m, st, v0, v1 = v0, rests = []) => {
+    for (let i = 0; i < n; i++) {
+      const tt = t0 + i * st;
+      if (rests.some(([a, b]) => tt > a - 0.03 && tt < b)) continue;
+      const v = (v0 + (v1 - v0) * (n > 1 ? i / (n - 1) : 0)) * (i % (st === s16 ? 4 : 2) ? 0.7 : 1);
+      at(tt, (G, w) => spic(G, w, m, v, 0, 0.14));
+    }
   };
-  // the orchestra steps back while a sound effect speaks
-  const under = (t, depth = 0.5, dur = 0.3) => at(t, (G, w) => hush(G, w, depth, dur));
 
   // ------------------------------------------ A · hook 0–3.6: the cold open, then the reels tick
   at(0, (G, w) => { boom(G, w, 0.9, 0.8); cymbal(G, w, 0.6); thump(G, w, 1); whoosh(G, w, 0.3, 0.5, 600, 3000, -0.9, -0.2); });
   tutti(0, 'Bm', 1);
-  at(0.02, (G, w) => strings(G, w, [35, 47, 54], 1.75, 0.8, { f: 700, att: 0.06, rel: 0.5 }));
   at(T.casa, (G, w) => { timp(G, w, 42, 0.8); thump(G, w, 0.8); });
   at(T.tivoli, (G, w) => { timp(G, w, 47, 0.95); piano(G, w, 35, 0.8, 0.8); thump(G, w, 1); });
   at(0.2, (G, w) => scratch(G, w, 1.0, 1));
   at(T.punch, (G, w) => clack(G, w, 0.9));
   at(T.punch + 0.04, (G, w) => whoosh(G, w, 0.35, 0.5, 900, 2600, 0, 0.1));
-  // Sai quanto vale davvero? — the reels spin; under them the strings only hold and rise
+  // Sai quanto vale davvero? — the reels spin over a quiet G, Em, F♯ that swells to the question
   at(T.q2, (G, w) => { thump(G, w, 0.7); timp(G, w, 43, 0.55); });
-  pad(T.q2, 0.6, 'G', 0.32, { att: 0.15, rel: 0.12 });
-  pad(2.4, 0.6, 'Em', 0.35, { att: 0.12, rel: 0.12 });
-  pad(3.0, 0.58, 'Fs', 0.5, { att: 0.08, rel: 0.03, cresc: 1, trem: 1 });
   for (let tt = T.q2 + 0.1; tt < T.promise - 0.05; tt += s16 / 2) { const k = (tt - T.q2) / (T.promise - T.q2); at(tt, (G, w) => tick(G, w, 1.1 + 0.6 * k, 2200 + 800 * k)); }
   at(3.0, (G, w) => { troll(G, w, 0.6, 42, 0.15, 0.55); swell(G, w, 0.6, 0.5); });
 
   // ------------------------------------------ B · the trap 3.6–9.6: the effects tell it
   at(T.promise, (G, w) => { timp(G, w, 47, 0.8); piano(G, w, 35, 0.8, 1.2); cymbal(G, w, 0.3); clack(G, w, 1); });
-  // a string tremolo swells under the pumps, and nothing plays on them
-  at(T.promise, (G, w) => {
-    strings(G, w, VO.Bm.s, T.pop - T.promise - 0.05, 0.42, { trem: 1, cresc: 1, att: 0.2, rel: 0.05 });
-    strings(G, w, [35, 47], T.pop - T.promise - 0.05, 0.5, { f: 700, cresc: 1, att: 0.2, rel: 0.05 });
-  });
+  // the section trembles and grows under the pumps; nothing is struck on them
   T.pumps.forEach((tp, k) => at(tp - 0.05, (G, w) => pump(G, w, 1.25, k)));
-  at(T.gonfiata, (G, w) => { timp(G, w, 42, 0.7); piano(G, w, 35, 0.7, 0.6); piano(G, w, 36, 0.5, 0.6); });
+  at(T.gonfiata, (G, w) => { timp(G, w, 42, 0.7); piano(G, w, 35, 0.7, 1.15); piano(G, w, 36, 0.5, 1.15); });
   at(5.1, (G, w) => squeak(G, w, 0.88, 1.3));
   at(5.4, (G, w) => troll(G, w, 0.6, 47, 0.08, 0.35));
   at(T.pop, (G, w) => { pop(G, w, 1.1); boom(G, w, 0.7, 0.6); cymbal(G, w, 0.5, 1.2); });
-  // the chart: only a low, dark bed under the months and the cuts
-  at(T.chart, (G, w) => strings(G, w, [35, 42, 47], T.rewind - T.chart, 0.55, { f: 480, att: 0.6, rel: 0.12, cresc: 1 }));
+  // the chart: under the months and the cuts only the low desks, dark, the celli stepping down
   monthTimes().forEach((tt, i) => at(tt, (G, w) => tick(G, w, 1, i % 2 ? 1500 : 2100)));
-  cutTimes().forEach(tt => { at(tt, (G, w) => bwomp(G, w, 1.1)); under(tt - 0.02, 0.6, 0.32); });
+  cutTimes().forEach(tt => at(tt, (G, w) => bwomp(G, w, 1.1)));
+  // the rewind: F♯ major trembles and grows straight into "Noi no."
   at(T.rewind, (G, w) => rewindFx(G, w, T.noino - T.rewind - 0.1, 1));
-  at(T.noino - 0.15, (G, w) => stopDown(G, w, w + 0.15));
+  at(T.rewind + 0.1, (G, w) => troll(G, w, T.noino - T.rewind - 0.1, 42, 0.1, 0.6));
 
   // ------------------------------------------ C · Noi no. 9.6–24: the turn, then a quiet drive under the method
   at(T.noino, (G, w) => { boom(G, w, 1, 0.8); cymbal(G, w, 1); });
   tutti(T.noino, 'D', 1.1, 50);
-  pad(T.noino, 2.35, 'D', 0.7, { att: 0.02, rel: 0.3 });
   at(T.noino + s16, (G, w) => timp(G, w, 45, 0.75));   // no.
   // real Tivoli data: a wooden note for every point, over the held chord
   const dotM = [74, 76, 78, 81, 83, 86, 88, 90, 93];
   T.dots.forEach((tt, i) => at(tt, (G, w) => { marimba(G, w, dotM[i], 1, (DOTS[i][0] - CX) / 600); blip(G, w, dotM[i] + 12, 0.35); }));
   // the right price: the celli start to pulse
-  pad(12.0, 2.35, 'A', 0.6);
   pulse(12.0, 8, 45, e8, 0.45, 0.55);
   at(T.lock - 0.62, (G, w) => whoosh(G, w, 0.6, 0.45, 500, 2400, -0.7, 0.2));
   at(T.lock, (G, w) => { clack(G, w, 1.25); click(G, w + 0.06, 0.45, 1800); });
-  under(T.lock, 0.45, 0.2);
   tutti(T.giusto, 'A', 0.95);                                               // Prezzo giusto.
   at(T.giusto, (G, w) => { cymbal(G, w, 0.4); thump(G, w, 0.7); });
-  // house → window → staging: the props land on a quiet pulse
-  pad(14.4, 2.35, 'Bm', 0.6);
-  pulse(14.4, 16, 47, s16, 0.4, 0.5);
+  // house → window → staging: the props land in the gaps of the pulse
+  pulse(T.house, 16, 47, s16, 0.4, 0.5, T.props.map(tt => [tt, tt + 0.1]).concat([[T.flash, T.flash + 0.15]]));
   at(T.house + 0.3, (G, w) => whoosh(G, w, 0.45, 0.6, 400, 5000, 0, 0));
-  T.props.forEach(tt => { at(tt, (G, w) => thump(G, w, 0.75)); under(tt, 0.4, 0.2); });
+  T.props.forEach(tt => at(tt, (G, w) => thump(G, w, 0.75)));
   at(T.props[1] + 0.25, (G, w) => click(G, w, 0.6, 1600));
   at(T.flash, (G, w) => { shutter(G, w, 1.1); cymbal(G, w, 0.3, 1); });
-  under(T.flash, 0.4, 0.3);
-  // mortgage, notary, paperwork: three stamps, three timpani climbing
-  pad(16.8, 2.35, 'G', 0.6);
-  pulse(16.8, 8, 43, e8, 0.4, 0.5);
+  // mortgage, notary, paperwork: the pen and the three stamps take the beat, three timpani climbing
+  pulse(T.docs, 8, 43, e8, 0.4, 0.5, T.stamps.map(ts => [ts - 0.42, ts + 0.1]));
   DOCS.forEach((d, i) => {
     at(T.docs + i * 0.09, (G, w) => paper(G, w, 1, (d.x - CX) / 500));
     at(T.stamps[i] - 0.42, (G, w) => scratch(G, w, 0.32, 1));
-    under(T.stamps[i] - 0.42, 0.4, 0.35);
     at(T.stamps[i], (G, w) => { stampFx(G, w, 1.1); timp(G, w, [43, 50, 55][i], 0.75 + 0.1 * i); strings(G, w, VO.G.s.concat([67]), 0.25, 0.8 + 0.1 * i, { att: 0.012, rel: 0.3 }); });
   });
-  // the portals: the notifications speak, the strings open up underneath
-  pad(19.2, 2.35, 'D', 0.5);
-  pulse(19.2, 16, 50, s16, 0.3, 0.38);
-  at(19.2, (G, w) => timp(G, w, 50, 0.6));
+  // the portals: the notifications speak over a dark D, the pulse leaves them room
+  pulse(T.phone, 16, 50, s16, 0.3, 0.38, T.pings.map(tt => [tt, tt + 0.1]));
+  at(T.phone, (G, w) => timp(G, w, 50, 0.6));
   at(T.phone, (G, w) => whoosh(G, w, 0.4, 0.55, 300, 2400, 0, 0));
-  T.pings.forEach((tt, i) => { at(tt, (G, w) => ping(G, w, [81, 85, 88][i], 1.45, [-0.4, 0.4, -0.4][i])); under(tt, 0.55, 0.4); });
-  pad(21.6, 1.15, 'A', 0.45);
-  pulse(21.6, 4, 45, e8, 0.35);
+  T.pings.forEach((tt, i) => at(tt, (G, w) => ping(G, w, [81, 85, 88][i], 1.45, [-0.4, 0.4, -0.4][i])));
+  pulse(T.report, 4, 45, e8, 0.35);
   at(T.report, (G, w) => whoosh(G, w, 0.3, 0.4, 900, 3200, 0.6, -0.6));
   [0, 1, 2, 3, 4, 5].forEach(i => at(T.report + 0.3 + i * 0.11, (G, w) => blip(G, w, 74 + [0, 2, 4, 7, 9, 12][i], 1.2)));
-  // the build on A: this one belongs to the orchestra
-  at(22.8, (G, w) => {
-    strings(G, w, VO.A.s.concat([69, 73]), 1.02, 1, { cresc: 1, att: 0.05, rel: 0.03 });
-    strings(G, w, [33, 45], 1.02, 1, { f: 900, cresc: 1, att: 0.05, rel: 0.03 });
-    troll(G, w, 1.05, 45, 0.25, 1); swell(G, w, 1.05, 1);
-  });
-  pulse(22.8, 7, 45, s16, 0.45, 0.8);
+  // the build on A: the violins tremble, the divisi enters; the phone buzzes in a rest of the
+  // pulse, then everything grows straight into SOLD
+  pulse(T.trasp, 8, 45, s16, 0.42, 0.85, [[T.accepted, T.accepted + 0.3]]);
   at(T.accepted, (G, w) => { buzz(G, w, 0.3, 1.1); ping(G, w, 81, 0.8, 0.2); });
-  under(T.accepted, 0.35, 0.25);
-  at(T.sold - 0.15, (G, w) => stopDown(G, w, w + 0.15));
+  at(T.accepted + 0.05, (G, w) => { troll(G, w, T.sold - T.accepted - 0.05, 45, 0.2, 1); swell(G, w, T.sold - T.accepted - 0.05, 1); });
 
   // ------------------------------------------ D · sold 24, Tivoli 25.2, the office 28.8
   at(T.sold, (G, w) => { boom(G, w, 1.1, 0.9); cymbal(G, w, 1.1); });
   tutti(T.sold, 'D', 1.15, 50);
-  pad(T.sold, 1.15, 'D', 0.45, { att: 0.02, rel: 0.2 });
   at(T.sold + 0.1, (G, w) => stampFx(G, w, 0.9));
   at(T.keys + 0.24, (G, w) => { clink(G, w, 1.3); jingle(G, w + 0.04, 1.35); });
-  under(T.keys + 0.24, 0.65, 0.6);
   // the pull back over Tivoli: the orchestra's moment, broad and held; a timpani on every stat
   at(T.pull, (G, w) => { whoosh(G, w, 1.2, 0.7, 200, 1800, 0.5, -0.5); timp(G, w, 50, 0.8); cymbal(G, w, 0.45); });
   at(T.pull + 0.3, (G, w) => rush(G, w, T.office + 0.5 - T.pull - 0.3, 0.9));
   [25.8, 26.25, 26.9, 27.35, 27.85, 28.3].forEach((tt, i) => at(tt, (G, w) => swift(G, w, 0.8, [-0.6, 0.5, -0.2, 0.7, -0.5, 0.3][i])));
-  [[25.2, 'D', 1.18], [26.4, 'G', 1.18], [27.6, 'A', 1.18]].forEach(([tt, ch, d], i) => {
-    pad(tt, d, ch, 0.9 + 0.05 * i, { att: 0.15, rel: 0.35 });
-    at(tt, (G, w) => strings(G, w, [VO[ch].p[0] + 12, VO[ch].p[2] + 12], d, 0.75, { att: 0.25, rel: 0.35, f: 4500 }));
-  });
   T.stats.forEach((tt, i) => {
     for (let k = 0; k < 6; k++) at(tt + k * 0.06, (G, w) => tick(G, w, 0.6, 2600));
     at(tt, (G, w) => timp(G, w, [43, 47, 45][i], 0.8 + 0.05 * i));
     at(tt + 0.38, (G, w) => bell(G, w, [86, 90, 93][i], 0.7, (i - 1) * 0.4, 1, G.sfx));
   });
-  // the office, close and warm: a soft held chord, the shop bell on top
+  // the office, close and warm: the violins leave, the low desks hold G and Em7, the shop bell on top
   at(T.office, (G, w) => whoosh(G, w, 0.8, 0.5, 250, 1500, 0, 0));
-  pad(T.office, 1.18, 'G', 0.45, { att: 0.35, rel: 0.4 });
-  pad(30.0, 1.18, 'Em', 0.45, { att: 0.2, rel: 0.1, cresc: 1 });
   at(T.office + 0.85, (G, w) => { bell(G, w, 93, 0.6, 0.3, 1.8, G.sfx); bell(G, w + 0.22, 88, 0.6, 0.3, 2, G.sfx); });
-  under(T.office + 0.85, 0.45, 0.6);
   at(T.office + 0.9, (G, w) => whoosh(G, w, 0.4, 0.45, 500, 3000, -0.3, 0.3));
   at(T.push, (G, w) => { whoosh(G, w, 0.9, 0.6, 200, 4000, 0, 0); swell(G, w, T.cta - T.push, 0.8); troll(G, w + 0.3, T.cta - T.push - 0.3, 45, 0.2, 0.7); });
 
   // ------------------------------------------ E · the offer 31.2–40
-  // Quanto vale la tua casa? — the reels tick; under them only a held A that grows
+  // Quanto vale la tua casa? — the reels tick; under them the section on A grows to GRATIS
   at(T.cta, (G, w) => { boom(G, w, 0.5, 0.5); timp(G, w, 45, 0.8); cymbal(G, w, 0.35); whoosh(G, w, 0.5, 0.5, 400, 2000, 0, 0); });
-  at(T.cta, (G, w) => {
-    strings(G, w, [45, 52, 57, 61, 64], T.gratis - 0.15 - T.cta, 0.5, { cresc: 1, att: 0.3, rel: 0.03 });
-    strings(G, w, [33, 45], T.gratis - 0.15 - T.cta, 0.55, { f: 900, cresc: 1, att: 0.3, rel: 0.03 });
-  });
   for (let tt = T.cta + 0.35; tt < T.gratis - 0.05; tt += s16 / 2) { const k = (tt - T.cta) / (T.gratis - T.cta); at(tt, (G, w) => tick(G, w, 0.8 + 0.7 * k, 2200 + 900 * k)); }
-  at(32.85, (G, w) => { troll(G, w, T.gratis - 0.15 - 32.85, 45, 0.15, 0.75); swell(G, w, T.gratis - 0.15 - 32.85, 0.75); });
-  at(T.gratis - 0.15, (G, w) => stopDown(G, w, w + 0.15));
+  at(32.85, (G, w) => { troll(G, w, T.gratis - 32.85, 45, 0.15, 0.75); swell(G, w, T.gratis - 32.85, 0.75); });
   // GRATIS: the payoff, the whole orchestra and a pulse that finally runs
   at(T.gratis, (G, w) => { boom(G, w, 1.1, 0.9); cymbal(G, w, 1.2); for (let i = 0; i < 6; i++) clack(G, w + i * 0.07, 0.8); });
   tutti(T.gratis, 'D', 1.15, 50);
   at(T.gratis + 0.45, (G, w) => sparkle(G, w, 0.8, 0.9));
-  pad(T.gratis, 1.18, 'D', 0.85, { att: 0.03, rel: 0.25 });
   pulse(T.gratis, 8, 50, s16, 0.6, 0.7);
-  pad(T.senza, 0.58, 'G', 0.85, { att: 0.03, rel: 0.2 });
-  pulse(T.senza, 4, 43, s16, 0.7);
+  pulse(T.senza, 4, 43, s16, 0.7, 0.7, [[T.senza, T.senza + 0.1]]);
   at(T.senza, (G, w) => { thump(G, w, 0.7); timp(G, w, 43, 0.85); });
-  pad(T.tap, 0.58, 'A', 0.6, { att: 0.03, rel: 0.1 });
+  // the tap lands between two phrases; the pulse picks up after it and drives into the logo
   at(T.tap, (G, w) => { click(G, w, 1.4, 1300); marimba(G, w + 0.02, 81, 1, 0.3); });
-  under(T.tap, 0.55, 0.25);
+  pulse(T.tap + 0.15, 3, 45, s16, 0.55, 0.8);
   at(35.55, (G, w) => troll(G, w, 0.45, 45, 0.4, 1));
   // the logo: the last chord and the sonic logo, the only time it plays; then a long ring out
   at(T.logo, (G, w) => { boom(G, w, 1, 0.9); cymbal(G, w, 1.1, 3); });
   tutti(T.logo, 'D', 1.15, 50);
-  pad(T.logo, 2.9, 'D', 0.85, { att: 0.03, rel: 1.2 });
-  at(T.logo, (G, w) => { piano(G, w, 26, 0.8, 3.2); strings(G, w, [74, 78, 81], 2.9, 0.6, { att: 0.3, rel: 1.2, f: 5000 }); });
+  at(T.logo, (G, w) => piano(G, w, 26, 0.8, 3.2));
   at(T.logo + 0.3, (G, w) => motif(G, w, 1.1));
   at(T.logo + 0.36, (G, w) => scratch(G, w, 0.7, 0.7));
   at(T.logo + 1.95, (G, w) => sparkle(G, w, 0.8, 0.7));
@@ -3879,7 +3989,7 @@ function stopAudio() {
   if (P.G) {
     const g = P.G;
     try { g.post.gain.setTargetAtTime(0, P.ac.currentTime, 0.03); } catch (e) { }
-    setTimeout(() => { try { g.post.disconnect(); } catch (e) { } }, 250);
+    setTimeout(() => { try { g.post.disconnect(); } catch (e) { } g.live.forEach(s => { try { s.stop(); } catch (e) { } }); }, 250);
   }
   P.G = null;
 }
@@ -4021,13 +4131,14 @@ function dev() {
 window.__renderAt = t => { render(t); };
 window.__fx = FXQ;
 window.__dur = DUR;
-// offline score: film time `from` lands AUDIO_LEAD seconds into the buffer
+// offline score: film time `from` lands AUDIO_LEAD seconds into the buffer; setup
+// events (the string section, which plays the whole film) run wherever it starts
 const AUDIO_LEAD = 0.05;
 window.__audioLead = AUDIO_LEAD;
 window.__renderAudio = async (from = 0, to = DUR, sr = 44100) => {
   const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
   const len = to - from + 0.5, ac = new OAC(2, Math.ceil(sr * len), sr);
-  const G = audioGraph(ac, AUDIO_LEAD - from), ev = buildScore().filter(e => e[0] >= from - 0.01 && e[0] < to);
+  const G = audioGraph(ac, AUDIO_LEAD - from), ev = buildScore().filter(e => (e[2] || e[0] >= from - 0.01) && e[0] < to);
   let i = 0;
   const feed = until => { while (i < ev.length && ev[i][0] - from + AUDIO_LEAD < until) { const [t, fn] = ev[i++]; fn(G, Math.max(ac.currentTime + 0.003, t - from + AUDIO_LEAD)); } };
   feed(1);
