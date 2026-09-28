@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* Export "The Casa 2.0 Social Media Masterpiece" as a frame-exact MP4.
 
-     node masterpiece/export-mp4.js [out.mp4] [--crf 16] [--grain]
+     node masterpiece/export-mp4.js [out.mp4] [--crf 16] [--preset veryslow] [--grain]
 
    Renders every frame of index.html at 1080 × 1920 and 60 fps in headless
    Chromium, renders the score offline at 48 kHz, and encodes H.264 High 4.2
@@ -14,8 +14,10 @@
    npx playwright install chromium) and ffmpeg 6+ on PATH, or FFMPEG=/path.
    CHROMIUM=/path/to/chrome picks a specific browser binary.
 
-   Film grain is off by default: it is most of the bitrate (about 150 MB
-   instead of 27 MB) and TikTok/Reels re-encode it into blocks. --grain keeps it. */
+   x264 runs at its veryslow preset, the best picture per byte; --preset slow
+   exports faster. Film grain is off by default: it is most of the bitrate
+   (about 150 MB instead of 30 MB) and TikTok/Reels re-encode it into blocks.
+   --grain keeps it. */
 'use strict';
 const http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { spawn, spawnSync, execSync } = require('child_process');
@@ -24,7 +26,7 @@ const W = 1080, H = 1920, FPS = 60, SR = 48000, FRAME_BYTES = W * H * 4;
 const args = process.argv.slice(2);
 const option = (name, def) => { const i = args.indexOf(name); return i >= 0 ? (args.splice(i, 2)[1] || def) : def; };
 const flag = name => { const i = args.indexOf(name); return i >= 0 ? (args.splice(i, 1), true) : false; };
-const CRF = option('--crf', '16'), GRAIN = flag('--grain');
+const CRF = option('--crf', '16'), PRESET = option('--preset', 'veryslow'), GRAIN = flag('--grain');
 const OUT = path.resolve(args[0] || 'casa-2-0-social-masterpiece-60fps.mp4');
 const FFMPEG = process.env.FFMPEG || 'ffmpeg';
 // intensity stereo and noise substitution only save bits at low rates; at 256 kb/s
@@ -128,7 +130,7 @@ const server = http.createServer((req, res) => {
       '-f', 'rawvideo', '-pix_fmt', 'rgba', '-s', `${W}x${H}`, '-framerate', String(FPS), '-i', 'pipe:0', '-i', wav,
       '-map', '0:v:0', '-map', '1:a:0',
       '-vf', 'scale=out_color_matrix=bt709:out_range=tv:flags=lanczos+accurate_rnd+full_chroma_int,format=yuv420p',
-      '-c:v', 'libx264', '-preset', 'slow', '-crf', CRF, '-profile:v', 'high', '-level:v', '4.2',
+      '-c:v', 'libx264', '-preset', PRESET, '-crf', CRF, '-profile:v', 'high', '-level:v', '4.2',
       '-maxrate', '30M', '-bufsize', '45M', '-g', String(FPS * 2),
       '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-color_range', 'tv',
       '-af', audioChain(limit), ...AAC,

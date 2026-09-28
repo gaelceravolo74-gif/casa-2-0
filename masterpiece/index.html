@@ -54,18 +54,17 @@
    (logo on cobalt) and the first (blueprint on cobalt) share a stage, so the
    film loops cleanly on the feed. Captions stay clear of TikTok/Reels UI.
 
-   SOUND — 100 BPM in B minor, scored on the same cue table T as the picture
-   with the trailer and phonk playbooks: a braam and three-layer hits on the
-   hook words, a Jaws semitone ostinato under the ticking reels, a phonk
-   cowbell riff in B Phrygian over a distorted 808 that slides up with every
-   pump and sags with every price cut; "Noi no." drops into a four-on-the-
-   floor drive (rolling bass, supersaw stabs, sixteenth hats and shakers).
-   Three stop-downs of dead silence before the drops, gated risers, taiko
-   under the Tivoli stats, the music heard through the office wall, and D
-   major only for SOLD, GRATIS and the logo, where the four-note sonic logo
-   plays. The ASMR foley rides on top: pen scratch, pumps and rubber squeak,
-   pop, clock, tape rewind, data points, stamps, shutter, paper, pings,
-   keys, shop bell.
+   SOUND — a cinematic score at 100 BPM, written on the same cue table T as
+   the picture: piano and strings in the lead, a spiccato ostinato for pace,
+   timpani and low drums for weight, impacts only on the turning points. B
+   minor for the hook and the problem: a string tremolo that swells under the
+   pumps, pizzicato climbing with every promise, a lament bass and a ticking
+   piano under the falling chart. "Noi no." opens into D major, warm and
+   driving; SOLD, Tivoli and GRATIS are the tutti, the office is the piano
+   alone, and the logo plays the four-note sonic logo. A short silence before
+   each turning point. The ASMR foley rides on top: pen scratch, pumps and
+   rubber squeak, pop, clock, tape rewind, data points, stamps, shutter,
+   paper, pings, keys, shop bell.
 
    EXPORT — "Scarica il video" on the poster records in real time. For the
    frame-exact 60 fps MP4 (H.264 + AAC) run node masterpiece/export-mp4.js:
@@ -2755,18 +2754,85 @@ function shopfront(c, t) {
 // white lettering. A real camera, so the push into the wall has parallax.
 const OF = { f: 1000, vx: 540, vy: 820, L: -2.3, R: 2.1, Fl: 1.5, Ce: -1.4, B: 6.0, cob: -0.15 };
 const oP = (m, X, Y, Z) => { const z = Z - m.z; return [OF.vx + OF.f * (X - m.x) / z, OF.vy + OF.f * (Y - m.y) / z, z]; };
+// a polygon in metres, clipped at the camera's near plane so that nothing behind
+// the lens is folded back into the picture as the camera walks through the room
 function oPoly(c, m, pts, fill) {
+  const zn = m.z + 0.05, q = [];
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[i], b = pts[(i + 1) % pts.length], ina = a[2] >= zn;
+    if (ina) q.push(a);
+    if (ina !== (b[2] >= zn)) { const k = (zn - a[2]) / (b[2] - a[2]); q.push([a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, zn]); }
+  }
+  if (q.length < 3) return;
   c.beginPath();
-  pts.forEach((p, i) => { const q = oP(m, p[0], p[1], Math.max(p[2], m.z + 0.06)); if (i) c.lineTo(q[0], q[1]); else c.moveTo(q[0], q[1]); });
+  q.forEach((p, i) => { const s = oP(m, p[0], p[1], p[2]); if (i) c.lineTo(s[0], s[1]); else c.moveTo(s[0], s[1]); });
   c.closePath(); c.fillStyle = fill; c.fill();
 }
 // an axis-aligned box: the faces that look at the camera
 function oBox(c, m, x0, x1, y0, y1, z0, z1, front, side, top) {
-  if (z0 < m.z + 0.12) return;
+  if (z1 < m.z + 0.05) return;
   if (m.x < x0) oPoly(c, m, [[x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0]], side);
   if (m.x > x1) oPoly(c, m, [[x1, y0, z0], [x1, y0, z1], [x1, y1, z1], [x1, y1, z0]], side);
   if (m.y < y0 && top) oPoly(c, m, [[x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1]], top);
-  oPoly(c, m, [[x0, y0, z0], [x1, y0, z0], [x1, y1, z0], [x0, y1, z0]], front);
+  if (m.z < z0) oPoly(c, m, [[x0, y0, z0], [x1, y0, z0], [x1, y1, z0], [x0, y1, z0]], front);
+}
+const floorShadow = (c, m, x0, x1, z0, z1, a) => oPoly(c, m, [[x0, OF.Fl - 0.002, z0], [x1, OF.Fl - 0.002, z0], [x1, OF.Fl - 0.002, z1], [x0, OF.Fl - 0.002, z1]], `rgba(60,36,18,${a})`);
+// the blue velvet chair of the photo, in profile: it faces the second desk (+x),
+// its padded back on the far side, four chrome legs
+function velvetChair(c, m, cx, cz) {
+  const Fl = OF.Fl, sy = Fl - 0.47, V = [36, 76, 92];
+  const top = rgba(mix(V, [140, 186, 200], 0.28)), face = rgba(V), dark = rgba(mix(V, [0, 0, 0], 0.32)), chrome = rgba([204, 208, 214]), chromeD = rgba([150, 154, 160]);
+  floorShadow(c, m, cx - 0.26, cx + 0.26, cz - 0.25, cz + 0.25, 0.16);
+  for (const [dx, dz] of [[-0.2, 0.2], [0.2, 0.2], [-0.2, -0.2], [0.2, -0.2]]) {
+    const x = cx + dx * 1.08, z = cz + dz * 1.08;
+    oBox(c, m, x - 0.011, x + 0.011, sy + 0.06, Fl, z - 0.011, z + 0.011, chrome, chromeD);
+  }
+  const back = () => oBox(c, m, cx - 0.27, cx - 0.2, sy - 0.44, sy + 0.03, cz - 0.215, cz + 0.215, dark, face, top);
+  const seat = () => oBox(c, m, cx - 0.22, cx + 0.23, sy, sy + 0.07, cz - 0.225, cz + 0.225, face, dark, top);
+  if (m.x > cx - 0.2) { back(); seat(); } else { seat(); back(); }
+}
+// the black office chair at the first desk: it faces the desk (+z), so the camera
+// sees its back; blue seat, gas column, five-star base
+function taskChair(c, m, cx, cz) {
+  const Fl = OF.Fl, sy = Fl - 0.48, blk = rgba([30, 30, 32]), blkD = rgba([16, 16, 18]), blkT = rgba([58, 58, 62]), metal = rgba([126, 128, 132]);
+  floorShadow(c, m, cx - 0.3, cx + 0.3, cz - 0.3, cz + 0.3, 0.14);
+  for (let k = 0; k < 5; k++) {
+    const a = k * TAU / 5 + 0.3, ux = Math.cos(a), uz = Math.sin(a), px = -uz * 0.02, pz = ux * 0.02, y = Fl - 0.05;
+    oPoly(c, m, [[cx + px, y, cz + pz], [cx + ux * 0.3 + px, y, cz + uz * 0.3 + pz], [cx + ux * 0.3 - px, y, cz + uz * 0.3 - pz], [cx - px, y, cz - pz]], blkT);
+  }
+  oBox(c, m, cx - 0.024, cx + 0.024, sy + 0.08, Fl - 0.06, cz - 0.024, cz + 0.024, metal, metal);
+  oBox(c, m, cx - 0.24, cx + 0.24, sy, sy + 0.08, cz - 0.21, cz + 0.25, rgba([40, 58, 80]), rgba([28, 42, 60]), rgba([58, 80, 108]));
+  oBox(c, m, cx - 0.23, cx + 0.23, sy - 0.5, sy - 0.04, cz - 0.27, cz - 0.21, blk, blkD, blkT);
+  oBox(c, m, cx - 0.03, cx + 0.03, sy - 0.06, sy + 0.02, cz - 0.24, cz - 0.2, metal, metal);
+}
+// the Louis settee behind the glass: along the right side, facing into the room,
+// striped upholstery on a carved walnut frame
+function settee(c, m) {
+  const Fl = OF.Fl, x0 = 1.38, x1 = 1.96, z0 = 1.95, z1 = 3.15, sy = Fl - 0.44, bx = x1 - 0.08, N = 34;
+  if (z1 < m.z + 0.05) return;
+  const wood = rgba([96, 62, 38]), woodD = rgba([62, 38, 22]), woodT = rgba([128, 88, 56]);
+  const stripe = (i, k = 0) => rgba(mix(O_STRIPES[i % O_STRIPES.length], [0, 0, 0], k));
+  const zs = i => z0 + 0.05 + (z1 - z0 - 0.1) * i / N, topY = z => sy - 0.43 - 0.09 * Math.sin(Math.PI * (z - z0) / (z1 - z0));
+  floorShadow(c, m, x0 - 0.04, x1, z0, z1, 0.18);
+  for (const [x, z] of [[x1 - 0.05, z1 - 0.05], [x1 - 0.05, z0 + 0.05], [x0 + 0.03, z1 - 0.05], [x0 + 0.03, z0 + 0.05]]) oBox(c, m, x - 0.022, x + 0.022, sy + 0.14, Fl, z - 0.022, z + 0.022, wood, woodD);
+  // the back: upright stripes under a carved rail that rises in the middle
+  for (let i = 0; i < N; i++) { const za = zs(i), zb = zs(i + 1); oPoly(c, m, [[bx, topY(za), za], [bx, topY(zb), zb], [bx, sy, zb], [bx, sy, za]], stripe(i)); }
+  for (let i = 0; i < N; i++) { const za = zs(i), zb = zs(i + 1); oPoly(c, m, [[bx - 0.004, topY(za) - 0.035, za], [bx - 0.004, topY(zb) - 0.035, zb], [bx - 0.004, topY(zb) + 0.012, zb], [bx - 0.004, topY(za) + 0.012, za]], wood); }
+  const arm = z => {
+    oBox(c, m, x0 + 0.02, x0 + 0.07, sy - 0.22, sy, z - 0.03, z + 0.03, wood, woodD, woodT);
+    oBox(c, m, x0, bx, sy - 0.26, sy - 0.2, z - 0.045, z + 0.045, wood, woodD, woodT);
+    oBox(c, m, x0 + 0.08, bx, sy - 0.2, sy, z - 0.035, z + 0.035, stripe(3, 0.1), stripe(3, 0.3), stripe(3));
+  };
+  arm(z1 - 0.05);
+  // the seat cushion: stripes running front to back, the front edge in shade
+  for (let i = 0; i < N; i++) {
+    const za = zs(i), zb = zs(i + 1);
+    if (m.y < sy) oPoly(c, m, [[x0, sy, za], [bx, sy, za], [bx, sy, zb], [x0, sy, zb]], stripe(i));
+    oPoly(c, m, [[x0, sy, za], [x0, sy, zb], [x0, sy + 0.1, zb], [x0, sy + 0.1, za]], stripe(i, 0.28));
+  }
+  oPoly(c, m, [[x0, sy, z0 + 0.05], [bx, sy, z0 + 0.05], [bx, sy + 0.1, z0 + 0.05], [x0, sy + 0.1, z0 + 0.05]], stripe(5, 0.35));
+  oBox(c, m, x0 - 0.02, x0 + 0.02, sy + 0.1, sy + 0.15, z0, z1, wood, woodD, woodT);
+  arm(z0 + 0.05);
 }
 // draw something flat facing the camera, in metres, at a point of the room
 function oAt(c, m, X, Y, Z, draw) {
@@ -2867,16 +2933,8 @@ function officeRoom(c, t, m, door) {
     const [px0, py0] = oP(m, x0 + 0.08, -0.22, 4.4), lsp = (x1 - x0 - 0.16) * OF.f / (4.4 - m.z) / 276;
     drawLogo(c, px0, py0, lsp, { roof: [67, 93, 109], ink: [67, 93, 109] });
   }
-  // the blue velvet chair with chrome legs
-  oAt(c, m, 0.3, Fl, 4.25, s => {
-    c.strokeStyle = rgba([196, 200, 206]); c.lineWidth = 0.018; c.beginPath();
-    c.moveTo(-0.2, 0); c.lineTo(-0.17, -0.46); c.moveTo(0.2, 0); c.lineTo(0.17, -0.46); c.moveTo(-0.12, -0.02); c.lineTo(-0.1, -0.46); c.moveTo(0.12, -0.02); c.lineTo(0.1, -0.46); c.stroke();
-    const vg = c.createLinearGradient(-0.24, 0, 0.24, 0); vg.addColorStop(0, rgba([54, 96, 110])); vg.addColorStop(0.45, rgba([34, 72, 88])); vg.addColorStop(1, rgba([22, 48, 62]));
-    c.fillStyle = vg; c.beginPath(); rrect(c, -0.24, -0.97, 0.48, 0.44, 0.08); c.fill();
-    c.beginPath(); rrect(c, -0.26, -0.54, 0.52, 0.1, 0.04); c.fill();
-    c.fillStyle = 'rgba(160,210,220,0.14)'; c.beginPath(); c.ellipse(-0.08, -0.82, 0.08, 0.16, 0, 0, TAU); c.fill();
-    c.fillStyle = 'rgba(0,0,0,0.18)'; c.beginPath(); c.ellipse(0, 0.005, 0.28, 0.03, 0, 0, TAU); c.fill();
-  });
+  // the blue velvet chair, in profile toward the second desk
+  velvetChair(c, m, 0.32, 4.25);
   // the wardrobe against the left wall: two laminate doors, steel handles
   if (3.4 > m.z + 0.12) {
     oPoly(c, m, [[-1.72, -0.62, 3.4], [-1.72, -0.62, 4.6], [-1.72, Fl, 4.6], [-1.72, Fl, 3.4]], rgba([214, 204, 186]));
@@ -2893,34 +2951,16 @@ function officeRoom(c, t, m, door) {
   oBox(c, m, -1.9, -1.35, 0.22, 0.66, 3.5, 3.53, rgba([28, 28, 30]), rgba([18, 18, 20]));
   oBox(c, m, -1.66, -1.59, 0.66, 0.72, 3.52, 3.6, rgba([40, 40, 44]), rgba([30, 30, 32]));
   oBox(c, m, -1.95, -1.5, 0.715, 0.72, 3.0, 3.25, rgba([246, 246, 244]), rgba([230, 230, 228]), rgba([250, 250, 248]));
-  oAt(c, m, -1.3, Fl, 3.1, s => {
-    c.strokeStyle = rgba([30, 30, 32]); c.lineWidth = 0.03; c.beginPath();
-    c.moveTo(0, -0.46); c.lineTo(0, -0.08); for (const a of [-0.3, 0, 0.3]) { c.moveTo(0, -0.08); c.lineTo(a, -0.02); } c.stroke();
-    c.fillStyle = rgba([24, 22, 22]); c.beginPath(); rrect(c, -0.26, -0.55, 0.52, 0.1, 0.04); c.fill();
-    c.beginPath(); rrect(c, -0.23, -1.05, 0.46, 0.46, 0.1); c.fill();
-    c.strokeStyle = 'rgba(90,90,96,0.35)'; c.lineWidth = 0.008; c.beginPath(); for (let y = -1.0; y < -0.62; y += 0.04) { c.moveTo(-0.2, y); c.lineTo(0.2, y); } c.stroke();
-  });
-  // the striped settee behind the glass: carved walnut frame, multicolour stripes
-  oAt(c, m, 1.5, Fl, 2.55, s => {
-    c.fillStyle = rgba([86, 56, 36]);
-    for (const x of [-0.72, -0.28, 0.28, 0.72]) { c.beginPath(); c.moveTo(x - 0.03, -0.4); c.quadraticCurveTo(x + 0.03, -0.2, x - 0.01, 0); c.lineTo(x + 0.02, 0); c.quadraticCurveTo(x + 0.06, -0.2, x + 0.03, -0.4); c.fill(); }
-    c.save(); c.beginPath();
-    c.moveTo(-0.74, -0.45); c.lineTo(-0.72, -0.88); c.bezierCurveTo(-0.6, -1.08, -0.2, -1.02, 0, -1.1); c.bezierCurveTo(0.2, -1.02, 0.6, -1.08, 0.72, -0.88); c.lineTo(0.74, -0.45); c.closePath();
-    c.moveTo(-0.8, -0.38); c.lineTo(0.8, -0.38); c.lineTo(0.8, -0.52); c.lineTo(-0.8, -0.52); c.closePath();
-    c.clip();
-    for (let i = 0, x = -0.82; x < 0.82; i++) { const w = 0.018 + ((i * 7) % 5) * 0.009; c.fillStyle = rgba(O_STRIPES[i % O_STRIPES.length]); c.fillRect(x, -1.12, w, 0.8); x += w; }
-    c.fillStyle = 'rgba(0,0,0,0.18)'; c.fillRect(-0.82, -0.52, 1.64, 0.03);
-    c.restore();
-    c.strokeStyle = rgba([92, 60, 38]); c.lineWidth = 0.035; c.beginPath();
-    c.moveTo(-0.74, -0.45); c.lineTo(-0.72, -0.88); c.bezierCurveTo(-0.6, -1.08, -0.2, -1.02, 0, -1.1); c.bezierCurveTo(0.2, -1.02, 0.6, -1.08, 0.72, -0.88); c.lineTo(0.74, -0.45); c.stroke();
-    c.lineWidth = 0.05; c.beginPath(); c.moveTo(-0.86, -0.72); c.quadraticCurveTo(-0.9, -0.5, -0.8, -0.38); c.moveTo(0.86, -0.72); c.quadraticCurveTo(0.9, -0.5, 0.8, -0.38); c.stroke();
-  });
+  // the black chair pulled up to it, seen from behind
+  taskChair(c, m, -1.2, 2.72);
   // a framed blue print on the right wall
   if (4.2 > m.z + 0.12) {
     oPoly(c, m, [[R - 0.01, -0.75, 4.2], [R - 0.01, -0.75, 4.95], [R - 0.01, 0.35, 4.95], [R - 0.01, 0.35, 4.2]], rgba([200, 204, 208]));
     oPoly(c, m, [[R - 0.012, -0.7, 4.25], [R - 0.012, -0.7, 4.9], [R - 0.012, 0.3, 4.9], [R - 0.012, 0.3, 4.25]], rgba([64, 104, 150]));
     oPoly(c, m, [[R - 0.013, -0.45, 4.35], [R - 0.013, -0.3, 4.8], [R - 0.013, 0.1, 4.7], [R - 0.013, -0.05, 4.3]], 'rgba(220,232,242,0.6)');
   }
+  // the striped settee behind the glass, along the right side
+  settee(c, m);
   // the rubber plant in the foreground on the left
   oAt(c, m, -0.72, Fl, 1.25, s => {
     const leaves = [[-0.3, -0.62, -0.9, 0.3], [-0.12, -0.8, -0.4, 0.28], [0.1, -0.7, 0.5, 0.3], [0.28, -0.52, 1.0, 0.27], [-0.34, -0.38, -1.2, 0.26], [0.02, -1.02, 0.1, 0.26], [-0.2, -1.2, -0.6, 0.24], [0.22, -1.12, 0.7, 0.25], [0.36, -0.86, 1.2, 0.24], [-0.4, -0.95, -1.3, 0.24], [0.0, -1.38, -0.2, 0.22], [0.14, -0.38, 0.8, 0.26], [-0.18, -0.46, -0.5, 0.28], [0.3, -1.3, 0.9, 0.2], [-0.36, -1.2, -1.0, 0.21], [0.08, -1.5, 0.3, 0.18], [-0.08, -0.3, -0.2, 0.3]];
@@ -2937,30 +2977,43 @@ function officeRoom(c, t, m, door) {
     });
     c.fillStyle = rgba([236, 234, 230]); c.beginPath(); c.moveTo(-0.2, -0.28); c.lineTo(0.2, -0.28); c.lineTo(0.16, 0); c.lineTo(-0.16, 0); c.closePath(); c.fill();
   });
-  // the open glass door in the foreground: its lever handle and white lettering
-  const ang = door, hx = 1.11, hz = 1.5, fxd = hx - Math.cos(ang), fzd = hz - Math.sin(ang);
-  if (fzd > m.z + 0.12) {
-    const q = [oP(m, fxd, -0.75, fzd), oP(m, hx, -0.75, hz), oP(m, hx, Fl, hz), oP(m, fxd, Fl, fzd)];
-    c.beginPath(); c.moveTo(q[0][0], q[0][1]); for (let i = 1; i < 4; i++) c.lineTo(q[i][0], q[i][1]); c.closePath();
-    c.fillStyle = 'rgba(214,232,240,0.14)'; c.fill();
-    g = c.createLinearGradient(q[0][0], q[0][1], q[2][0], q[2][1]); g.addColorStop(0.2, 'rgba(255,255,255,0)'); g.addColorStop(0.35, 'rgba(255,255,255,0.18)'); g.addColorStop(0.45, 'rgba(255,255,255,0)');
-    c.fillStyle = g; c.fill();
-    // the aluminium stile on the free edge and the lever
-    const e0 = oP(m, fxd, -0.75, fzd), e1 = oP(m, fxd, Fl, fzd), ew = 0.028 * OF.f / (fzd - m.z);
-    const sg = c.createLinearGradient(e0[0] - ew / 2, 0, e0[0] + ew / 2, 0); sg.addColorStop(0, rgba([150, 154, 158])); sg.addColorStop(0.4, rgba([232, 234, 236])); sg.addColorStop(1, rgba([170, 174, 178]));
-    c.fillStyle = sg; c.fillRect(e0[0] - ew / 2, e0[1], ew, e1[1] - e0[1]);
-    const hd = oP(m, fxd + 0.02, 0.48, fzd), hs = OF.f / (fzd - m.z);
-    c.fillStyle = rgba([226, 228, 232]); c.beginPath(); c.arc(hd[0], hd[1], 0.03 * hs, 0, TAU); c.fill();
-    fillRR(c, hd[0] - 0.012 * hs, hd[1] - 0.014 * hs, 0.14 * hs, 0.028 * hs, 0.012 * hs, [214, 216, 220]);
-    // lettering on the glass, in the plane of the door (affine from three corners)
-    const W0 = Math.hypot(hx - fxd, hz - fzd);
-    const A = q[0], Bq = q[1], D = q[3];
-    c.save();
-    c.transform((Bq[0] - A[0]) / W0, (Bq[1] - A[1]) / W0, (D[0] - A[0]) / 2.25, (D[1] - A[1]) / 2.25, A[0], A[1]);
-    c.transform(1, 0, -0.18, 1, 0, 0);
-    const lines = [['I NOSTRI SERVIZI', 0.22, 0.052], ['Vendita e locazione di Immobili', 0.36, 0.04], ['Consulenza Mutui', 0.48, 0.04], ['Valutazioni Gratuite', 0.6, 0.04], ['Residenziale Commerciale', 0.72, 0.04], ['Gestione Affitti e Contratti', 0.92, 0.04], ['Pratiche Notarili', 1.05, 0.04], ['I NOSTRI CONTATTI', 1.3, 0.05]];
-    for (const [s, y, size] of lines) drawText(c, s, 0.16, y, { size, w: size > 0.05 ? 16 : 13, align: 'left', color: C.white, alpha: 0.92 });
-    c.restore();
+  // the glass door: it swings inward as the camera comes in. An aluminium frame
+  // round the glass, the lever, and the white vinyl lettering set word by word in
+  // the plane of the door, so it keeps its perspective; it fades as the door turns
+  // edge-on
+  const ang = door, hx = 1.11, hz = 1.5, DW = 1.0, top = -0.75;
+  const ex = Math.cos(ang), ez = -Math.sin(ang), fx = hx - ex * DW, fz = hz - ez * DW;
+  const dp = (u, v) => [fx + ex * u, v, fz + ez * u];
+  const quad = (u0, u1, v0, v1, fill) => oPoly(c, m, [dp(u0, v0), dp(u1, v0), dp(u1, v1), dp(u0, v1)], fill);
+  if (Math.max(fz, hz) > m.z + 0.05) {
+    quad(0, DW, top, Fl, 'rgba(214,232,240,0.13)');
+    oPoly(c, m, [dp(0.3, top), dp(0.5, top), dp(0.2, Fl), dp(0.02, Fl)], 'rgba(255,255,255,0.06)');
+    const al = rgba([200, 204, 208]), alD = rgba([154, 158, 164]);
+    quad(0, 0.035, top, Fl, al); quad(DW - 0.035, DW, top, Fl, alD);
+    quad(0, DW, top, top + 0.045, al); quad(0, DW, Fl - 0.1, Fl, alD);
+    quad(0.045, 0.085, 0.44, 0.515, rgba([210, 212, 216]));
+    quad(0.05, 0.19, 0.465, 0.49, rgba([228, 230, 234]));
+    const la = 0.92 * (1 - ss(0.55, 1.05, ang));
+    if (la > 0.01) {
+      const lines = [['I NOSTRI SERVIZI', 0.22, 0.052], ['Vendita e locazione di Immobili', 0.36, 0.04], ['Consulenza Mutui', 0.48, 0.04], ['Valutazioni Gratuite', 0.6, 0.04], ['Residenziale Commerciale', 0.72, 0.04], ['Gestione Affitti e Contratti', 0.92, 0.04], ['Pratiche Notarili', 1.05, 0.04], ['I NOSTRI CONTATTI', 1.3, 0.05]];
+      for (const [s, y, sz0] of lines) {
+        const wt = sz0 > 0.05 ? 16 : 13, words = s.split(' ');
+        const w0 = words.reduce((a, wd) => a + measure(wd, sz0, wt), 0) + sz0 * 0.3 * (words.length - 1);
+        const size = sz0 * Math.min(1, (DW - 0.22) / w0), gap = size * 0.3;
+        let u = 0.13;
+        for (const wd of words) {
+          const ww = measure(wd, size, wt), A = oP(m, ...dp(u, top + y)), Bw = oP(m, ...dp(u + ww, top + y)), Cw = oP(m, ...dp(u, top + y + size));
+          if (A[2] > 0.1 && Bw[2] > 0.1 && Cw[2] > 0.1) {
+            c.save();
+            c.transform((Bw[0] - A[0]) / ww, (Bw[1] - A[1]) / ww, (Cw[0] - A[0]) / size, (Cw[1] - A[1]) / size, A[0], A[1]);
+            c.transform(1, 0, -0.18, 1, 0, 0);
+            drawText(c, wd, 0, 0, { size, w: wt, align: 'left', color: C.white, alpha: la });
+            c.restore();
+          }
+          u += ww + gap;
+        }
+      }
+    }
   }
 }
 function sceneOffice(c, t) {
@@ -2988,7 +3041,7 @@ function sceneOffice(c, t) {
     // a step inside while the caption reads, then the camera walks up to the cobalt wall
     const creep = 0.28 * ss(T.office + 1.0, T.push + 0.3, t);
     const cam = { x: 0.98 * pu, y: -0.3 * pu, z: creep + (5.1 - creep) * pu };
-    officeRoom(c, t, cam, 0.2 + 1.3 * ss(T.push - 0.15, T.push + 0.3, t));
+    officeRoom(c, t, cam, 0.2 + 1.25 * ss(T.office + 1.2, T.push + 0.3, t));
     c.restore();
   }
   // the wall becomes the field of the call to action
@@ -3222,16 +3275,14 @@ function render(t) {
 
 // ================================================================== audio
 // The score is synthesised here on the cue table T that drives the picture, so
-// every hit lands on a cut or a word. Hybrid trailer × phonk × midtempo at
-// 100 BPM in B minor: braams and three-layer hits (crack, body, sub drop), a
-// phonk cowbell riff in B Phrygian over a driven 808, a four-on-the-floor
-// drive with a rolling bass and supersaw stabs, taiko, gated risers and three
-// stop-downs of dead silence before the drops; D major only for SOLD, GRATIS
-// and the logo. The ASMR foley rides on top.
-// Graph: kick / 808 / drums / synths (sidechained to the kick) → the office
-// low-pass → the level ride → the stop-down gate → master; hits and foley go
-// straight to the master: 30 Hz high-pass → low shelf, presence and air →
-// glue compressor → soft clipper.
+// every accent lands on a cut or a word. A cinematic score for a brand film:
+// piano and strings in the lead, a spiccato ostinato for pace, timpani and low
+// drums for weight, a few impacts on the turning points, the ASMR foley on top.
+// B minor with a tense string tremolo and a ticking pulse for the problem; D
+// major, warm and driving, from "Noi no." to the logo, where the four-note
+// sonic logo plays. Graph: piano / strings / percussion → the level ride → the
+// stop-down gate → master; impacts and foley go straight to the master:
+// 30 Hz high-pass → presence and air → glue compressor → soft clipper.
 const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
 function makeNoise(ac, sec) {
   const b = ac.createBuffer(1, Math.floor(ac.sampleRate * sec), ac.sampleRate), d = b.getChannelData(0), r = rng(123);
@@ -3253,82 +3304,61 @@ function makeIR(ac, sec, decay) {
   }
   return b;
 }
-// TR-808 metal: the six square oscillators of its hats and cymbals, summed
-function makeMetal(ac) {
-  const sr = ac.sampleRate, b = ac.createBuffer(1, Math.floor(sr * 0.6), sr), d = b.getChannelData(0);
-  const F = [205.3, 304.4, 369.6, 522.7, 540, 800];
-  for (let i = 0; i < d.length; i++) { let s = 0; for (const f of F) s += (f * i / sr) % 1 < 0.5 ? 1 : -1; d[i] = s / 6; }
-  return b;
-}
 // a waveshaper curve from a function on [-1, 1]
 function curveOf(fn, n = 2048) { const c = new Float32Array(n); for (let i = 0; i < n; i++) c[i] = fn(i / (n - 1) * 2 - 1); return c; }
-const soft = k => x => Math.tanh(k * x) / Math.tanh(k);
-// input gain → optional drive → output gain → dest; the outputs stay in G.bus
-function bus(G, name, dest, level, drive = 0, pre = 1) {
-  const i = G.ac.createGain(), o = G.ac.createGain();
-  i.gain.value = pre; o.gain.value = level;
-  if (drive) { const s = G.ac.createWaveShaper(); s.curve = curveOf(soft(drive)); i.connect(s); s.connect(o); }
-  else i.connect(o);
-  o.connect(dest); G.bus[name] = o;
-  return i;
+// a mixer channel: its gain feeds dest; G.bus keeps the channels
+function bus(G, name, dest, level) {
+  const g = G.ac.createGain(); g.gain.value = level; g.connect(dest); G.bus[name] = g;
+  return g;
 }
 function audioGraph(ac, t0 = 0) {
   const G = { ac, nr: rng(99), t0, bus: {} };
   // master: 30 Hz high-pass → presence and air (phones live between 300 Hz and 6 kHz) →
   // glue → a soft clipper, linear to 0.6 with a smooth knee that never passes 0.95
-  G.out = ac.createGain(); G.out.gain.value = 0.95;
-  const hp = filt(G, 'highpass', 30, 0.7), low = filt(G, 'lowshelf', 110), pres = filt(G, 'peaking', 3000, 0.6), air = filt(G, 'highshelf', 7500);
-  low.gain.value = -2; pres.gain.value = 4.5; air.gain.value = 2.5;
+  G.out = ac.createGain(); G.out.gain.value = 0.9;
+  const hp = filt(G, 'highpass', 30, 0.7), pres = filt(G, 'peaking', 3000, 0.6), air = filt(G, 'highshelf', 8000);
+  pres.gain.value = 2; air.gain.value = 1.5;
   const glue = ac.createDynamicsCompressor();
-  glue.threshold.value = -12; glue.knee.value = 10; glue.ratio.value = 2; glue.attack.value = 0.01; glue.release.value = 0.2;
+  glue.threshold.value = -14; glue.knee.value = 10; glue.ratio.value = 2; glue.attack.value = 0.015; glue.release.value = 0.25;
   const clipIn = ac.createGain(), clip = ac.createWaveShaper();
   clipIn.gain.value = 0.5;
   clip.curve = curveOf(u => { const x = 2 * u, a = Math.abs(x); return Math.sign(x) * (a < 0.6 ? a : 0.6 + 0.35 * Math.tanh((a - 0.6) / 0.35)); });
   G.post = ac.createGain(); G.post.gain.value = 0.94;
-  G.out.connect(hp); hp.connect(low); low.connect(pres); pres.connect(air); air.connect(glue); glue.connect(clipIn); clipIn.connect(clip); clip.connect(G.post); G.post.connect(ac.destination);
-  // stop-down gate ← the level ride of the film ← office low-pass ← sidechain duck
+  G.out.connect(hp); hp.connect(pres); pres.connect(air); air.connect(glue); glue.connect(clipIn); clipIn.connect(clip); clip.connect(G.post); G.post.connect(ac.destination);
+  // stop-down gate ← the level ride of the film ← the orchestra
   G.gate = ac.createGain(); G.gate.connect(G.out);
   G.ride = ac.createGain(); G.ride.connect(G.gate);
-  G.mlp = filt(G, 'lowpass', 20000, 0.6); G.mlp.connect(G.ride);
-  // the fader: a sparse promise, the drops on top, the office behind a wall, the offer climbing
-  [[0, 0.9], [3.6, 0.68], [5.9, 0.9], [6.0, 0.85], [9.6, 1.12], [12.0, 0.95], [22.8, 0.95], [24.0, 1.08], [25.2, 0.92],
-   [28.8, 0.7], [30.3, 0.7], [31.2, 0.9], [31.21, 0.72], [33.45, 0.95], [33.6, 1.12], [36.0, 1.05]].forEach(([tt, v], i, arr) => {
+  // the fader: a quiet promise, the turning points on top, the office close and intimate
+  [[0, 0.95], [3.6, 0.78], [5.9, 1], [6.0, 0.9], [9.6, 1.05], [12.0, 1], [19.2, 1.06], [24.0, 1.08], [25.2, 1], [28.8, 0.9],
+   [30.3, 0.9], [31.2, 0.95], [31.21, 0.85], [33.45, 1], [33.6, 1.08], [36.0, 1.05]].forEach(([tt, v], i, arr) => {
     const w = t0 + tt;
-    if (i === 0) G.ride.gain.setValueAtTime(v, w);
-    else if (tt - arr[i - 1][0] < 0.05) G.ride.gain.setValueAtTime(v, w);
+    if (i === 0 || tt - arr[i - 1][0] < 0.05) G.ride.gain.setValueAtTime(v, w);
     else G.ride.gain.linearRampToValueAtTime(v, w);
   });
-  G.duck = ac.createGain(); G.duck.connect(G.mlp);
-  G.music = bus(G, 'music', G.duck, 0.75);
-  G.grit = bus(G, 'grit', G.duck, 0.26, 2.5);
-  G.lead = bus(G, 'lead', G.mlp, 0.5, 1.6);
-  G.kick = bus(G, 'kick', G.mlp, 0.46, 2, 0.9);
-  G.drums = bus(G, 'drums', G.mlp, 0.75);
-  G.hits = bus(G, 'hits', G.out, 0.8);
+  G.keys = bus(G, 'keys', G.ride, 0.9);
+  G.strings = bus(G, 'strings', G.ride, 1.05);
+  G.perc = bus(G, 'perc', G.ride, 0.62);
+  G.music = bus(G, 'music', G.ride, 0.7);
+  G.hits = bus(G, 'hits', G.out, 0.7);
   G.sfx = bus(G, 'sfx', G.out, 1.0);
-  // 808: every note gets its own asymmetric drive (even harmonics a phone speaker can
-  // play, and the velocity survives), then the bus tames it
-  G.c808 = curveOf(x => (Math.tanh(4 * (x + 0.06)) - Math.tanh(0.24)) / 1.24);
-  G.b808 = filt(G, 'lowpass', 3500, 0.7);
-  const hp8 = filt(G, 'highpass', 28, 0.7), o8 = ac.createGain();
-  o8.gain.value = 0.25; G.bus.b808 = o8;
-  G.b808.connect(hp8); hp8.connect(o8); o8.connect(G.mlp);
   G.rev = ac.createConvolver(); G.rev.buffer = makeIR(ac, 2.8, 3);
   G.revIn = ac.createGain(); G.revIn.connect(G.rev);
-  const revHp = filt(G, 'highpass', 200), revOut = ac.createGain(); revOut.gain.value = 0.55; G.bus.rev = revOut;
-  G.rev.connect(revHp); revHp.connect(revOut); revOut.connect(G.mlp);
+  const revHp = filt(G, 'highpass', 180), revOut = ac.createGain(); revOut.gain.value = 0.6; G.bus.rev = revOut;
+  G.rev.connect(revHp); revHp.connect(revOut); revOut.connect(G.ride);
   // stereo ping-pong delay, dotted eighths, as eight feed-forward taps: left,
   // right, -8.9 dB every second repeat. A feedback loop sounds the same, but the
   // browser may run it a render quantum apart, so two exports would not match.
   G.dlyIn = ac.createGain();
   const dlp = filt(G, 'lowpass', 3200); G.dlyIn.connect(dlp);
-  const oL = pan(G, G.mlp, -0.75), oR = pan(G, G.mlp, 0.75);
+  const oL = pan(G, G.ride, -0.75), oR = pan(G, G.ride, 0.75);
   for (let k = 0; k < 8; k++) {
     const dt = BEAT * 0.75 * (k + 1), d = ac.createDelay(dt + 0.1), g = ac.createGain();
     d.delayTime.value = dt; g.gain.value = 0.26 * Math.pow(0.36, k >> 1);
     dlp.connect(d); d.connect(g); g.connect(k % 2 ? oR : oL);
   }
-  G.metal = makeMetal(ac);
+  // a piano-like harmonic series: strong low partials, a dip where the hammer strikes
+  const amp = [0, 1, 0.62, 0.42, 0.26, 0.22, 0.12, 0.05, 0.07, 0.05, 0.035, 0.025, 0.02, 0.015, 0.01];
+  G.pianoWave = ac.createPeriodicWave(new Float32Array(amp.length), Float32Array.from(amp));
   G.noise = makeNoise(ac, 2.5);
   return G;
 }
@@ -3356,213 +3386,126 @@ function send(G, node, rev = 0, dly = 0) {
   if (rev > 0) { const g = G.ac.createGain(); g.gain.value = rev; node.connect(g); g.connect(G.revIn); }
   if (dly > 0) { const g = G.ac.createGain(); g.gain.value = dly; node.connect(g); g.connect(G.dlyIn); }
 }
-// a note's own drive into the 808 bus, at velocity v
-function drv(G, v) {
-  const s = G.ac.createWaveShaper(), g = G.ac.createGain();
-  s.curve = G.c808; g.gain.value = v;
-  s.connect(g); g.connect(G.b808);
-  return s;
-}
-// the kick pumps the synths
-function duck(G, t, v = 1) {
-  const p = G.duck.gain;
-  p.setTargetAtTime(1 - 0.62 * Math.min(1, v), t, 0.003);
-  p.setTargetAtTime(1, t + 0.045, 0.075);
-}
-// dead silence before a drop: the musical buses and their tails shut, then open on the hit
+// a breath of silence before a turning point: the orchestra and its tails stop, then come back on the hit
 function stopDown(G, t, t1) {
   const g = G.gate.gain;
-  g.setValueAtTime(1, t); g.linearRampToValueAtTime(0, t + 0.012);
+  g.setValueAtTime(1, t); g.linearRampToValueAtTime(0, t + 0.03);
   g.setValueAtTime(0, t1 - 0.003); g.linearRampToValueAtTime(1, t1);
 }
-// the office: the music through a wall, then the wall opens
-function muffle(G, t, f0, f1, dur) {
-  const p = G.mlp.frequency;
-  p.setValueAtTime(f0, t); p.exponentialRampToValueAtTime(f1, t + dur);
+// ------------------------------------------------------------ the orchestra
+// piano: two strings a note on the piano wave, a felt hammer, a low-pass that closes
+// as the tone rings (the high partials die first); low notes ring longer
+function piano(G, t, m, v = 1, dur = 1, p) {
+  const f = mtof(m), out = pan(G, G.keys, p === undefined ? clamp((m - 62) / 36, -0.5, 0.5) : p);
+  const lp = filt(G, 'lowpass', 1000, 0.5), g = G.ac.createGain();
+  const top = Math.min(15000, f * (2.5 + 9 * v) + 500), T = 2.2 * Math.pow(2, -(m - 40) / 22);
+  lp.frequency.setValueAtTime(top, t); lp.frequency.setTargetAtTime(Math.min(top, f * 2.4 + 400), t + 0.005, 0.4);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.2 * v, t + 0.002);
+  g.gain.setTargetAtTime(0.09 * v, t + 0.004, 0.1);
+  if (dur > 0.14) g.gain.setTargetAtTime(0, t + 0.13, T);
+  g.gain.setTargetAtTime(0, t + Math.max(dur, 0.01), 0.1);          // the damper
+  const end = t + Math.max(dur, 0.01) + 0.6;
+  [-1.4, 1.4].forEach(d => { const o = G.ac.createOscillator(); o.setPeriodicWave(G.pianoWave); o.frequency.value = f; o.detune.value = d; o.start(t); o.stop(end); o.connect(lp); });
+  lp.connect(g); g.connect(out); send(G, g, 0.3);
+  const n = nsrc(G, t, 0.03), bp = filt(G, 'bandpass', Math.min(3500, 500 + f * 2), 0.9), ng = vca(G, t, out, 0.0008, 0.04 * v, 0.02, 0.01);
+  n.connect(bp); bp.connect(ng);
 }
-// ------------------------------------------------------------------- drums
-// a pitch-swept sine, a knock and a click; the bus drive squares it up
-function kick(G, t, v = 1, dec = 0.3) {
-  const o = osc(G, t, 'sine', 240, dec + 0.1), g = G.ac.createGain();
-  o.frequency.exponentialRampToValueAtTime(62, t + 0.035); o.frequency.exponentialRampToValueAtTime(45, t + dec);
-  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + 0.0015);
-  g.gain.setValueAtTime(v, t + 0.05); g.gain.exponentialRampToValueAtTime(0.001, t + dec);
-  o.connect(g); g.connect(G.kick);
-  const kn = osc(G, t, 'triangle', 190, 0.07), kg = vca(G, t, G.kick, 0.001, 0.35 * v, 0.045, 0.02);
-  kn.frequency.exponentialRampToValueAtTime(95, t + 0.045); kn.connect(kg);
-  const n = nsrc(G, t, 0.015), f = filt(G, 'highpass', 2500), ng = vca(G, t, G.kick, 0.0003, 0.6 * v, 0.01, 0.005);
-  n.connect(f); f.connect(ng);
-  duck(G, t, v);
+function chord(G, t, notes, v = 1, dur = 1.2, spread = 0.012) { notes.forEach((m, j) => piano(G, t + j * spread, m, v, dur)); }
+// the string section: three detuned saws a note, a slow bow, a shared vibrato and a warm
+// low-pass. `cresc` swells from a quarter to full over the note; `trem` bows it in tremolo
+function strings(G, t, notes, dur, v = 1, o = {}) {
+  const att = o.att === undefined ? 0.25 : o.att, rel = o.rel === undefined ? 0.5 : o.rel, lv = 0.046 * v;
+  const lp = filt(G, 'lowpass', o.f || 2600, 0.4), hp = filt(G, 'highpass', 70, 0.5), g = G.ac.createGain();
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(o.cresc ? lv * 0.25 : lv, t + att);
+  if (o.cresc) g.gain.linearRampToValueAtTime(lv, t + dur); else g.gain.setValueAtTime(lv, t + dur);
+  g.gain.linearRampToValueAtTime(0, t + dur + rel);
+  lp.connect(hp); hp.connect(g);
+  let out = g;
+  if (o.trem) {
+    const tg = G.ac.createGain(), lfo = osc(G, t, 'sine', 11.5, dur + rel), ld = G.ac.createGain();
+    tg.gain.value = 0.6; ld.gain.value = 0.4; lfo.connect(ld); ld.connect(tg.gain); g.connect(tg); out = tg;
+  }
+  out.connect(o.dest || G.strings); send(G, out, o.rev === undefined ? 0.45 : o.rev);
+  const vib = osc(G, t, 'sine', 5.2, dur + rel + 0.05), vd = G.ac.createGain(); vd.gain.value = 6; vib.connect(vd);
+  const sides = [pan(G, lp, -0.55), lp, pan(G, lp, 0.55)];
+  notes.forEach((m, j) => [-8, 1, 9].forEach((d, k) => {
+    const s = osc(G, t, 'sawtooth', mtof(m), dur + rel + 0.05); s.detune.value = d; vd.connect(s.detune); s.connect(sides[(k + j) % 3]);
+  }));
 }
-// 808: a sine with a pitch punch, or a slide up from the last note; `fall` sags it at the end
-function b808(G, t, m, dur, v = 1, o = {}) {
-  const f = mtof(m), s = osc(G, t, 'sine', o.from ? mtof(o.from) : f * 1.9, dur + 0.15), g = G.ac.createGain();
-  s.frequency.exponentialRampToValueAtTime(f, t + (o.from ? o.glide || 0.06 : 0.025));
-  if (o.fall) { s.frequency.setValueAtTime(f, t + dur - o.fall[1]); s.frequency.exponentialRampToValueAtTime(f * Math.pow(2, -o.fall[0] / 12), t + dur); }
-  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.95, t + 0.004);
-  g.gain.setTargetAtTime(0.6, t + 0.02, dur * 0.5); g.gain.setTargetAtTime(0, t + dur, 0.025);
-  s.connect(g); g.connect(drv(G, v));
+// spiccato: short bowed notes that give the score its pace
+function spic(G, t, m, v = 1, p = 0, len = 0.12) {
+  const f = mtof(m), a = osc(G, t, 'sawtooth', f, len + 0.25), b = osc(G, t, 'sawtooth', f * 1.005, len + 0.25);
+  const lp = filt(G, 'lowpass', 2000, 0.7), g = G.ac.createGain();
+  lp.frequency.setValueAtTime(Math.min(9000, 700 + f * 2.5 + 2500 * v), t); lp.frequency.setTargetAtTime(500 + f * 1.8, t + 0.015, 0.05);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.1 * v, t + 0.007); g.gain.setTargetAtTime(0, t + 0.03, len / 3);
+  a.connect(lp); b.connect(lp); lp.connect(g); g.connect(pan(G, G.strings, p)); send(G, g, 0.28);
 }
-// trap clap-snare: three flams, a tail, a tonal body and a snap of sizzle
-function snap(G, t, v = 1, tail = 0.15, p = 0) {
-  const out = pan(G, G.drums, p), bp = filt(G, 'bandpass', 2100, 0.7);
-  bp.connect(out); send(G, bp, 0.2);
-  for (let i = 0; i < 3; i++) { const tt = t + i * 0.009, n = nsrc(G, tt, 0.012), g = vca(G, tt, bp, 0.0004, (i === 2 ? 1 : 0.7) * v, 0.007, 0.004); n.connect(g); }
-  const n = nsrc(G, t + 0.02, tail + 0.05), g = vca(G, t + 0.02, bp, 0.001, v, tail, 0.04); n.connect(g);
-  const hs = filt(G, 'highpass', 6000), n2 = nsrc(G, t, 0.06), hg = vca(G, t, out, 0.0004, 0.5 * v, 0.035, 0.02); n2.connect(hs); hs.connect(hg);
-  const o = osc(G, t, 'triangle', 220, 0.14), og = vca(G, t, out, 0.0008, 0.3 * v, 0.06, 0.03);
-  o.frequency.exponentialRampToValueAtTime(165, t + 0.05); o.connect(og);
+function pizz(G, t, m, v = 1, p = 0) {
+  const f = mtof(m), o = osc(G, t, 'triangle', f, 0.7), o2 = osc(G, t, 'sine', f * 2.01, 0.4);
+  const lp = filt(G, 'lowpass', Math.min(8000, f * 6), 0.7), h = G.ac.createGain(), g = vca(G, t, pan(G, G.strings, p), 0.002, 0.34 * v, 0.4, 0.1);
+  h.gain.value = 0.3; o.connect(lp); o2.connect(h); h.connect(lp); lp.connect(g); send(G, g, 0.35);
 }
-function hat(G, t, v = 1, open = 0, p = 0.28, rate = 1) {
-  const s = G.ac.createBufferSource(); s.buffer = G.metal; s.playbackRate.value = rate;
-  s.start(t, G.nr() * 0.3); s.stop(t + (open ? 0.45 : 0.09));
-  const bp = filt(G, 'bandpass', 10500, 0.8), hp = filt(G, 'highpass', 7200, 0.7), g = vca(G, t, pan(G, G.drums, p), 0.0005, 0.65 * v, open ? 0.28 : 0.04, 0.02);
-  s.connect(bp); bp.connect(hp); hp.connect(g);
+// timpani: a tuned membrane with its inharmonic partials, a mallet knock and a big room
+function timp(G, t, m, v = 1, p = 0) {
+  const f = mtof(m), out = pan(G, G.perc, p);
+  [[1, 1, 1.4], [1.5, 0.42, 0.8], [1.98, 0.28, 0.6], [2.44, 0.16, 0.4]].forEach(([k, a, d]) => {
+    const o = osc(G, t, 'sine', f * k * 1.03, d + 0.3), g = vca(G, t, out, 0.004, 0.5 * v * a, d, 0.2);
+    o.frequency.exponentialRampToValueAtTime(f * k, t + 0.08); o.connect(g); send(G, g, 0.5);
+  });
+  const n = nsrc(G, t, 0.1), lp = filt(G, 'lowpass', 900, 0.7), ng = vca(G, t, out, 0.001, 0.22 * v, 0.05, 0.03);
+  n.connect(lp); lp.connect(ng); send(G, ng, 0.4);
 }
-function shaker(G, t, v = 1, p = -0.35) {
-  const n = nsrc(G, t, 0.09), f = filt(G, 'bandpass', 6800, 0.9), g = vca(G, t, pan(G, G.drums, p), 0.01, 0.22 * v, 0.045, 0.03);
-  n.connect(f); f.connect(g);
-}
-function crash(G, t, v = 1, dur = 2) {
-  const s = G.ac.createBufferSource(); s.buffer = G.metal; s.loop = true; s.start(t); s.stop(t + dur + 0.1);
-  const n = nsrc(G, t, dur), hp = filt(G, 'highpass', 4500, 0.7), g = vca(G, t, G.hits, 0.001, 0.3 * v, dur * 0.8, 0.2);
-  s.connect(hp); n.connect(hp); hp.connect(g); send(G, g, 0.4);
+// a timpani roll: one membrane, struck fast, growing
+function troll(G, t, dur, m, v0 = 0.2, v1 = 1) {
+  const f = mtof(m), g = G.ac.createGain(), am = G.ac.createGain(), lfo = osc(G, t, 'sawtooth', 17, dur + 0.1), ld = G.ac.createGain();
+  g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.3 * v0, t + 0.05); g.gain.linearRampToValueAtTime(0.3 * v1, t + dur); g.gain.setTargetAtTime(0, t + dur, 0.04);
+  am.gain.value = 0.65; ld.gain.value = -0.35; lfo.connect(ld); ld.connect(am.gain);
+  [[1, 1], [1.5, 0.35]].forEach(([k, a]) => { const o = osc(G, t, 'sine', f * k, dur + 0.3), og = G.ac.createGain(); og.gain.value = a; o.connect(og); og.connect(g); });
+  const n = nsrc(G, t, dur), lp = filt(G, 'lowpass', 700, 0.7), ng = G.ac.createGain(); ng.gain.value = 0.35; n.connect(lp); lp.connect(ng); ng.connect(g);
+  g.connect(am); am.connect(G.perc); send(G, am, 0.45);
 }
 function taiko(G, t, v = 1, f0 = 95, p = 0) {
-  const out = pan(G, G.drums, p), o = osc(G, t, 'sine', f0 * 1.7, 0.9), g = vca(G, t, out, 0.001, 0.85 * v, 0.6, 0.2);
+  const out = pan(G, G.perc, p), o = osc(G, t, 'sine', f0 * 1.7, 0.9), g = vca(G, t, out, 0.001, 0.8 * v, 0.6, 0.2);
   o.frequency.exponentialRampToValueAtTime(f0, t + 0.025); o.frequency.exponentialRampToValueAtTime(f0 * 0.82, t + 0.7);
   o.connect(g); send(G, g, 0.5);
-  const n = nsrc(G, t, 0.2), bp = filt(G, 'bandpass', f0 * 6, 1.4), ng = vca(G, t, out, 0.0008, 0.55 * v, 0.08, 0.04);
+  const n = nsrc(G, t, 0.2), bp = filt(G, 'bandpass', f0 * 6, 1.4), ng = vca(G, t, out, 0.0008, 0.45 * v, 0.08, 0.04);
   n.connect(bp); bp.connect(ng); send(G, ng, 0.5);
 }
-// ------------------------------------------------------------- instruments
-// phonk cowbell: two square waves a fifth-ish apart (the 808's 540 / 800 Hz pair), band-passed
-function cowbell(G, t, m, v = 1, dur = 0.12, p = -0.2) {
-  const f = mtof(m), o1 = osc(G, t, 'square', f, dur + 0.3), o2 = osc(G, t, 'square', f * 1.48, dur + 0.3);
-  const bp = filt(G, 'bandpass', f * 2.2, 0.9), hp = filt(G, 'highpass', f * 0.9, 0.7), g = G.ac.createGain();
-  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.35 * v, t + 0.002);
-  g.gain.setTargetAtTime(0.12 * v, t + 0.002, 0.012); g.gain.setTargetAtTime(0, t + 0.03, dur / 2.5);
-  o1.connect(bp); o2.connect(bp); bp.connect(hp); hp.connect(g); g.connect(pan(G, G.lead, p)); send(G, g, 0.15, 0.25);
+// suspended cymbal: bright noise with a shimmer band and a long tail
+function cymbal(G, t, v = 1, dur = 2.2) {
+  const n = nsrc(G, t, dur), hp = filt(G, 'highpass', 3200, 0.5), sh = filt(G, 'peaking', 7500, 1.2), g = vca(G, t, G.perc, 0.004, 0.13 * v, dur * 0.7, 0.3);
+  sh.gain.value = 5; n.connect(hp); hp.connect(sh); sh.connect(g); send(G, g, 0.45);
 }
-// rolling bass: two saws through a resonant low-pass that snaps shut
-function pulse(G, t, m, v = 1, br = 0.5, len = 0.13) {
-  const f = mtof(m), a = osc(G, t, 'sawtooth', f, len + 0.1), b = osc(G, t, 'sawtooth', f * 1.007, len + 0.1);
-  const lp = filt(G, 'lowpass', 300, 4.5), g = G.ac.createGain();
-  lp.frequency.setValueAtTime(220 + 3000 * br, t); lp.frequency.exponentialRampToValueAtTime(160 + 500 * br, t + len * 0.9);
-  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.32 * v, t + 0.003); g.gain.setValueAtTime(0.32 * v, t + len * 0.6); g.gain.linearRampToValueAtTime(0, t + len);
-  a.connect(lp); b.connect(lp); lp.connect(g); g.connect(G.grit);
+// a reverse cymbal into t + dur, cut on the beat
+function swell(G, t, dur, v = 1) {
+  const n = nsrc(G, t, dur), hp = filt(G, 'highpass', 1500, 0.5), g = G.ac.createGain();
+  hp.frequency.exponentialRampToValueAtTime(5000, t + dur);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.2 * v, t + dur); g.gain.setValueAtTime(0, t + dur);
+  n.connect(hp); hp.connect(g); g.connect(G.perc); send(G, g, 0.3);
 }
-function sub(G, t, m, dur, v = 1) {
-  const o = osc(G, t, 'sine', mtof(m), dur + 0.6), g = vca(G, t, G.music, 0.02, 0.09 * v, 0.5, 0.3, dur);
-  o.connect(g);
-}
-// supersaw: three detuned saws a note, spread wide; a stab, or a held chord
-function saws(G, t, notes, dur, v = 1, o = {}) {
-  const lp = filt(G, 'lowpass', 1000, 0.8), g = G.ac.createGain(), rel = o.rel || 0.15, br = o.bright === undefined ? 1 : o.bright;
-  if (o.stab) {
-    lp.frequency.setValueAtTime(3000 + 9000 * br, t); lp.frequency.exponentialRampToValueAtTime(900 + 2600 * br, t + 0.25);
-    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.115 * v, t + 0.003); g.gain.setTargetAtTime(0, t + 0.003, dur / 3);
-  } else {
-    lp.frequency.setValueAtTime(500 + 800 * br, t); lp.frequency.exponentialRampToValueAtTime(1800 + 5000 * br, t + Math.min(dur, 0.6));
-    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.08 * v, t + (o.att || 0.02));
-    g.gain.setValueAtTime(0.08 * v, t + dur); g.gain.linearRampToValueAtTime(0, t + dur + rel);
-  }
-  lp.connect(g); g.connect(o.dest || G.music); send(G, g, o.rev === undefined ? 0.3 : o.rev, o.dly || 0);
-  const sides = [pan(G, lp, -0.8), lp, pan(G, lp, 0.8)], end = o.stab ? dur * 2.4 : dur + rel + 0.05;
-  notes.forEach(m => [-15, 0, 14].forEach((d, k) => { const s = osc(G, t, 'sawtooth', mtof(m), end); s.detune.value = d; s.connect(sides[k]); }));
-}
-// low detuned saws behind a closed filter: the menace under the phonk and the office
-function drone(G, t, notes, dur, v = 1, f = 500) {
-  const lp = filt(G, 'lowpass', f, 1.2), g = G.ac.createGain();
-  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.08 * v, t + 0.3);
-  g.gain.setValueAtTime(0.08 * v, t + dur - 0.2); g.gain.linearRampToValueAtTime(0, t + dur);
-  lp.connect(g); g.connect(G.music); send(G, g, 0.4);
-  notes.forEach(m => [-7, 7].forEach(d => { const s = osc(G, t, 'sawtooth', mtof(m), dur + 0.05); s.detune.value = d; s.connect(lp); }));
-}
-function pluck(G, t, m, v = 1, p = 0, bright = 1) {
-  const f = mtof(m), o1 = osc(G, t, 'sawtooth', f, 0.6), o2 = osc(G, t, 'square', f * 1.003, 0.6);
-  const lp = filt(G, 'lowpass', 400, 2); lp.frequency.setValueAtTime(900 + 3200 * bright, t); lp.frequency.exponentialRampToValueAtTime(380, t + 0.22);
-  const g = vca(G, t, pan(G, G.music, p), 0.002, 0.23 * v, 0.34, 0.1);
-  const m2 = G.ac.createGain(); m2.gain.value = 0.5;
-  o1.connect(lp); o2.connect(m2); m2.connect(lp); lp.connect(g); send(G, g, 0.2, 0.55);
-}
-// trailer braam: root, fifth and octaves in detuned saws, a filter blat, a pitch sag, a sub
-function braam(G, t, m, dur = 2.4, v = 1) {
-  const lp = filt(G, 'lowpass', 180, 3), g = G.ac.createGain();
-  lp.frequency.setValueAtTime(160, t); lp.frequency.exponentialRampToValueAtTime(2600, t + 0.07);
-  lp.frequency.exponentialRampToValueAtTime(900, t + 0.5); lp.frequency.exponentialRampToValueAtTime(260, t + dur);
-  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + 0.025);
-  g.gain.setTargetAtTime(0.55 * v, t + 0.12, 0.35); g.gain.setTargetAtTime(0, t + dur - 0.5, 0.18);
-  const dr = G.ac.createWaveShaper(), dg = G.ac.createGain(); dr.curve = curveOf(soft(3)); dg.gain.value = 0.5;
-  lp.connect(dr); dr.connect(dg); dg.connect(g); g.connect(G.hits); send(G, g, 0.55);
-  [[m - 12, 0.5], [m, 0.4], [m + 7, 0.3], [m + 12, 0.25]].forEach(([mm, a]) => [-11, 0, 11].forEach(d => {
-    const o = osc(G, t, 'sawtooth', mtof(mm), dur + 0.3), og = G.ac.createGain();
-    o.detune.setValueAtTime(d, t); o.detune.linearRampToValueAtTime(d - 70, t + dur);
-    og.gain.value = a / 3; o.connect(og); og.connect(lp);
-  }));
-  const s = osc(G, t, 'sine', mtof(m - 12), dur + 0.3), sg = vca(G, t, drv(G, 0.6 * v), 0.01, 0.8, dur * 0.8, 0.3, 0.2); s.connect(sg);
-}
-// three-layer trailer hit: a crack, a low slam with a noise bloom that darkens, a sub drop
+// cinematic impact: a crack, a low slam with a darkening bloom, a clean sub
 function boom(G, t, v = 1, sub = 1) {
-  const n = nsrc(G, t, 0.05), hp = filt(G, 'highpass', 1500), tg = vca(G, t, G.hits, 0.0004, 0.9 * v, 0.03, 0.015);
-  n.connect(hp); hp.connect(tg); send(G, tg, 0.4);
-  const o = osc(G, t, 'triangle', 150, 0.6), og = vca(G, t, G.hits, 0.001, 0.9 * v, 0.35, 0.1);
-  o.frequency.exponentialRampToValueAtTime(48, t + 0.25); o.connect(og);
-  const n2 = nsrc(G, t, 1.6), lp = filt(G, 'lowpass', 4000, 0.9), bg = vca(G, t, G.hits, 0.002, 0.6 * v, 1.0, 0.3);
-  lp.frequency.exponentialRampToValueAtTime(120, t + 1.0); n2.connect(lp); lp.connect(bg); send(G, bg, 0.7);
-  if (sub > 0) {
-    const s = osc(G, t, 'sine', 64, 2.2), sg = vca(G, t, drv(G, 0.8 * v * sub), 0.003, 0.9, 1.5, 0.3);
-    s.frequency.exponentialRampToValueAtTime(32, t + 1.6); s.connect(sg);
-  }
-  duck(G, t, 1);
+  const n = nsrc(G, t, 0.05), hp = filt(G, 'highpass', 1800), tg = vca(G, t, G.hits, 0.0006, 0.5 * v, 0.03, 0.015);
+  n.connect(hp); hp.connect(tg); send(G, tg, 0.5);
+  const o = osc(G, t, 'sine', 120, 0.9), og = vca(G, t, G.hits, 0.002, 0.9 * v, 0.5, 0.1);
+  o.frequency.exponentialRampToValueAtTime(42, t + 0.3); o.connect(og); send(G, og, 0.3);
+  const n2 = nsrc(G, t, 1.8), lp = filt(G, 'lowpass', 2500, 0.8), bg = vca(G, t, G.hits, 0.004, 0.45 * v, 1.2, 0.3);
+  lp.frequency.exponentialRampToValueAtTime(110, t + 1.2); n2.connect(lp); lp.connect(bg); send(G, bg, 0.8);
+  if (sub > 0) { const s = osc(G, t, 'sine', 55, 2.2), sg = vca(G, t, G.hits, 0.005, 0.5 * v * sub, 1.6, 0.3); s.frequency.exponentialRampToValueAtTime(36, t + 1.8); s.connect(sg); }
 }
-// riser: a noise sweep and three saws an octave apart gliding up (the lowest fading in,
-// the highest out, so it seems to climb for ever); dead stop on the hit. `gate` stutters
-// it in eighths, then sixteenths, then thirty-seconds.
-function rise(G, t, dur, v = 1, o = {}) {
-  const end = t + dur, out = G.ac.createGain();
-  out.connect(G.hits); send(G, out, 0.35);
-  if (o.gate) {
-    out.gain.setValueAtTime(0.2, t);
-    for (let tt = t; tt < end - 0.01;) {
-      const k = (tt - t) / dur, st = k < 0.5 ? BEAT / 2 : k < 0.8 ? BEAT / 4 : BEAT / 8;
-      out.gain.setValueAtTime(1, tt); out.gain.setTargetAtTime(0.15, tt + 0.012, st * 0.3); tt += st;
-    }
-  }
-  const n = nsrc(G, t, dur), bp = filt(G, 'bandpass', 350, 1.1), ng = G.ac.createGain();
-  bp.frequency.exponentialRampToValueAtTime(9000, end);
-  ng.gain.setValueAtTime(0.001, t); ng.gain.exponentialRampToValueAtTime(0.5 * v, end); ng.gain.setValueAtTime(0, end);
-  n.connect(bp); bp.connect(ng); ng.connect(out);
-  const lp = filt(G, 'lowpass', 600, 2), sg = G.ac.createGain();
-  lp.frequency.exponentialRampToValueAtTime(9000, end);
-  sg.gain.setValueAtTime(0.001, t); sg.gain.exponentialRampToValueAtTime(0.16 * v, end); sg.gain.setValueAtTime(0, end);
-  lp.connect(sg); sg.connect(out);
-  const m0 = o.m || 47;
-  [0, 12, 24].forEach((dm, i) => {
-    const s = osc(G, t, 'sawtooth', mtof(m0 + dm), dur), a = G.ac.createGain();
-    s.frequency.exponentialRampToValueAtTime(mtof(m0 + dm + 12), end);
-    a.gain.setValueAtTime(i === 0 ? 0 : 1, t); a.gain.linearRampToValueAtTime(i === 2 ? 0.2 : 1, end);
-    s.connect(a); a.connect(lp);
-  });
-}
-function bell(G, t, m, v = 1, p = 0, dec = 1.4) {
-  const f = mtof(m), out = pan(G, G.music, p);
+function bell(G, t, m, v = 1, p = 0, dec = 1.4, dest = G.music) {
+  const f = mtof(m), out = pan(G, dest, p);
   [[1, 1, dec], [2.76, 0.4, dec * 0.45], [5.4, 0.2, dec * 0.25], [8.9, 0.08, dec * 0.12]].forEach(([k, a, d]) => {
     const o = osc(G, t, 'sine', f * k, d + 0.2), g = vca(G, t, out, 0.002, 0.14 * v * a, d, 0.1); o.connect(g); send(G, g, 0.5, 0.25);
   });
 }
-function marimba(G, t, m, v = 1, p = 0) {
-  const f = mtof(m), out = pan(G, G.sfx, p);
-  const o = osc(G, t, 'sine', f, 0.5), o2 = osc(G, t, 'sine', f * 4, 0.1);
-  const g = vca(G, t, out, 0.002, 0.34 * v, 0.28, 0.1), g2 = vca(G, t, out, 0.001, 0.08 * v, 0.04, 0.03);
-  o.connect(g); o2.connect(g2); send(G, g, 0.25, 0.2);
-}
-// the sonic logo, A–D–F♯–A: supersaw lead, a bell on top, the last note held
+// the sonic logo, A–D–F♯–A: piano in octaves with the violins, the last note held
 function motif(G, t, v = 1) {
   [[69, 0], [74, 0.3], [78, 0.6], [81, 0.9]].forEach(([m, dt], i) => {
     const last = i === 3;
-    saws(G, t + dt, [m], last ? 1.3 : 0.3, 1.5 * v, last ? { dest: G.lead, rel: 0.9, bright: 0.7, rev: 0.5, dly: 0.3, att: 0.008 } : { dest: G.lead, stab: 1, bright: 0.8, rev: 0.35, dly: 0.2 });
-    bell(G, t + dt, m + 12, 0.7 * v, (i - 1.5) * 0.25, last ? 2.4 : 1);
+    piano(G, t + dt, m + 12, 0.85 * v, last ? 2.6 : 0.34);
+    piano(G, t + dt, m, 0.6 * v, last ? 2.6 : 0.34);
+    strings(G, t + dt, [m + 12], last ? 1.5 : 0.28, 1.1 * v, { att: 0.04, rel: last ? 1.2 : 0.15, f: 5500, rev: 0.5 });
   });
 }
 // -------------------------------------------------------------------- foley
@@ -3709,207 +3652,254 @@ function monthTimes() {
 function cutTimes() {
   return STEPS.slice(1).map(([mm]) => { let lo = T.months0, hi = T.months1; for (let i = 0; i < 30; i++) { const mid = (lo + hi) / 2; if (monthsAt(mid) < mm) lo = mid; else hi = mid; } return hi; });
 }
-// the phonk cowbell riff, a bar of sixteenths in B Phrygian (0 is a rest); the
-// hero version swaps the flat second C for C♯
-const RIFF = [71, 0, 71, 0, 72, 71, 0, 69, 0, 71, 0, 74, 72, 0, 71, 0];
-const RIFF2 = [71, 0, 71, 0, 72, 71, 0, 69, 0, 71, 0, 74, 76, 74, 72, 71];
-const RIFF_HERO = [71, 0, 71, 0, 73, 71, 0, 69, 0, 71, 0, 74, 73, 0, 71, 0];
+// voicings (MIDI): the bass, four string notes, the piano chord, the ostinato's root, third and fifth
+const VO = {
+  Bm: { lo: 35, s: [47, 54, 59, 62], p: [59, 62, 66], o: [59, 62, 66] },
+  G: { lo: 31, s: [43, 50, 55, 59], p: [55, 59, 62], o: [55, 59, 62] },
+  Em: { lo: 28, s: [40, 47, 55, 59], p: [55, 59, 64], o: [64, 67, 71] },
+  Fs: { lo: 30, s: [42, 49, 54, 58], p: [54, 58, 61], o: [54, 58, 61] },
+  D: { lo: 38, s: [50, 57, 62, 66], p: [62, 66, 69], o: [62, 66, 69] },
+  A: { lo: 33, s: [45, 52, 57, 61], p: [57, 61, 64], o: [57, 61, 64] },
+  BmA: { lo: 33, s: [45, 54, 59, 62], p: [59, 62, 66], o: [59, 62, 66] },
+};
 function buildScore() {
   const ev = [], at = (t, fn) => ev.push([t, fn]);
-  const b = BEAT, s16 = b / 4, s32 = b / 8;
-  // one character a step: x accent, o normal, - ghost, . rest (spaces and | only help reading)
-  const pat = (t0, str, st, fn) => [...str.replace(/[ |]/g, '')].forEach((ch, i) => { if (ch !== '.') at(t0 + i * st, (G, w) => fn(G, w, ch === 'x' ? 1 : ch === 'o' ? 0.7 : 0.4, i)); });
-  const riff = (t0, notes, from, to, v = 1) => { for (let i = from; i < to; i++) { const m = notes[i % 16]; if (m) at(t0 + i * s16, (G, w) => cowbell(G, w, m, v * (i % 4 === 0 ? 1 : 0.8))); } };
-  const roll = (times, v0, v1, fn) => times.forEach((tt, i) => at(tt, (G, w) => fn(G, w, v0 + (v1 - v0) * i / Math.max(1, times.length - 1), i)));
-  const steps = (t0, n, st) => Array.from({ length: n }, (_, i) => t0 + i * st);
-  // a bar of the drive: four on the floor, clap on 2 and 4, hats, a rolling bass off the kick, a sub
-  const drive = (t0, root, o = {}) => {
-    const n = (o.beats || 4) * 4, cut = s => s.replace(/[ |]/g, '').slice(0, n), vm = o.v || 1;
-    pat(t0, cut(o.k || 'x...x...x...x...'), s16, (G, w, v) => kick(G, w, v * vm));
-    pat(t0, cut(o.c || '....x.......x...'), s16, (G, w, v) => snap(G, w, 0.9 * v * vm));
-    pat(t0, cut(o.h || '-.x.-.x.-.x.-.x.'), s16, (G, w, v, i) => hat(G, w, 0.8 * v * vm, o.open && i % 8 === 6 ? 1 : 0, i % 2 ? 0.3 : -0.3));
-    if (o.s !== false) pat(t0, cut(o.s || 'oxoxoxoxoxoxoxox'), s16, (G, w, v) => shaker(G, w, v * vm));
-    if (o.b !== false) pat(t0, cut(o.b || '.xxo.xxo.xxo.xxo'), s16, (G, w, v, i) => pulse(G, w, root + (i % 4 === 3 ? 24 : 12), v * vm, o.bright === undefined ? 0.55 : o.bright));
-    if (o.sub !== false) at(t0, (G, w) => sub(G, w, root, n * s16 - 0.1, vm));
+  const b = BEAT, e8 = b / 2, s16 = b / 4;
+  const ramp = (i, n, v0, v1) => v0 + (v1 - v0) * (n > 1 ? i / (n - 1) : 0);
+  // violins, spiccato sixteenths: root, root, fifth, root, third, root, fifth, root
+  const osti = (t0, n, ch, v0 = 0.7, v1 = v0, up = 0) => {
+    const [r, th, fi] = VO[ch].o, cell = [r, r, fi, r, th, r, fi, r];
+    for (let i = 0; i < n; i++) { const m = cell[i % 8] + up, v = ramp(i, n, v0, v1) * (i % 4 ? 0.72 : 1); at(t0 + i * s16, (G, w) => spic(G, w, m, v, i % 2 ? 0.3 : -0.3)); }
   };
-  const arp = (t0, n, notes, v = 0.75, br = 0.7) => { for (let i = 0; i < n; i++) { const m = notes[[0, 2, 1, 3][i % 4]]; at(t0 + i * s16, (G, w) => pluck(G, w, m, (i % 4 ? 0.7 : 1) * v, ((i % 2) - 0.5) * 0.8, br)); } };
+  // celli and basses, spiccato eighths bouncing on the octave
+  const lows = (t0, n, ch, v0 = 0.7, v1 = v0) => {
+    const lo = VO[ch].lo;
+    for (let i = 0; i < n; i++) { const m = lo + (i % 2 ? 24 : 12), v = ramp(i, n, v0, v1) * (i % 2 ? 0.7 : 1); at(t0 + i * e8, (G, w) => spic(G, w, m, v, 0, 0.16)); }
+  };
+  // piano, broken chords in eighths an octave above the violins
+  const keys = (t0, n, ch, v0 = 0.45, v1 = v0) => {
+    const [a, c, e] = VO[ch].p, cell = [a + 12, e + 12, c + 12, e + 12];
+    for (let i = 0; i < n; i++) { const m = cell[i % 4], v = ramp(i, n, v0, v1) * (i % 2 ? 0.8 : 1); at(t0 + i * e8, (G, w) => piano(G, w, m, v, 0.5)); }
+  };
+  // the string section on a chord, with the basses underneath
+  const pad = (t0, dur, ch, v = 0.8, o = {}) => at(t0, (G, w) => {
+    strings(G, w, VO[ch].s, dur, v, o);
+    strings(G, w, [VO[ch].lo, VO[ch].lo + 12], dur, v * 0.95, Object.assign({}, o, { f: 900 }));
+  });
+  // an orchestral accent: timpani, piano in low octaves and a short string chord
+  const tutti = (t0, ch, v = 1, tm) => at(t0, (G, w) => {
+    timp(G, w, tm || VO[ch].lo + 12, v);
+    piano(G, w, VO[ch].lo, 0.9 * v, 1.2); piano(G, w, VO[ch].lo + 12, 0.8 * v, 1.2);
+    chord(G, w + 0.01, VO[ch].p, 0.75 * v, 0.9);
+    strings(G, w, VO[ch].s.concat([VO[ch].o[0] + 12]), 0.32, 1.1 * v, { att: 0.012, rel: 0.35 });
+  });
+  // a heartbeat on the low drum: one, the and of two, three
+  const beat = (t0, bars, v = 0.5) => { for (let k = 0; k < bars; k++) [[0, 1], [6, 0.7], [8, 0.85]].forEach(([st, a]) => at(t0 + k * 4 * b + st * s16, (G, w) => taiko(G, w, v * a, 82, 0))); };
 
-  // ------------------------------------------ A · hook 0–3.6: a trailer cold open
-  at(0, (G, w) => { boom(G, w, 1.1); braam(G, w, 35, 2.2, 1); kick(G, w, 1); crash(G, w, 0.7); thump(G, w, 1); whoosh(G, w, 0.3, 0.5, 600, 3000, -0.9, -0.2); });
-  at(T.casa, (G, w) => { kick(G, w, 0.85); snap(G, w, 0.8); taiko(G, w, 0.8, 120, -0.3); thump(G, w, 0.8); });
-  at(T.tivoli, (G, w) => { kick(G, w, 1); taiko(G, w, 1, 90, 0.3); boom(G, w, 0.6, 0.5); saws(G, w, [47, 54, 59, 62, 66], 0.5, 1, { stab: 1, bright: 0.7 }); thump(G, w, 1); });
+  // ------------------------------------------ A · hook 0–3.6: an orchestral cold open in B minor
+  at(0, (G, w) => { boom(G, w, 0.9, 0.8); cymbal(G, w, 0.6); thump(G, w, 1); whoosh(G, w, 0.3, 0.5, 600, 3000, -0.9, -0.2); });
+  tutti(0, 'Bm', 1);
+  pad(0.02, 1.7, 'Bm', 0.8, { att: 0.06, rel: 0.4 });
+  at(T.casa, (G, w) => { timp(G, w, 42, 1); piano(G, w, 42, 0.8, 0.5); VO.Bm.p.forEach((m, j) => pizz(G, w + j * 0.01, m, 0.9, (j - 1) * 0.4)); thump(G, w, 0.8); });
+  at(T.tivoli, (G, w) => { timp(G, w, 47, 1); chord(G, w, [47, 54, 59, 62, 66], 0.9, 1.1); thump(G, w, 1); });
   at(0.2, (G, w) => scratch(G, w, 1.0, 1));
-  // the Jaws semitone: sixteenths on B with C, the flat second, climbing out of the braam
-  for (let i = 0; i < 18; i++) { const k = i / 17, m = i % 4 === 2 ? 48 : 47; at(0.9 + i * s16, (G, w) => pulse(G, w, m, 0.45 + 0.55 * k, 0.1 + 0.7 * k)); }
-  at(T.punch, (G, w) => { clack(G, w, 0.9); kick(G, w, 0.8); snap(G, w, 0.6); });
+  osti(0.9, 6, 'Bm', 0.35, 0.55);
+  at(T.punch, (G, w) => { clack(G, w, 0.9); pizz(G, w, 47, 0.9); });
   at(T.punch + 0.04, (G, w) => whoosh(G, w, 0.35, 0.5, 900, 2600, 0, 0.1));
-  // Sai quanto vale davvero? — Bm, C (the Phrygian flat II), Bm: a taiko, the sub and a stab each
-  [[T.q2, 35, [59, 62, 66, 71], 100], [2.4, 36, [60, 64, 67, 72], 95], [3.0, 35, [59, 62, 66, 71], 88]].forEach(([tt, r, ch, f0], i) =>
-    at(tt, (G, w) => { kick(G, w, 1); taiko(G, w, 0.9, f0, (i - 1) * 0.3); sub(G, w, r, 0.55, 1); saws(G, w, ch, 0.45, 0.9 + 0.1 * i, { stab: 1, bright: 0.6 + 0.1 * i }); }));
+  // Sai quanto vale davvero? — G, E minor, then F♯ major holds the question open
+  [[T.q2, 'G', 43], [2.4, 'Em', 40], [3.0, 'Fs', 42]].forEach(([tt, ch, tm], i) => {
+    at(tt, (G, w) => { timp(G, w, tm + (i === 2 ? 12 : 0), 0.75 + 0.1 * i); piano(G, w, VO[ch].lo, 0.8, 0.6); chord(G, w + 0.01, VO[ch].p, 0.6 + 0.1 * i, 0.6); });
+    pad(tt, 0.58, ch, 0.7 + 0.1 * i, { att: 0.05, rel: 0.1, cresc: i === 2 });
+    osti(tt, 4, ch, 0.55 + 0.12 * i, 0.65 + 0.15 * i);
+  });
   at(T.q2, (G, w) => thump(G, w, 0.7));
-  roll(steps(T.q2, 12, s16), 0.35, 0.75, (G, w, v, i) => hat(G, w, v * (i % 2 ? 0.6 : 1)));
-  // the price reels tick in thirty-seconds, faster and higher
-  for (let tt = T.q2 + 0.1; tt < T.promise - 0.05; tt += s32) { const k = (tt - T.q2) / (T.promise - T.q2); at(tt, (G, w) => tick(G, w, 0.8 + 0.5 * k, 2200 + 800 * k)); }
-  at(2.4, (G, w) => rise(G, w, 1.2, 0.8, { m: 47 }));
-  roll([3.0, 3.15, 3.3, 3.375, 3.45, 3.525], 0.35, 0.95, (G, w, v) => snap(G, w, v, 0.08));
-  at(3.3, (G, w) => taiko(G, w, 0.7, 150, -0.3));
-  at(3.45, (G, w) => taiko(G, w, 0.8, 130, 0.3));
+  for (let tt = T.q2 + 0.1; tt < T.promise - 0.05; tt += s16 / 2) { const k = (tt - T.q2) / (T.promise - T.q2); at(tt, (G, w) => tick(G, w, 0.8 + 0.5 * k, 2200 + 800 * k)); }
+  at(3.0, (G, w) => { troll(G, w, 0.6, 42, 0.25, 1); swell(G, w, 0.6, 0.9); });
 
-  // ------------------------------------------ B · the trap 3.6–9.6: phonk in B Phrygian
-  at(T.promise, (G, w) => { boom(G, w, 0.8, 0); kick(G, w, 1); b808(G, w, 35, 0.28, 0.7); clack(G, w, 1); crash(G, w, 0.5); });
-  // every promise pumps the tag, and the 808 slides up the scale with it
-  const climb = [36, 38, 40, 42, 43, 45, 46, 47];
+  // ------------------------------------------ B · the trap 3.6–9.6: tension in B minor
+  at(T.promise, (G, w) => { boom(G, w, 0.45, 0.3); timp(G, w, 47, 0.9); piano(G, w, 35, 0.9, 2.4); piano(G, w, 47, 0.7, 2.4); cymbal(G, w, 0.35); clack(G, w, 1); });
+  // a string tremolo swells under the promises; each pump plucks one step higher
+  at(T.promise, (G, w) => {
+    strings(G, w, VO.Bm.s, T.pop - T.promise - 0.05, 0.85, { trem: 1, cresc: 1, att: 0.1, rel: 0.05 });
+    strings(G, w, [35, 47], T.pop - T.promise - 0.05, 0.9, { f: 800, cresc: 1, att: 0.1, rel: 0.05 });
+  });
+  const climb = [59, 61, 62, 64, 66, 67, 69, 70];
   T.pumps.forEach((tp, k) => {
     at(tp - 0.05, (G, w) => pump(G, w, 0.9, k));
-    at(tp, (G, w) => b808(G, w, climb[k], (T.pumps[k + 1] || T.pop) - tp - 0.02, 0.45 + 0.08 * k, { from: k ? climb[k - 1] : 35, glide: 0.04 }));
+    at(tp, (G, w) => { pizz(G, w, climb[k], 0.55 + 0.06 * k, k % 2 ? 0.3 : -0.3); pizz(G, w, climb[k] - 12, 0.4 + 0.05 * k, 0); });
   });
-  pat(T.promise, 'o.o.o.o.', s16, (G, w, v) => hat(G, w, 0.45 * v));
-  at(T.gonfiata, (G, w) => { boom(G, w, 0.7, 0); snap(G, w, 1); crash(G, w, 0.4); });
-  at(5.0, (G, w) => snap(G, w, 0.8, 0.1, 0.15));
-  roll(steps(T.gonfiata, 8, s16).concat(steps(6.0 - 4 * s32, 4, s32)), 0.4, 0.9, (G, w, v, i) => hat(G, w, v, 0, 0.28, 1 + 0.03 * i));
-  riff(T.gonfiata, RIFF, 0, 8, 0.9);
+  at(T.gonfiata, (G, w) => { timp(G, w, 42, 0.9); piano(G, w, 35, 0.9, 0.9); piano(G, w, 36, 0.7, 0.9); cymbal(G, w, 0.3); });
+  at(5.0, (G, w) => VO.Bm.p.forEach((m, j) => pizz(G, w + j * 0.012, m + 12, 0.7, (j - 1) * 0.4)));
   at(5.1, (G, w) => squeak(G, w, 0.88, 1));
-  at(T.gonfiata, (G, w) => rise(G, w, T.pop - T.gonfiata, 0.9, { m: 47, gate: 1 }));
-  roll([5.4, 5.55, 5.7, 5.775, 5.85, 5.925], 0.4, 1, (G, w, v) => snap(G, w, v, 0.08));
-  // the pop: the bubble bursts and the 808 falls two octaves
-  at(T.pop, (G, w) => { pop(G, w, 1); boom(G, w, 1.2, 0); kick(G, w, 1); crash(G, w, 0.9); b808(G, w, 47, 0.9, 1, { fall: [24, 0.85] }); });
-  // the chart, a year of cuts: the 808 walks the lament down B–A–G–F♯ and every note sags
-  at(6.3, (G, w) => { kick(G, w, 1); b808(G, w, 35, 0.55, 0.85, { fall: [1, 0.15] }); });
-  at(6.9, (G, w) => { kick(G, w, 0.9); b808(G, w, 33, 0.55, 0.85, { from: 35, glide: 0.06, fall: [1, 0.15] }); });
-  at(7.2, (G, w) => { snap(G, w, 1); hat(G, w, 0.6, 1); });
-  at(7.5, (G, w) => { kick(G, w, 1); b808(G, w, 31, 0.28, 0.85, { from: 33, glide: 0.05 }); });
-  at(7.8, (G, w) => { kick(G, w, 1); snap(G, w, 0.8); b808(G, w, 30, 0.18, 0.85, { from: 31, glide: 0.04 }); });     // Poi,
-  at(8.0, (G, w) => { boom(G, w, 0.8, 0); snap(G, w, 1); kick(G, w, 1); b808(G, w, 30, 0.38, 0.9, { fall: [5, 0.3] }); });   // ribassi.
-  at(8.4, (G, w) => { kick(G, w, 1); b808(G, w, 35, 0.28, 0.85); });
-  at(8.7, (G, w) => { kick(G, w, 0.8); b808(G, w, 38, 0.13, 0.8, { from: 35, glide: 0.04 }); });
-  // tape stop into the rewind
-  at(8.85, (G, w) => { kick(G, w, 0.9); b808(G, w, 35, 0.3, 0.85, { fall: [24, 0.26] }); });
-  steps(6.3, 18, s16).forEach((tt, i) => at(tt, (G, w) => hat(G, w, [0.5, 0.25, 0.8, 0.25][i % 4])));
-  roll([7.05, 7.125, 7.65, 7.725], 0.4, 0.6, (G, w, v) => hat(G, w, v, 0, -0.2, 1.1));
-  roll(steps(8.55, 6, 0.05), 0.35, 0.8, (G, w, v, i) => hat(G, w, v, 0, 0.3, 1 + 0.06 * i));
-  riff(T.pop, RIFF2, 2, 16, 1);
-  riff(8.4, RIFF, 0, 4, 1);
-  at(6.3, (G, w) => drone(G, w, [47, 54], 2.7, 1, 420));
+  at(5.4, (G, w) => { troll(G, w, 0.6, 47, 0.3, 1); swell(G, w, 0.6, 1); });
+  // the pop, then the chart: a lament bass down B–A–G–F♯ under tremolo strings and a piano clock
+  at(T.pop, (G, w) => { pop(G, w, 1); boom(G, w, 0.7, 0.6); cymbal(G, w, 0.7); piano(G, w, 23, 0.8, 1.2); piano(G, w, 35, 0.8, 1.2); });
+  [[6.3, 'Bm', 0.6], [6.9, 'BmA', 0.6], [7.5, 'G', 0.6], [8.1, 'Fs', 0.9]].forEach(([tt, ch, d], i) => {
+    at(tt, (G, w) => { piano(G, w, VO[ch].lo + 12, 0.7, d); chord(G, w + 0.02, VO[ch].p, 0.45, d); });
+    at(tt, (G, w) => {
+      strings(G, w, VO[ch].s, d - 0.02, 0.7 + 0.1 * (i === 3), { trem: 1, att: 0.06, rel: 0.12, cresc: i === 3 });
+      strings(G, w, [VO[ch].lo + 12], d - 0.02, 0.8, { f: 800, att: 0.06, rel: 0.12 });
+    });
+  });
+  for (let tt = 6.3, i = 0; tt < 8.95; tt += e8, i++) { const m = i % 4 === 2 ? 79 : 78, v = 0.3 + 0.02 * i; at(tt, (G, w) => piano(G, w, m, v, 0.2, 0.35)); }
+  at(7.8, (G, w) => timp(G, w, 42, 0.75));
+  at(8.0, (G, w) => { timp(G, w, 47, 0.95); piano(G, w, 35, 0.9, 0.8); piano(G, w, 36, 0.75, 0.8); cymbal(G, w, 0.35); });
   monthTimes().forEach((tt, i) => at(tt, (G, w) => tick(G, w, 0.9, i % 2 ? 1500 : 2100)));
   cutTimes().forEach(tt => at(tt, (G, w) => bwomp(G, w, 0.9)));
-  at(T.rewind, (G, w) => rewindFx(G, w, T.noino - T.rewind - 0.1, 1));
+  at(T.rewind, (G, w) => { rewindFx(G, w, T.noino - T.rewind - 0.1, 1); swell(G, w, 0.45, 0.8); });
   at(T.noino - 0.15, (G, w) => stopDown(G, w, w + 0.15));
 
-  // ------------------------------------------ C · Noi no. 9.6–24: the drive, Bm–G–D–A
-  at(T.noino, (G, w) => { boom(G, w, 1.3); crash(G, w, 1); taiko(G, w, 1, 80); saws(G, w, [47, 54, 59, 62, 66, 71], 0.7, 1.2, { stab: 1 }); });
-  at(T.noino + s16, (G, w) => { snap(G, w, 1.1); taiko(G, w, 0.9, 130, 0.25); });   // no.
-  drive(9.6, 35, { bright: 0.3, open: true });
-  pat(9.6, '...x..x...x..x..', s16, (G, w) => saws(G, w, [59, 62, 66, 71], 0.22, 0.75, { stab: 1, bright: 0.9 }));
-  at(10.2, (G, w) => rise(G, w, 0.6, 0.35, { m: 59 }));
-  // real Tivoli data: a note for every point
+  // ------------------------------------------ C · Noi no. 9.6–24: warm and driving in D major
+  at(T.noino, (G, w) => { boom(G, w, 1, 0.8); cymbal(G, w, 1); });
+  tutti(T.noino, 'D', 1.1, 50);
+  pad(T.noino, 2.35, 'D', 0.85, { att: 0.02, rel: 0.3 });
+  at(T.noino + s16, (G, w) => timp(G, w, 45, 0.8));   // no.
+  keys(10.2, 6, 'D', 0.4, 0.5);
+  lows(10.2, 6, 'D', 0.5, 0.65);
+  // real Tivoli data: a piano note for every point
   const dotM = [74, 76, 78, 81, 83, 86, 88, 90, 93];
-  T.dots.forEach((tt, i) => at(tt, (G, w) => { marimba(G, w, dotM[i], 1, (DOTS[i][0] - CX) / 600); blip(G, w, dotM[i] + 12, 0.4); }));
-  drive(12.0, 31, { h: '-.x.-xx.-.x.-xx.', bright: 0.4 });
-  at(12.0, (G, w) => saws(G, w, [55, 59, 62, 67], 0.4, 0.9, { stab: 1, bright: 0.7 }));
+  T.dots.forEach((tt, i) => at(tt, (G, w) => { piano(G, w, dotM[i], 0.6, 0.4, (DOTS[i][0] - CX) / 700); blip(G, w, dotM[i] + 12, 0.25); }));
+  // the right price: A major, the violins start to run
+  pad(12.0, 2.35, 'A', 0.75);
+  osti(12.0, 16, 'A', 0.5, 0.65);
+  lows(12.0, 8, 'A', 0.65);
+  keys(12.0, 8, 'A', 0.4);
+  at(12.0, (G, w) => timp(G, w, 45, 0.7));
+  beat(12.0, 1, 0.45);
   at(T.lock - 0.62, (G, w) => whoosh(G, w, 0.6, 0.45, 500, 2400, -0.7, 0.2));
   at(T.lock, (G, w) => { clack(G, w, 1.25); click(G, w + 0.06, 0.45, 1800); });
-  at(T.giusto, (G, w) => { boom(G, w, 0.8, 0.4); saws(G, w, [55, 59, 62, 67, 71], 0.5, 1.1, { stab: 1 }); thump(G, w, 0.7); });   // Prezzo giusto.
-  at(13.62, (G, w) => { snap(G, w, 1); taiko(G, w, 0.8, 140); });   // Da subito.
-  // house → window → staging, with a hero arpeggio
-  drive(14.4, 38, { h: 'o-x-o-x-o-x-o-x-', bright: 0.5, open: true });
-  at(14.4, (G, w) => saws(G, w, [57, 62, 66, 69], 0.4, 0.9, { stab: 1, bright: 0.8 }));
-  arp(14.4, 16, [74, 78, 81, 86]);
+  tutti(T.giusto, 'A', 1);                                                  // Prezzo giusto.
+  at(T.giusto, (G, w) => { cymbal(G, w, 0.45); thump(G, w, 0.7); });
+  at(13.62, (G, w) => timp(G, w, 52, 0.8));                                 // Da subito.
+  // house → window → staging: B minor, full ostinato
+  pad(14.4, 2.35, 'Bm', 0.8);
+  osti(14.4, 16, 'Bm', 0.65, 0.75);
+  osti(14.4, 16, 'Bm', 0.3, 0.35, 12);
+  lows(14.4, 8, 'Bm', 0.7);
+  keys(14.4, 8, 'Bm', 0.45);
+  at(14.4, (G, w) => timp(G, w, 47, 0.75));
+  beat(14.4, 1, 0.5);
   at(T.house + 0.3, (G, w) => whoosh(G, w, 0.45, 0.6, 400, 5000, 0, 0));
-  T.props.forEach((tt, i) => at(tt, (G, w) => { thump(G, w, 0.55); taiko(G, w, 0.7, [90, 105, 120, 140][i], [-0.4, 0.4, -0.2, 0.2][i]); }));
+  T.props.forEach((tt, i) => at(tt, (G, w) => { thump(G, w, 0.55); taiko(G, w, 0.45, [100, 115, 130, 150][i], [-0.4, 0.4, -0.2, 0.2][i]); }));
   at(T.props[1] + 0.25, (G, w) => click(G, w, 0.6, 1600));
-  at(T.flash, (G, w) => { shutter(G, w, 1); snap(G, w, 0.9); crash(G, w, 0.35, 1); });
-  // mortgage, notary, paperwork: three stamps, three hits
-  drive(16.8, 33, { c: '................', bright: 0.45 });
-  arp(16.8, 16, [73, 76, 81, 85], 0.6, 0.6);
+  at(T.flash, (G, w) => { shutter(G, w, 1); cymbal(G, w, 0.4, 1.2); });
+  // mortgage, notary, paperwork: G major, three stamps, three timpani climbing
+  pad(16.8, 2.35, 'G', 0.8);
+  osti(16.8, 16, 'G', 0.65, 0.75);
+  lows(16.8, 8, 'G', 0.7);
+  keys(16.8, 8, 'G', 0.45);
+  at(16.8, (G, w) => timp(G, w, 43, 0.7));
   DOCS.forEach((d, i) => {
     at(T.docs + i * 0.09, (G, w) => paper(G, w, 0.9, (d.x - CX) / 500));
     at(T.stamps[i] - 0.42, (G, w) => scratch(G, w, 0.32, 0.9));
-    at(T.stamps[i], (G, w) => { stampFx(G, w, 1); boom(G, w, 0.7 + 0.1 * i, 0.35); snap(G, w, 0.9); saws(G, w, [45, 52, 57, 61, 64, 69], 0.35, 0.9 + 0.1 * i, { stab: 1 }); });
+    at(T.stamps[i], (G, w) => { stampFx(G, w, 1); timp(G, w, [43, 50, 55][i], 0.8 + 0.1 * i); piano(G, w, 31 + 12 * (i > 1), 0.8, 0.5); strings(G, w, VO.G.s.concat([67]), 0.25, 0.9 + 0.1 * i, { att: 0.012, rel: 0.3 }); });
   });
-  at(18.3, (G, w) => snap(G, w, 1));   // noi.
-  // the portals: the cowbell comes back as the hero, with C♯
-  drive(19.2, 35, { h: 'o-x-o-x-o-x-o-xx', bright: 0.55, open: true });
-  at(19.2, (G, w) => { saws(G, w, [59, 62, 66, 71], 0.4, 1, { stab: 1 }); crash(G, w, 0.4); });
-  riff(19.2, RIFF_HERO, 0, 16, 0.9);
+  at(18.3, (G, w) => timp(G, w, 50, 0.7));                                  // noi.
+  // the portals: D major, the violins climb A–B–C♯–D with the notifications
+  pad(19.2, 2.35, 'D', 0.85);
+  osti(19.2, 16, 'D', 0.7, 0.8);
+  osti(19.2, 16, 'D', 0.32, 0.38, 12);
+  lows(19.2, 8, 'D', 0.75);
+  keys(19.2, 8, 'D', 0.5);
+  at(19.2, (G, w) => { timp(G, w, 50, 0.8); cymbal(G, w, 0.35); });
+  beat(19.2, 1, 0.5);
+  [[19.2, 81, 0.58], [19.8, 83, 0.58], [20.4, 85, 0.58], [21.0, 86, 0.55]].forEach(([tt, m, d]) => at(tt, (G, w) => strings(G, w, [m], d, 1.1, { att: 0.06, rel: 0.3, f: 5000 })));
   at(T.phone, (G, w) => whoosh(G, w, 0.4, 0.55, 300, 2400, 0, 0));
-  T.pings.forEach((tt, i) => at(tt, (G, w) => ping(G, w, [81, 83, 86][i], 1, [-0.4, 0.4, -0.4][i])));
-  drive(21.6, 31, { beats: 2, h: 'o-x-o-x-', bright: 0.6 });
-  at(21.6, (G, w) => saws(G, w, [55, 59, 62, 67], 0.4, 1, { stab: 1 }));
+  T.pings.forEach((tt, i) => at(tt, (G, w) => ping(G, w, [83, 85, 86][i], 0.8, [-0.4, 0.4, -0.4][i])));
+  pad(21.6, 1.15, 'A', 0.85);
+  osti(21.6, 8, 'A', 0.7, 0.8);
+  lows(21.6, 4, 'A', 0.75);
+  keys(21.6, 4, 'A', 0.5);
+  at(21.6, (G, w) => timp(G, w, 45, 0.75));
   at(T.report, (G, w) => whoosh(G, w, 0.3, 0.4, 900, 3200, 0.6, -0.6));
-  [0, 1, 2, 3, 4, 5].forEach(i => at(T.report + 0.3 + i * 0.11, (G, w) => blip(G, w, 74 + [0, 2, 4, 7, 9, 12][i], 0.8)));
-  // the build on A: kick and snare accelerate, the bass opens, the riser climbs; then silence
-  pat(22.8, 'x.x.xxx', s16, (G, w) => kick(G, w, 0.9));
-  roll(steps(22.8, 4, s16).concat(steps(23.4, 6, s32)), 0.3, 1, (G, w, v) => snap(G, w, v, 0.07));
-  roll(steps(22.8, 7, s16), 0.6, 1, (G, w, v, i) => pulse(G, w, i % 2 ? 57 : 45, v, 0.3 + 0.12 * i));
-  roll(steps(23.4, 6, s32), 0.4, 0.9, (G, w, v, i) => hat(G, w, v, 0, 0.3, 1 + 0.05 * i));
-  at(22.8, (G, w) => { sub(G, w, 33, 0.95, 1); saws(G, w, [57, 61, 64, 69], 0.4, 0.9, { stab: 1 }); rise(G, w, 1.05, 1, { m: 45, gate: 1 }); });
-  at(T.accepted, (G, w) => { buzz(G, w, 0.3, 1); ping(G, w, 81, 0.8, 0.2); });
+  [0, 1, 2, 3, 4, 5].forEach(i => at(T.report + 0.3 + i * 0.11, (G, w) => blip(G, w, 74 + [0, 2, 4, 7, 9, 12][i], 0.6)));
+  // the build on A: timpani roll, strings swelling, the ostinato growing; then a breath
+  at(22.8, (G, w) => {
+    strings(G, w, VO.A.s.concat([69, 73]), 1.02, 1, { cresc: 1, att: 0.05, rel: 0.03 });
+    strings(G, w, [33, 45], 1.02, 1, { f: 900, cresc: 1, att: 0.05, rel: 0.03 });
+    troll(G, w, 1.05, 45, 0.25, 1); swell(G, w, 1.05, 1);
+  });
+  osti(22.8, 7, 'A', 0.6, 1);
+  lows(22.8, 4, 'A', 0.7, 1);
+  at(T.accepted, (G, w) => { buzz(G, w, 0.3, 1); ping(G, w, 81, 0.7, 0.2); });
   at(T.sold - 0.15, (G, w) => stopDown(G, w, w + 0.15));
 
   // ------------------------------------------ D · sold 24, Tivoli 25.2, the office 28.8
-  at(T.sold, (G, w) => { boom(G, w, 1.4); braam(G, w, 38, 2.4, 1); crash(G, w, 1.1); taiko(G, w, 1, 80); saws(G, w, [50, 57, 62, 66, 69, 74], 1.0, 1.2, { stab: 1 }); });
+  at(T.sold, (G, w) => { boom(G, w, 1.1, 0.9); cymbal(G, w, 1.1); });
+  tutti(T.sold, 'D', 1.15, 50);
+  pad(T.sold, 1.15, 'D', 0.9, { att: 0.02, rel: 0.2 });
   at(T.sold + 0.1, (G, w) => stampFx(G, w, 0.9));
   at(T.keys + 0.24, (G, w) => { clink(G, w, 1); jingle(G, w + 0.04, 0.9); });
   at(24.3, (G, w) => motif(G, w, 1));
-  drive(24.0, 38, { beats: 2, c: '....x...', h: 'o-x-o-x-', bright: 0.6 });
-  // the pull back over Tivoli: epic half time, taiko sixteenths, held supersaws, a hit on every stat
-  at(T.pull, (G, w) => { whoosh(G, w, 1.2, 0.7, 200, 1800, 0.5, -0.5); taiko(G, w, 1, 75); crash(G, w, 0.5); });
+  osti(24.0, 8, 'D', 0.55);
+  lows(24.0, 4, 'D', 0.6);
+  // the pull back over Tivoli: broad strings, piano across the keyboard, a timpani on every stat
+  at(T.pull, (G, w) => { whoosh(G, w, 1.2, 0.7, 200, 1800, 0.5, -0.5); timp(G, w, 50, 0.8); cymbal(G, w, 0.5); });
   at(T.pull + 0.3, (G, w) => rush(G, w, T.office + 0.5 - T.pull - 0.3, 0.9));
   [25.8, 26.25, 26.9, 27.35, 27.85, 28.3].forEach((tt, i) => at(tt, (G, w) => swift(G, w, 0.8, [-0.6, 0.5, -0.2, 0.7, -0.5, 0.3][i])));
-  [[25.2, 38, [50, 57, 62, 66, 69]], [26.4, 31, [55, 59, 62, 67, 71]], [27.6, 33, [57, 61, 64, 69, 73]]].forEach(([tt, r, ch]) =>
-    at(tt, (G, w) => { saws(G, w, ch, 1.15, 0.9, { att: 0.04, bright: 0.6, rev: 0.45 }); sub(G, w, r, 1.1, 1); }));
-  steps(25.2, 24, s16).forEach((tt, i) => { const r = tt < 26.39 ? 50 : tt < 27.59 ? 43 : 45; at(tt, (G, w) => pulse(G, w, r + (i % 4 === 2 ? 12 : 0), i % 2 ? 0.6 : 0.9, 0.55)); });
-  pat(25.2, 'x.......x.......x.......', s16, (G, w) => kick(G, w, 1));
-  [25.8, 27.0, 28.2].forEach(tt => at(tt, (G, w) => { snap(G, w, 1, 0.25); taiko(G, w, 0.8, 110); }));
-  pat(25.2, 'x..x..x.x..x..x.|x..x..x.x..x..x.|x..x..x.x..x.xxx', s16, (G, w, v, i) => taiko(G, w, 0.3 * v, [140, 170, 120][i % 3], ((i % 3) - 1) * 0.5));
-  pat(25.2, '..x...x...x...x...x...x...x...x...x...x...x...x.', s32 * 2, (G, w) => hat(G, w, 0.5));
+  [[25.2, 'D', 1.18], [26.4, 'G', 1.18], [27.6, 'A', 1.18]].forEach(([tt, ch, d]) => {
+    pad(tt, d, ch, 0.95, { att: 0.12, rel: 0.35 });
+    at(tt, (G, w) => strings(G, w, [VO[ch].o[0] + 12, VO[ch].o[2] + 12], d, 0.8, { att: 0.2, rel: 0.35, f: 4500 }));
+    const [a, c, e] = VO[ch].p;
+    [a - 12, e - 12, a, c, e, a + 12, e + 12, c + 12].forEach((m, k) => at(tt + k * e8 / 2, (G, w) => piano(G, w, m, 0.5 - 0.02 * k, 1.1)));
+    osti(tt, 8, ch, 0.45);
+    lows(tt, 4, ch, 0.6);
+  });
   T.stats.forEach((tt, i) => {
     for (let k = 0; k < 6; k++) at(tt + k * 0.06, (G, w) => tick(G, w, 0.5, 2600));
-    at(tt, (G, w) => { boom(G, w, 0.6 + 0.1 * i, 0.3); saws(G, w, [[55, 59, 62, 67], [59, 62, 67, 71], [57, 61, 64, 69]][i], 0.4, 1, { stab: 1 }); });
+    at(tt, (G, w) => { timp(G, w, [43, 47, 45][i], 0.85 + 0.05 * i); taiko(G, w, 0.5, 80); });
     at(tt + 0.38, (G, w) => bell(G, w, [86, 90, 93][i], 0.6, (i - 1) * 0.4, 1));
   });
-  // the office: the music goes on behind the wall, then the wall opens
-  at(T.office, (G, w) => { muffle(G, w, 20000, 700, 0.35); boom(G, w, 0.5, 0.6); whoosh(G, w, 0.8, 0.5, 250, 1500, 0, 0); });
-  drive(28.8, 35, { beats: 2, c: '....x...', h: 'o-x-o-x-', bright: 0.4, v: 0.55, s: false });
-  drive(30.0, 33, { beats: 2, c: '........', h: 'o-x-o-x-', bright: 0.5, v: 0.7, s: '....oxox' });
-  at(28.8, (G, w) => saws(G, w, [59, 62, 66], 1.15, 0.6, { att: 0.05, bright: 0.4 }));
-  at(30.0, (G, w) => saws(G, w, [57, 61, 64], 1.15, 0.7, { att: 0.05, bright: 0.5 }));
+  // the office, close and warm: the piano alone over quiet strings, then the camera walks in
+  at(T.office, (G, w) => { whoosh(G, w, 0.8, 0.5, 250, 1500, 0, 0); timp(G, w, 43, 0.45); });
+  pad(T.office, 1.18, 'G', 0.5, { att: 0.3, rel: 0.4 });
+  pad(30.0, 1.18, 'Em', 0.55, { att: 0.2, rel: 0.1, cresc: 1 });
+  [[28.8, [43, 50, 55, 59], 74], [30.0, [40, 47, 52, 55], 71]].forEach(([t0, ns, top]) => {
+    ns.forEach((m, k) => at(t0 + k * e8, (G, w) => piano(G, w, m, 0.42 - 0.03 * k, 1.3)));
+    at(t0 + 0.6, (G, w) => piano(G, w, top, 0.4, 1.0));
+  });
   at(T.office + 0.85, (G, w) => { bell(G, w, 93, 0.5, 0.3, 1.8, G.sfx); bell(G, w + 0.22, 88, 0.5, 0.3, 2, G.sfx); });
   at(T.office + 0.9, (G, w) => whoosh(G, w, 0.4, 0.45, 500, 3000, -0.3, 0.3));
-  at(T.push, (G, w) => { muffle(G, w, 700, 20000, 0.9); whoosh(G, w, 0.9, 0.6, 200, 4000, 0, 0); rise(G, w, T.cta - T.push, 0.6, { m: 45 }); });
-  roll([30.6, 30.75, 30.9, 30.975, 31.05, 31.125], 0.35, 0.95, (G, w, v) => snap(G, w, v, 0.08));
+  at(T.push, (G, w) => { whoosh(G, w, 0.9, 0.6, 200, 4000, 0, 0); swell(G, w, T.cta - T.push, 0.8); troll(G, w + 0.3, T.cta - T.push - 0.3, 45, 0.2, 0.8); });
+  osti(30.6, 4, 'Em', 0.35, 0.6);
 
   // ------------------------------------------ E · the offer 31.2–40
-  // Quanto vale la tua casa? — the Phrygian riff returns over a B pedal and everything accelerates
-  at(T.cta, (G, w) => { boom(G, w, 0.9, 0.6); crash(G, w, 0.6); whoosh(G, w, 0.5, 0.5, 400, 2000, 0, 0); b808(G, w, 35, 1.1, 0.55); });
-  at(32.4, (G, w) => b808(G, w, 35, 1.0, 0.75));
-  pat(T.cta, 'x...x...x.x.xxx', s16, (G, w, v, i) => kick(G, w, 0.6 + 0.03 * i));
-  roll([31.8, 32.1].concat(steps(32.4, 4, s16), steps(33.0, 6, s32)), 0.3, 1, (G, w, v) => snap(G, w, v, 0.07));
-  roll(steps(T.cta, 15, s16), 0.4, 1, (G, w, v, i) => pulse(G, w, i % 4 === 3 ? 59 : 47, v, 0.15 + 0.055 * i));
-  roll(steps(T.cta, 15, s16), 0.3, 0.8, (G, w, v, i) => hat(G, w, v * (i % 2 ? 0.6 : 1)));
-  riff(T.cta, RIFF, 0, 15, 1);
-  at(31.8, (G, w) => rise(G, w, T.gratis - 0.15 - 31.8, 1, { m: 47, gate: 1 }));
-  for (let tt = T.cta + 0.35; tt < T.gratis - 0.05; tt += s32) { const k = (tt - T.cta) / (T.gratis - T.cta); at(tt, (G, w) => tick(G, w, 0.45 + 0.4 * k, 2200 + 900 * k)); }
+  // Quanto vale la tua casa? — an A pedal, everything growing into GRATIS
+  at(T.cta, (G, w) => { boom(G, w, 0.6, 0.5); timp(G, w, 45, 0.9); cymbal(G, w, 0.4); whoosh(G, w, 0.5, 0.5, 400, 2000, 0, 0); });
+  at(T.cta, (G, w) => {
+    strings(G, w, [45, 52, 57, 61, 64], T.gratis - 0.15 - T.cta, 0.95, { cresc: 1, att: 0.1, rel: 0.03 });
+    strings(G, w, [33, 45], T.gratis - 0.15 - T.cta, 1, { f: 900, cresc: 1, att: 0.1, rel: 0.03 });
+  });
+  osti(T.cta, 15, 'A', 0.4, 1);
+  lows(T.cta, 8, 'A', 0.55, 0.95);
+  for (let i = 0; i < 7; i++) at(T.cta + 0.3 + i * e8, (G, w) => piano(G, w, 81, 0.3 + 0.05 * i, 0.25, 0.3));
+  for (let tt = T.cta + 0.35; tt < T.gratis - 0.05; tt += s16 / 2) { const k = (tt - T.cta) / (T.gratis - T.cta); at(tt, (G, w) => tick(G, w, 0.45 + 0.4 * k, 2200 + 900 * k)); }
+  at(32.4, (G, w) => { troll(G, w, T.gratis - 0.15 - 32.4, 45, 0.2, 1); swell(G, w, T.gratis - 0.15 - 32.4, 1); });
   at(T.gratis - 0.15, (G, w) => stopDown(G, w, w + 0.15));
-  // GRATIS: the biggest drop, in D major
-  at(T.gratis, (G, w) => { boom(G, w, 1.5); braam(G, w, 38, 2.4, 1.1); crash(G, w, 1.2); saws(G, w, [50, 57, 62, 66, 69, 74], 1.0, 1.3, { stab: 1 }); for (let i = 0; i < 6; i++) clack(G, w + i * 0.07, 0.7); });
+  // GRATIS: the whole orchestra in D major
+  at(T.gratis, (G, w) => { boom(G, w, 1.1, 0.9); cymbal(G, w, 1.2); for (let i = 0; i < 6; i++) clack(G, w + i * 0.07, 0.7); });
+  tutti(T.gratis, 'D', 1.15, 50);
   at(T.gratis + 0.45, (G, w) => sparkle(G, w, 0.8, 0.8));
-  drive(33.6, 38, { beats: 2, h: 'o-x-o-x-', open: true, bright: 0.75 });
-  drive(34.8, 31, { beats: 1, h: 'o-x-', bright: 0.8 });
-  drive(35.4, 33, { beats: 1, h: 'o-xx', c: '....', bright: 0.9 });
-  pat(33.6, '...x..x...x..x..', s16, (G, w, v, i) => saws(G, w, i < 8 ? [62, 66, 69, 74] : i < 12 ? [62, 67, 71, 74] : [61, 64, 69, 73], 0.25, 0.85, { stab: 1, bright: 0.9 }));
-  arp(33.6, 8, [74, 78, 81, 86], 0.8, 0.9);
-  arp(34.8, 4, [74, 79, 83, 86], 0.8, 0.9);
-  arp(35.4, 4, [73, 76, 81, 85], 0.8, 0.9);
-  at(T.senza, (G, w) => { thump(G, w, 0.6); boom(G, w, 0.7, 0.3); saws(G, w, [55, 59, 62, 67, 71], 0.5, 1.1, { stab: 1 }); });
-  at(T.tap, (G, w) => { click(G, w, 0.9, 1300); marimba(G, w + 0.02, 81, 0.7, 0.3); saws(G, w, [57, 61, 64, 69], 0.3, 1, { stab: 1 }); });
-  roll([35.55, 35.7, 35.85, 35.925], 0.5, 1, (G, w, v, i) => { snap(G, w, v, 0.08); taiko(G, w, v, 150 - 15 * i, (i % 2 - 0.5) * 0.6); });
-  // the logo: the last hit, the braam, the sonic logo; then it rings out and the loop can start again
-  at(T.logo, (G, w) => { boom(G, w, 1.5); braam(G, w, 38, 3.2, 1.1); crash(G, w, 1.2, 2.6); kick(G, w, 1); taiko(G, w, 1, 75); saws(G, w, [50, 57, 62, 66, 69], 2.4, 0.9, { att: 0.01, bright: 0.7, rel: 1.4, rev: 0.55 }); sub(G, w, 38, 2.8, 1); });
+  [[T.gratis, 'D', 1.18, 8], [T.senza, 'G', 0.58, 4], [T.tap, 'A', 0.58, 4]].forEach(([tt, ch, d, n]) => {
+    pad(tt, d, ch, 0.95, { att: 0.03, rel: 0.25 });
+    osti(tt, n, ch, 0.8, 0.85);
+    osti(tt, n, ch, 0.36, 0.4, 12);
+    lows(tt, n / 2, ch, 0.8);
+    keys(tt, n / 2, ch, 0.5);
+  });
+  beat(T.gratis, 1, 0.55);
+  at(T.senza, (G, w) => { thump(G, w, 0.6); timp(G, w, 43, 0.9); cymbal(G, w, 0.4); chord(G, w, VO.G.p, 0.7, 0.5); });
+  at(T.tap, (G, w) => { click(G, w, 0.9, 1300); timp(G, w, 45, 0.85); piano(G, w + 0.02, 81, 0.7, 0.5, 0.3); });
+  at(35.55, (G, w) => troll(G, w, 0.45, 45, 0.4, 1));
+  // the logo: the last chord, the sonic logo, and a long ring out for the loop
+  at(T.logo, (G, w) => { boom(G, w, 1, 0.9); cymbal(G, w, 1.1, 3); });
+  tutti(T.logo, 'D', 1.15, 50);
+  pad(T.logo, 2.9, 'D', 0.9, { att: 0.03, rel: 1.2 });
+  at(T.logo, (G, w) => { piano(G, w, 26, 0.8, 3.2); piano(G, w, 38, 0.8, 3.2); strings(G, w, [74, 78, 81], 2.9, 0.7, { att: 0.3, rel: 1.2, f: 5000 }); });
   at(T.logo + 0.3, (G, w) => motif(G, w, 1.1));
   at(T.logo + 0.36, (G, w) => scratch(G, w, 0.7, 0.6));
   at(T.logo + 1.95, (G, w) => sparkle(G, w, 0.8, 0.6));
-  at(38.4, (G, w) => { taiko(G, w, 0.5, 70); bell(G, w, 93, 0.35, 0.3, 2.4); });
+  at(38.4, (G, w) => chord(G, w, [74, 78, 81, 86], 0.3, 1.5, 0.03));
   ev.sort((p, q) => p[0] - q[0]);
   return ev;
 }
