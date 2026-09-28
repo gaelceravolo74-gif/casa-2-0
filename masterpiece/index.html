@@ -55,6 +55,10 @@
    picture: slams, pen scratch, reel ticks, pump and rubber squeak, pop,
    clock, tape rewind, marimba data points, stamps, shutter, paper, pings,
    keys, shop bell, and a four-note motif that returns on SOLD and the logo.
+
+   EXPORT — "Scarica il video" on the poster records in real time. For the
+   frame-exact 60 fps MP4 (H.264 + AAC) run node masterpiece/export-mp4.js:
+   it renders every frame and the score offline through the hooks at the end.
    ========================================================================== */
 
 // =============================================================== utilities
@@ -2468,13 +2472,17 @@ function audioGraph(ac, t0 = 0) {
   G.revIn = ac.createGain(); G.revIn.connect(G.rev);
   const revHp = ac.createBiquadFilter(); revHp.type = 'highpass'; revHp.frequency.value = 220;
   const revOut = ac.createGain(); revOut.gain.value = 0.42; G.rev.connect(revHp); revHp.connect(revOut); revOut.connect(G.out);
-  // stereo ping-pong delay, dotted eighths
+  // stereo ping-pong delay, dotted eighths, as eight feed-forward taps: left,
+  // right, -8.9 dB every second repeat. A feedback loop sounds the same, but the
+  // browser may run it a render quantum apart, so two exports would not match.
   G.dlyIn = ac.createGain();
-  const dL = ac.createDelay(2), dR = ac.createDelay(2), fb = ac.createGain(), dlp = ac.createBiquadFilter();
-  dL.delayTime.value = BEAT * 0.75; dR.delayTime.value = BEAT * 0.75; fb.gain.value = 0.36; dlp.type = 'lowpass'; dlp.frequency.value = 3200;
-  G.dlyIn.connect(dlp); dlp.connect(dL); dL.connect(dR); dR.connect(fb); fb.connect(dL);
-  const oL = pan(G, G.out, -0.75), oR = pan(G, G.out, 0.75), gL = ac.createGain(), gR = ac.createGain();
-  gL.gain.value = 0.26; gR.gain.value = 0.26; dL.connect(gL); gL.connect(oL); dR.connect(gR); gR.connect(oR);
+  const dlp = ac.createBiquadFilter(); dlp.type = 'lowpass'; dlp.frequency.value = 3200; G.dlyIn.connect(dlp);
+  const oL = pan(G, G.out, -0.75), oR = pan(G, G.out, 0.75);
+  for (let k = 0; k < 8; k++) {
+    const dt = BEAT * 0.75 * (k + 1), d = ac.createDelay(dt + 0.1), g = ac.createGain();
+    d.delayTime.value = dt; g.gain.value = 0.26 * Math.pow(0.36, k >> 1);
+    dlp.connect(d); d.connect(g); g.connect(k % 2 ? oR : oL);
+  }
   G.drive = ac.createWaveShaper();
   const curve = new Float32Array(1024); for (let i = 0; i < 1024; i++) { const x = i / 511.5 - 1; curve[i] = Math.tanh(x * 2.2) / Math.tanh(2.2); }
   G.drive.curve = curve;
@@ -3078,15 +3086,19 @@ function dev() {
   if (Q.has('logotest')) { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H); drawLogo(ctx, 0, 0, 1080 / 276); drawLogo(ctx, 60, 700, 3, { roof: C.white, ink: C.white, under: 1 }); return true; }
   return false;
 }
-// review hooks for automated checks
+// review and export hooks (export-mp4.js renders every frame and the score through these)
 window.__renderAt = t => { render(t); };
 window.__fx = FXQ;
-window.__renderAudio = async (from = 0, to = DUR) => {
+window.__dur = DUR;
+// offline score: film time `from` lands AUDIO_LEAD seconds into the buffer
+const AUDIO_LEAD = 0.05;
+window.__audioLead = AUDIO_LEAD;
+window.__renderAudio = async (from = 0, to = DUR, sr = 44100) => {
   const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
-  const sr = 44100, len = to - from + 0.5, ac = new OAC(2, Math.ceil(sr * len), sr);
-  const G = audioGraph(ac, 0.05 - from), ev = buildScore().filter(e => e[0] >= from - 0.01 && e[0] < to);
+  const len = to - from + 0.5, ac = new OAC(2, Math.ceil(sr * len), sr);
+  const G = audioGraph(ac, AUDIO_LEAD - from), ev = buildScore().filter(e => e[0] >= from - 0.01 && e[0] < to);
   let i = 0;
-  const feed = until => { while (i < ev.length && ev[i][0] - from + 0.05 < until) { const [t, fn] = ev[i++]; fn(G, Math.max(ac.currentTime + 0.003, t - from + 0.05)); } };
+  const feed = until => { while (i < ev.length && ev[i][0] - from + AUDIO_LEAD < until) { const [t, fn] = ev[i++]; fn(G, Math.max(ac.currentTime + 0.003, t - from + AUDIO_LEAD)); } };
   feed(1);
   for (let tt = 0.5; tt < len - 0.1; tt += 0.5) ac.suspend(tt).then(() => { feed(tt + 1); ac.resume(); });
   return ac.startRendering();
