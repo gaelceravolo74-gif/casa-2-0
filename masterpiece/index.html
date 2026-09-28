@@ -39,9 +39,11 @@
      after another: real Tivoli data → the right price from day one; staging,
      photos, mortgage, notary, compliance done for you; the best portals and
      constant reports → "Venduto. Al prezzo giusto. Senza stress."
-   · Proof 25–31 s — the temple of Vesta and the old town (the site's hero
-     photo), 30+ years, 24 h, 0 € upfront; then Via Colsereno 45 and the office
-     itself: cobalt wall, white logo, pine floor (assets/casa-ufficio.jpg).
+   · Proof 25–31 s — the sold house is a real house of the old town: the camera
+     pulls back to the view in the site's hero photo (the round temple of Vesta,
+     the palazzi, the gorge), 30+ years, 24 h, 0 € upfront; then Via Colsereno
+     45 and the office itself: cobalt wall, white logo, pine floor
+     (assets/casa-ufficio.jpg).
    · Offer 31–40 s — the open loop closes: "Quanto vale la tua casa?" — the
      reels land on GRATIS; valuation in 24 h, no obligation, WhatsApp button,
      number and site; the tag morphs into the Casa 2.0 roof, the name writes.
@@ -716,7 +718,7 @@ const CAPS = [
   { t0: 19.2, t1: 21.5, y: 420, size: 112, w: 17, lines: ['Sui migliori', '{portali.}'], at: [19.2, 19.28, 19.45], fx: 'rise', hs: 'box', th: 'paper' },
   { t0: 21.6, t1: 23.9, y: 410, size: 104, w: 16, lines: ['Report {costanti.}', 'Trasparenza totale.'], at: [21.6, 21.7, 22.8, 22.9], fx: 'rise', hs: 'box', th: 'paper' },
   { t0: 24.05, t1: 25.28, y: 410, size: 112, w: 17, lines: ['Al {prezzo giusto.}', 'Senza stress.'], at: [24.05, 24.12, 24.2, 24.45, 24.53], fx: 'slam', hs: 'box', th: 'paper' },
-  { t0: 25.36, t1: 26.32, y: 410, size: 128, w: 17, lines: ['Dal 1994', 'a {Tivoli.}'], at: [25.36, 25.44, 25.62, 25.7], fx: 'rise', hs: 'box', th: 'paper' },
+  { t0: 25.36, t1: 26.32, y: 410, size: 128, w: 17, lines: ['Dal 1994', 'a {Tivoli.}'], at: [25.36, 25.44, 25.62, 25.7], fx: 'rise', hs: 'box', th: 'paper', bg: 1 },
   { t0: 29.42, t1: 30.4, y: 420, size: 112, w: 17, lines: ['Vieni a {trovarci.}'], at: [29.42, 29.5, 29.6], fx: 'rise', hs: 'box', th: 'paper' },
   { t0: 31.3, t1: 33.5, y: 410, size: 118, w: 17, lines: ['Quanto vale', '{la tua casa?}'], at: [31.3, 31.38, 31.6, 31.68, 31.76], fx: 'rise', hs: 'box', th: 'dark' },
   { t0: 33.6, t1: 34.72, y: 400, size: 98, w: 16, lines: ['Valutazione gratuita', 'in {24 ore.}'], at: [33.62, 33.72, 33.95, 34.03, 34.1], fx: 'slam', hs: 'box', th: 'dark' },
@@ -1787,7 +1789,7 @@ function scenePhone(c, t) {
 }
 
 // =================================================================== S6
-// Sold. The house springs back, the ribbon slams on, confetti, and the keys.
+// Sold. A house of the old town springs up, the ribbon slams on, confetti, and the keys.
 const CONF = (() => { const r = rng(77), a = []; const cols = [C.roof, C.primaryL, C.navy, C.beige, C.white, C.onDark];
   for (let i = 0; i < 120; i++) a.push({ vx: (r() - 0.5) * 2000, vy: -900 - r() * 1900, sp: (r() - 0.5) * 14, fl: 6 + r() * 10, ph: r() * TAU, w: 12 + r() * 16, h: 8 + r() * 10, col: cols[Math.floor(r() * cols.length)], round: r() > 0.75, x0: (r() - 0.5) * 300, y0: (r() - 0.5) * 200 });
   return a; })();
@@ -1836,13 +1838,15 @@ function sceneSold(c, t) {
   const u = t - T.sold;
   if (u < -0.05 || t > T.pull + 0.02) return;
   const rise = spring(u + 0.05, 2.4, 0.52);
-  const y = lerp(1700, 690, rise), sc = 1.25;
-  casaTag(c, CX, y, sc, { facade: 1, lit: ss(T.sold + 0.12, T.sold + 0.55, t) });
+  const y = lerp(1720, 690, rise), sc = SOLD_S;
+  // the house of the old town that was just sold, standing on the paper
+  c.fillStyle = `rgba(40,30,20,${(0.16 * clamp(rise)).toFixed(3)})`; c.beginPath(); c.ellipse(CX, y + 466 * sc, 230 * sc, 18 * sc, 0, 0, TAU); c.fill();
+  tvHouse(c, CX, y, sc, { lit: ss(T.sold + 0.12, T.sold + 0.55, t) });
   const ru = u - 0.1;
   if (ru > 0) {
     const k = clamp(ru / 0.12), s = 1 + 0.8 * (1 - E.outCubic(k));
-    ribbon(c, CX, y + 400 * sc - 40, s, clamp(ru / 0.05));
-    if (ru < 0.4) { c.strokeStyle = rgba(C.white, 1 - ru / 0.4); c.lineWidth = 10; c.beginPath(); c.arc(CX, y + 450, 200 + ru * 900, 0, TAU); c.stroke(); }
+    ribbon(c, CX, y + RIB_Y * sc, s, clamp(ru / 0.05));
+    if (ru < 0.4) { c.strokeStyle = rgba(C.white, 1 - ru / 0.4); c.lineWidth = 10; c.beginPath(); c.arc(CX, y + RIB_Y * sc, 200 + ru * 900, 0, TAU); c.stroke(); }
   }
   confetti(c, T.sold + 0.08, t, CX, 1060);
   // the keys drop in on a string and swing
@@ -1860,144 +1864,749 @@ function sceneSold(c, t) {
 }
 
 // =================================================================== S7
-// Pull back: the sold house is one of the houses of Tivoli — the temple of
-// Vesta on its cliff, the old town, the umbrella pine, the gorge at sunset.
-const HERO = { x: 640, y: 930, s: 0 };
-const PZ = 8;                 // zoom at which the panorama's house matches the SOLD house
-HERO.s = 1.25 / PZ;
+// Pull back: the sold house is one of the houses of Tivoli's old town. The view
+// is the site's hero photo (assets/tivoli-aerial.jpg), across the gorge at
+// golden hour: the round temple of Vesta on its Roman terrace, the Sibilla
+// terrace and its umbrellas, ochre and stone palazzi under coppi roofs, the
+// umbrella pine, holm oaks down the gorge, the falls and Monte Catillo.
+const TIV = {
+  sky0: [98, 146, 194], sky1: [156, 190, 218], sky2: [226, 216, 200], sky3: [242, 210, 168], haze: [214, 206, 192],
+  roof: [188, 122, 80], roofD: [128, 78, 50], roofL: [214, 154, 110], roofOld: [164, 134, 102],
+  trav: [238, 222, 190], travS: [192, 166, 130], travD: [140, 116, 88],
+  shG: [84, 112, 80], shB: [108, 72, 48], glass: [42, 37, 33], lit: [255, 206, 136], iron: [40, 36, 34],
+  leafK: [26, 34, 19], leafD: [48, 60, 29], leafM: [74, 88, 39], leafO: [102, 108, 47], leafB: [144, 142, 57], leafL: [182, 170, 84],
+  rock: [206, 176, 130], rockS: [158, 126, 90], rockD: [88, 68, 50],
+};
+const tvHz = (col, k) => (k > 0 ? mix(col, TIV.haze, k) : col);
+
+// ------------------------------------------------------------- roofs, walls
+// a coppi roof in elevation: eave xl..xr at y1, ridge rl..rr at y0 (hips at the sides)
+function tvRoofTile(c, xl, xr, rl, rr, y0, y1, px, col) {
+  c.fillStyle = rgba(col);
+  c.beginPath(); c.moveTo(xl, y1); c.lineTo(xr, y1); c.lineTo(rr, y0); c.lineTo(rl, y0); c.closePath(); c.fill();
+  const h = y1 - y0, step = Math.max(4, Math.min(11, h * 0.34));
+  if (px * step > 1.6) {
+    c.save(); c.clip();
+    // coppi channels: a lit crown and a shaded gutter per course
+    c.fillStyle = rgba(mix(col, [255, 228, 192], 0.2));
+    c.beginPath(); for (let x = xl; x < xr; x += step) c.rect(x, y0, step * 0.46, h); c.fill();
+    c.fillStyle = rgba(mix(col, [76, 42, 26], 0.26));
+    c.beginPath(); for (let x = xl + step * 0.62; x < xr; x += step) c.rect(x, y0, step * 0.22, h); c.fill();
+    if (px * step > 4.5) {
+      // overlapping tile ends, row by row
+      c.strokeStyle = rgba(mix(col, [70, 38, 24], 0.5), 0.6); c.lineWidth = step * 0.12; c.beginPath();
+      for (let y = y0 + step * 0.75; y < y1; y += step * 0.75) for (let x = xl; x < xr; x += step) { c.moveTo(x, y); c.quadraticCurveTo(x + step * 0.23, y + step * 0.22, x + step * 0.46, y); }
+      c.stroke();
+      // lichen
+      c.fillStyle = 'rgba(206,196,160,0.28)'; c.beginPath();
+      for (let i = 0; i < 9; i++) { const u = hash(Math.round(xl * 7), i), v = hash(Math.round(xr * 3), i + 9); c.moveTo(lerp(rl, rr, u) + step, lerp(y0, y1, v)); c.ellipse(lerp(rl, rr, u), lerp(y0, y1, v), step * 0.9, step * 0.35, 0, 0, TAU); }
+      c.fill();
+    }
+    c.restore();
+    // ridge and hip tiles
+    c.strokeStyle = rgba(mix(col, [255, 230, 196], 0.22)); c.lineWidth = Math.max(0.8, step * 0.3);
+    c.beginPath(); c.moveTo(xl + step * 0.3, y1 - step * 0.2); c.lineTo(rl, y0); c.lineTo(rr, y0); c.lineTo(xr - step * 0.3, y1 - step * 0.2); c.stroke();
+  }
+  // shaded tile ends along the eave, and the shadow the eave throws on the wall
+  c.fillStyle = rgba(mix(col, [58, 32, 20], 0.5)); c.fillRect(xl, y1 - Math.max(0.8, h * 0.1), xr - xl, Math.max(0.8, h * 0.1));
+}
+// rough stone showing through the plaster: many small blocks in two tones (built once per wall)
+function tvStones(x, y, w, h, seed, sz) {
+  const r = rng(seed), d = new Path2D(), l = new Path2D();
+  for (let yy = y; yy < y + h; yy += sz * 0.72) for (let xx = x - r() * sz; xx < x + w; xx += sz * (0.7 + r() * 0.8)) {
+    const bw = sz * (0.55 + r() * 0.75), bh = sz * (0.42 + r() * 0.26);
+    (r() < 0.55 ? d : l).rect(xx, yy + r() * sz * 0.1, bw, bh);
+  }
+  return [d, l];
+}
+// a window with its surround, sill, persiane and (when lit) warm glass
+function tvWindow(c, cx, top, w, h, st, px, o = {}) {
+  const x = cx - w / 2, fr = w * 0.12, sh = o.sh || TIV.shG, lit = o.lit || 0, arch = o.arch || 0;
+  const path = (xx, yy, ww, hh) => { c.beginPath(); if (arch) { const r = ww / 2; c.moveTo(xx, yy + hh); c.lineTo(xx, yy + r); c.arc(xx + r, yy + r, r, Math.PI, 0); c.lineTo(xx + ww, yy + hh); c.closePath(); } else c.rect(xx, yy, ww, hh); };
+  if (px * w > 5) { c.fillStyle = rgba(o.frame || TIV.trav); path(x - fr, top - fr, w + fr * 2, h + fr * 2); c.fill(); }
+  // glass, darker at the top of the recess
+  const gl = mix(TIV.glass, TIV.lit, lit * (st === 'closed' ? 0 : 0.92));
+  c.fillStyle = rgba(gl); path(x, top, w, h); c.fill();
+  if (px * w > 10) {
+    c.fillStyle = 'rgba(0,0,0,0.25)'; c.fillRect(x, top + (arch ? w * 0.5 : 0), w, h * 0.1);
+    if (st !== 'closed') {
+      // glazing bars and a curtain
+      c.strokeStyle = rgba(lit > 0.3 ? [120, 84, 50] : [214, 204, 186], 0.8); c.lineWidth = w * 0.045;
+      c.beginPath(); c.moveTo(cx, top + (arch ? w * 0.5 : 0)); c.lineTo(cx, top + h); for (let k = 1; k < 3; k++) { c.moveTo(x, top + h * k / 3); c.lineTo(x + w, top + h * k / 3); } c.stroke();
+      if (o.curtain) { c.fillStyle = rgba([246, 238, 222], 0.55 + 0.3 * lit); c.beginPath(); c.moveTo(x, top + h * 0.1); c.quadraticCurveTo(x + w * 0.3, top + h * 0.4, x + w * 0.08, top + h); c.lineTo(x, top + h); c.fill(); }
+    }
+  }
+  // persiane: closed over the glass, open against the wall, or half
+  const slats = (xx, yy, ww, hh) => {
+    c.fillStyle = rgba(sh); c.fillRect(xx, yy, ww, hh);
+    if (px * ww > 7) {
+      c.strokeStyle = rgba(mix(sh, [0, 0, 0], 0.35), 0.7); c.lineWidth = hh * 0.012 + 0.4; c.beginPath();
+      for (let yy2 = yy + hh * 0.06; yy2 < yy + hh; yy2 += Math.max(1.4, hh * 0.055)) { c.moveTo(xx + ww * 0.08, yy2); c.lineTo(xx + ww * 0.92, yy2); }
+      c.stroke();
+      c.fillStyle = rgba(mix(sh, [255, 255, 240], 0.18)); c.fillRect(xx, yy, ww * 0.1, hh);
+    }
+  };
+  if (st === 'closed') { slats(x, top, w / 2, h); slats(cx, top, w / 2, h); if (px * w > 10) { c.fillStyle = 'rgba(0,0,0,0.3)'; c.fillRect(cx - w * 0.015, top, w * 0.03, h); } }
+  else if (st === 'open') { slats(x - fr - w * 0.5, top - fr * 0.5, w * 0.48, h + fr); slats(x + w + fr + w * 0.02, top - fr * 0.5, w * 0.48, h + fr); }
+  else if (st === 'half') { slats(x, top, w / 2, h); slats(x + w + fr + w * 0.02, top - fr * 0.5, w * 0.48, h + fr); }
+  // sill and its shadow
+  if (px * w > 5) {
+    c.fillStyle = rgba(o.frame || TIV.trav); c.fillRect(x - fr * 1.8, top + h + fr * 0.6, w + fr * 3.6, fr * 1.1);
+    c.fillStyle = 'rgba(60,40,24,0.22)'; c.fillRect(x - fr * 1.5, top + h + fr * 1.7, w + fr * 3, fr * 0.9);
+  }
+  if (lit > 0 && st !== 'closed' && o.glow !== false) glow(c, cx, top + h * 0.5, w * 1.6, TIV.lit, 0.22 * lit);
+}
+
+// ------------------------------------------------------------ the sold house
+const HERO = { x: 300, y: 1030, s: 0.225 };
+const SOLD_S = 1.35;                  // the house's scale in the SOLD scene
+const PZ = SOLD_S / HERO.s;           // 6: the zoom at which the town's house fills the frame the same way
+const RIB_Y = 262;                    // where the VENDUTO ribbon crosses the facade
+// Replicated from the ochre palazzetto left of the temple in the photo: rusticated
+// travertine ground floor and arched door, a piano nobile with a wrought-iron
+// balcony and geraniums, green persiane, a moulded cornice, coppi and a chimney.
+// Local units, 400 wide, origin at the top of the roof, ground at y = 466.
+function tvHouse(c, x, y, s, o = {}) {
+  const lit = o.lit || 0, px = s * (o.z || 1), fine = px > 0.42, mid = px > 0.14;
+  const OC = [241, 201, 118], OCS = [216, 168, 90], OCL = [250, 222, 152];
+  c.save(); c.translate(x, y); c.scale(s, s);
+  // chimney, behind the roof
+  c.fillStyle = rgba([200, 138, 98]); c.fillRect(104, -72, 34, 100);
+  c.fillStyle = rgba([158, 102, 70]); c.fillRect(127, -72, 11, 100);
+  c.fillStyle = rgba(TIV.roofD); c.fillRect(95, -88, 52, 18);
+  c.fillStyle = rgba(TIV.roofL); c.fillRect(95, -88, 52, 6);
+  tvRoofTile(c, -216, 216, -148, 148, 0, 36, px, TIV.roof);
+  // plastered upper floors: low sun from the left, warmer under the eave
+  let g = c.createLinearGradient(-200, 0, 200, 0);
+  g.addColorStop(0, rgba(OCL)); g.addColorStop(0.5, rgba(OC)); g.addColorStop(1, rgba(OCS));
+  c.fillStyle = g; c.fillRect(-200, 36, 400, 284);
+  g = c.createLinearGradient(0, 36, 0, 320); g.addColorStop(0, 'rgba(90,50,20,0.20)'); g.addColorStop(0.12, 'rgba(255,230,180,0.10)'); g.addColorStop(1, 'rgba(120,80,40,0.10)');
+  c.fillStyle = g; c.fillRect(-200, 36, 400, 284);
+  if (mid) {
+    // weathering: soft damp patches and a little bare stone where the plaster fell
+    c.fillStyle = 'rgba(150,104,52,0.10)'; c.beginPath(); c.ellipse(-150, 250, 60, 40, 0.3, 0, TAU); c.ellipse(120, 120, 50, 26, -0.2, 0, TAU); c.fill();
+    c.fillStyle = rgba([196, 164, 128]); c.beginPath(); c.moveTo(150, 232); c.bezierCurveTo(176, 222, 196, 240, 192, 262); c.bezierCurveTo(196, 286, 168, 300, 150, 290); c.bezierCurveTo(134, 276, 138, 246, 150, 232); c.fill();
+    if (fine) { const [sd, sl] = tvStonePatch(); c.fillStyle = 'rgba(96,70,48,0.45)'; c.fill(sd); c.fillStyle = 'rgba(236,214,184,0.5)'; c.fill(sl); }
+  }
+  // cornice: projecting band, dentils, shadow on the wall
+  c.fillStyle = rgba(TIV.trav); c.fillRect(-208, 36, 416, 9);
+  c.fillStyle = rgba(mix(OC, [255, 240, 210], 0.4)); c.fillRect(-203, 45, 406, 11);
+  if (mid) { c.fillStyle = rgba(OCS); c.beginPath(); for (let xx = -198; xx < 198; xx += 12) c.rect(xx, 47, 6, 6); c.fill(); }
+  g = c.createLinearGradient(0, 56, 0, 76); g.addColorStop(0, 'rgba(80,44,20,0.30)'); g.addColorStop(1, 'rgba(80,44,20,0)');
+  c.fillStyle = g; c.fillRect(-200, 56, 400, 20);
+  // string course between the floors
+  c.fillStyle = rgba(TIV.trav); c.fillRect(-202, 176, 404, 8);
+  c.fillStyle = 'rgba(80,50,26,0.18)'; c.fillRect(-200, 184, 400, 5);
+  // second floor
+  tvWindow(c, -130, 78, 50, 78, 'closed', px, { lit });
+  tvWindow(c, 0, 78, 50, 78, 'open', px, { lit, curtain: 1 });
+  tvWindow(c, 130, 78, 50, 78, 'half', px, { lit });
+  // piano nobile: side windows under small cornices, French window with balcony
+  for (const wx of [-130, 130]) { c.fillStyle = rgba(TIV.trav); c.fillRect(wx - 40, 196, 80, 7); c.fillStyle = 'rgba(80,44,20,0.25)'; c.fillRect(wx - 36, 203, 72, 4); }
+  tvWindow(c, -130, 214, 54, 86, 'open', px, { lit, curtain: 1 });
+  tvWindow(c, 130, 214, 54, 86, 'closed', px, { lit });
+  c.fillStyle = rgba(TIV.trav); c.beginPath(); c.moveTo(-50, 204); c.lineTo(0, 188); c.lineTo(50, 204); c.closePath(); c.fill();
+  c.fillStyle = 'rgba(80,44,20,0.22)'; c.fillRect(-44, 204, 88, 4);
+  tvWindow(c, 0, 212, 62, 94, 'open', px, { lit, curtain: 1 });
+  // balcony: travertine slab, iron railing, pots of geraniums
+  c.fillStyle = 'rgba(70,40,20,0.28)'; c.fillRect(-66, 314, 132, 7);
+  c.fillStyle = rgba(TIV.trav); c.fillRect(-72, 305, 144, 10);
+  c.fillStyle = rgba(TIV.travS); c.fillRect(-72, 312, 144, 3);
+  if (mid) {
+    c.strokeStyle = rgba(TIV.iron); c.lineWidth = 2.4; c.beginPath();
+    c.moveTo(-68, 268); c.lineTo(68, 268); c.moveTo(-68, 272); c.lineTo(68, 272); c.moveTo(-68, 296); c.lineTo(68, 296);
+    for (let xx = -66; xx <= 66; xx += 8.25) { c.moveTo(xx, 268); c.lineTo(xx, 305); }
+    c.stroke();
+    if (fine) { c.lineWidth = 1.6; c.beginPath(); for (let xx = -58; xx < 60; xx += 16.5) { c.moveTo(xx + 8, 284); c.arc(xx + 8, 284, 5, 0, TAU); } c.stroke(); }
+  }
+  for (const [px0, k] of [[-52, 0], [2, 1], [50, 2]]) tvGeraniums(c, px0, 305, k, mid);
+  // ground floor: rusticated travertine, arched door with fanlight, grilled windows
+  c.fillStyle = rgba(TIV.trav); c.fillRect(-200, 320, 400, 146);
+  g = c.createLinearGradient(-200, 0, 200, 0); g.addColorStop(0, 'rgba(255,248,230,0.18)'); g.addColorStop(1, 'rgba(110,80,50,0.16)');
+  c.fillStyle = g; c.fillRect(-200, 320, 400, 146);
+  if (mid) {
+    c.strokeStyle = rgba(TIV.travS); c.lineWidth = 2.4; c.beginPath();
+    for (let r = 1; r < 6; r++) { c.moveTo(-200, 320 + r * 24.3); c.lineTo(200, 320 + r * 24.3); }
+    for (let r = 0; r < 6; r++) for (let xx = -200 + (r % 2) * 32; xx < 200; xx += 64) { c.moveTo(xx, 320 + r * 24.3); c.lineTo(xx, 320 + (r + 1) * 24.3); }
+    c.stroke();
+    if (fine) { c.fillStyle = 'rgba(150,120,86,0.35)'; c.beginPath(); for (let i = 0; i < 150; i++) { const u = hash(i, 3), v = hash(i, 5); c.moveTo(-198 + u * 396, 322 + v * 142); c.ellipse(-198 + u * 396, 322 + v * 142, 1.6 + hash(i, 7) * 2, 0.9, 0, 0, TAU); } c.fill(); }
+  }
+  c.fillStyle = rgba(TIV.travS); c.fillRect(-204, 316, 408, 6);
+  // the door: travertine arch with keystone, fanlight, walnut leaves
+  c.fillStyle = rgba(mix(TIV.trav, [255, 250, 236], 0.3)); c.beginPath(); c.moveTo(-74, 466); c.lineTo(-74, 392); c.arc(0, 392, 74, Math.PI, 0); c.lineTo(74, 466); c.closePath(); c.fill();
+  if (mid) { c.strokeStyle = rgba(TIV.travS); c.lineWidth = 2; c.beginPath(); for (let k = 1; k < 9; k++) { const a = Math.PI + k * Math.PI / 9; c.moveTo(Math.cos(a) * 56, 392 + Math.sin(a) * 56); c.lineTo(Math.cos(a) * 74, 392 + Math.sin(a) * 74); } c.stroke(); }
+  c.fillStyle = rgba(mix(TIV.trav, [255, 250, 236], 0.45)); c.beginPath(); c.moveTo(-10, 316); c.lineTo(10, 316); c.lineTo(8, 338); c.lineTo(-8, 338); c.closePath(); c.fill();
+  c.fillStyle = rgba(mix(TIV.glass, TIV.lit, 0.8 * lit)); c.beginPath(); c.moveTo(-56, 392); c.arc(0, 392, 56, Math.PI, 0); c.closePath(); c.fill();
+  if (mid) { c.strokeStyle = rgba(TIV.iron); c.lineWidth = 2.2; c.beginPath(); for (let k = 1; k < 6; k++) { const a = Math.PI + k * Math.PI / 6; c.moveTo(0, 392); c.lineTo(Math.cos(a) * 56, 392 + Math.sin(a) * 56); } c.moveTo(-56, 392); c.lineTo(56, 392); c.stroke(); }
+  g = c.createLinearGradient(-56, 0, 56, 0); g.addColorStop(0, rgba([104, 66, 40])); g.addColorStop(1, rgba([72, 44, 28]));
+  c.fillStyle = g; c.fillRect(-56, 394, 112, 72);
+  if (mid) {
+    c.strokeStyle = 'rgba(30,16,8,0.55)'; c.lineWidth = 2.2; c.beginPath(); c.moveTo(0, 394); c.lineTo(0, 466);
+    for (const xx of [-50, 6]) { c.rect(xx, 402, 44, 26); c.rect(xx, 434, 44, 26); } c.stroke();
+    c.fillStyle = rgba([196, 158, 84]); c.beginPath(); c.arc(-14, 432, 4, 0, TAU); c.arc(14, 432, 4, 0, TAU); c.fill();
+  }
+  c.fillStyle = rgba(TIV.travS); c.fillRect(-80, 460, 160, 6);
+  for (const wx of [-136, 136]) {
+    c.fillStyle = rgba(mix(TIV.trav, [255, 250, 236], 0.3)); c.fillRect(wx - 30, 364, 60, 70);
+    c.fillStyle = rgba(mix(TIV.glass, TIV.lit, 0.55 * lit)); c.fillRect(wx - 23, 371, 46, 56);
+    if (mid) { c.strokeStyle = rgba(TIV.iron); c.lineWidth = 2.2; c.beginPath(); for (let k = 0; k < 5; k++) { c.moveTo(wx - 18 + k * 9, 369); c.lineTo(wx - 18 + k * 9, 429); } c.moveTo(wx - 25, 386); c.lineTo(wx + 25, 386); c.moveTo(wx - 25, 412); c.lineTo(wx + 25, 412); c.stroke(); }
+  }
+  // lantern by the door, and a lemon tree in a pot
+  c.strokeStyle = rgba(TIV.iron); c.lineWidth = 3; c.beginPath(); c.moveTo(96, 350); c.lineTo(110, 350); c.lineTo(110, 356); c.stroke();
+  c.fillStyle = rgba(TIV.iron); c.fillRect(103, 356, 14, 4); c.fillRect(104, 376, 12, 3);
+  c.fillStyle = rgba(mix([96, 90, 76], TIV.lit, 0.25 + 0.75 * lit)); c.fillRect(105, 360, 10, 16);
+  if (lit > 0) glow(c, 110, 368, 60, TIV.lit, 0.35 * lit);
+  c.fillStyle = rgba([176, 96, 58]); c.beginPath(); c.moveTo(-112, 430); c.lineTo(-78, 430); c.lineTo(-82, 466); c.lineTo(-108, 466); c.closePath(); c.fill();
+  c.fillStyle = rgba([138, 70, 40]); c.fillRect(-114, 428, 38, 6);
+  c.fillStyle = rgba(TIV.leafD); c.beginPath(); c.arc(-95, 402, 26, 0, TAU); c.arc(-112, 412, 16, 0, TAU); c.arc(-78, 410, 16, 0, TAU); c.fill();
+  c.fillStyle = rgba(TIV.leafM); c.beginPath(); c.arc(-100, 396, 17, 0, TAU); c.arc(-84, 404, 10, 0, TAU); c.fill();
+  if (mid) { c.fillStyle = rgba([244, 208, 62]); c.beginPath(); for (const [lx, ly] of [[-104, 392], [-86, 406], [-110, 414], [-92, 386], [-80, 396]]) { c.moveTo(lx + 3.5, ly); c.arc(lx, ly, 3.5, 0, TAU); } c.fill(); }
+  // copper downpipe on the right edge
+  c.fillStyle = rgba([150, 92, 58]); c.fillRect(186, 40, 7, 426); c.fillRect(182, 36, 15, 6);
+  c.fillStyle = 'rgba(255,220,180,0.35)'; c.fillRect(187, 40, 2, 426);
+  if (lit > 0 && mid) glow(c, 0, 250, 260, TIV.lit, 0.06 * lit);
+  c.restore();
+}
+let TV_PATCH = null;
+function tvStonePatch() {
+  if (!TV_PATCH) TV_PATCH = tvStones(136, 222, 64, 82, 4242, 11);
+  return TV_PATCH;
+}
+function tvGeraniums(c, x, y, k, mid) {
+  c.fillStyle = rgba([180, 98, 58]); c.beginPath(); c.moveTo(x - 13, y - 18); c.lineTo(x + 13, y - 18); c.lineTo(x + 10, y); c.lineTo(x - 10, y); c.closePath(); c.fill();
+  c.fillStyle = rgba(TIV.leafM); c.beginPath(); c.arc(x - 8, y - 24, 9, 0, TAU); c.arc(x + 8, y - 24, 9, 0, TAU); c.arc(x, y - 30, 9, 0, TAU); c.fill();
+  if (!mid) return;
+  c.fillStyle = rgba(k === 1 ? [232, 72, 96] : [214, 46, 50]); c.beginPath();
+  for (let i = 0; i < 7; i++) { const a = i * 2.4 + k, r = 4 + (i % 3) * 3; c.moveTo(x + Math.cos(a) * r * 1.6 + 3.2, y - 30 + Math.sin(a) * r); c.arc(x + Math.cos(a) * r * 1.6, y - 30 + Math.sin(a) * r, 3.2, 0, TAU); }
+  c.fill();
+}
+
+// -------------------------------------------------------------------- town
+// b: x, bt (foot), w, h (to the eaves), col, mat ('s' shows its stones), fl, bays,
+// sh (persiane colour, or 0), win ('r' plain, 'a' arched), rh (roof), side (shaded
+// flank on the right), ch (chimneys), hz (haze), lit (share of lit windows)
 const TOWN = (() => {
   const r = rng(1994), out = [];
-  // three rows climbing the ridge, left to right
-  [[0, 1010, 150, 70], [1, 1080, 125, 40], [2, 1150, 105, 20]].forEach(([row, base, hh, ox]) => {
-    let x = 300 + ox;
-    while (x < 1120) {
-      const w = 68 + r() * 58, h = hh * (0.7 + r() * 0.55), bb = base - (x - 300) * 0.05 * (row === 0 ? 1 : 0.4);
-      if (!(row === 1 && Math.abs(x + w / 2 - HERO.x) < 70)) out.push({ x, w, h, base: bb, row, tone: r(), roof: r(), seed: Math.floor(r() * 1e6) });
-      x += w - 6 + r() * 8;
-    }
-  });
+  const tones = [[232, 206, 164], [226, 194, 150], [236, 199, 156], [240, 176, 116], [234, 198, 146], [248, 216, 140], [190, 158, 128], [214, 182, 150], [226, 170, 144], [236, 222, 200], [204, 176, 146]];
+  const add = b => { b.seed = Math.floor(r() * 1e6); if (b.lit === undefined) b.lit = 0.1; if (b.sh === undefined) b.sh = r() < 0.55 ? TIV.shG : TIV.shB; if (b.ant === undefined) b.ant = r() < 0.4; out.push(b); };
+  // the upper town, rooftop after rooftop up towards Monte Catillo
+  for (let x = -70; x < 1150;) {
+    const w = 52 + r() * 70, h = 64 + r() * 74, up = x > 640 ? (x - 640) * 0.16 : 0;
+    add({ x, bt: 872 - up + r() * 16, w, h, col: tones[Math.floor(r() * tones.length)], mat: r() < 0.3 ? 's' : 'p', fl: Math.max(2, Math.round(h / 38)), bays: Math.max(1, Math.round(w / 34)), win: 'r', rh: 9 + r() * 7, rc: r() < 0.35 ? TIV.roofOld : TIV.roof, hz: 0.4, lit: 0.06, ch: r() < 0.5 ? [w * (0.2 + r() * 0.6)] : [] });
+    x += w - 3 - r() * 8;
+  }
+  // the middle rows, from the photo: stone palazzi, the tall yellow house, houses behind the temple
+  const mid = [
+    { x: -60, bt: 1034, w: 100, h: 196, col: [226, 194, 150], fl: 4, bays: 2, rh: 14 },
+    { x: 36, bt: 1044, w: 264, h: 254, col: [190, 158, 128], mat: 's', fl: 5, bays: 5, sh: TIV.shB, rh: 24, side: 22, ch: [36, 150, 226] },
+    { x: 300, bt: 1014, w: 96, h: 216, col: [236, 199, 156], fl: 4, bays: 2, sh: TIV.shG, rh: 14, ch: [64] },
+    { x: 396, bt: 1022, w: 118, h: 182, col: [212, 182, 150], mat: 's', fl: 3, bays: 2, win: 'a', sh: TIV.shB, rh: 16 },
+    { x: 514, bt: 1004, w: 86, h: 236, col: [250, 216, 136], fl: 5, bays: 2, sh: TIV.shG, rh: 12, ch: [20], altana: 1 },
+    { x: 600, bt: 1012, w: 124, h: 178, col: [234, 198, 146], fl: 4, bays: 3, rh: 16, side: 10 },
+    { x: 722, bt: 1018, w: 112, h: 170, col: [228, 196, 152], fl: 4, bays: 2, rh: 14, ch: [80] },
+    { x: 832, bt: 1034, w: 92, h: 176, col: [210, 180, 150], mat: 's', fl: 4, bays: 2, rh: 14 },
+    { x: 922, bt: 1046, w: 104, h: 162, col: [236, 214, 176], fl: 4, bays: 2, rh: 14, ch: [30] },
+    { x: 1024, bt: 1062, w: 112, h: 150, col: [226, 170, 146], fl: 3, bays: 3, rh: 14 },
+  ];
+  for (const b of mid) add(Object.assign({ mat: 'p', win: 'r', hz: 0.1, lit: 0.12, ch: [] }, b));
+  // the front row on the cliff: the small stone house, the Sibilla restaurant, the house with green persiane, the pink one
+  const front = [
+    { x: 348, bt: 1152, w: 58, h: 92, col: [206, 176, 140], mat: 's', fl: 2, bays: 1, sh: TIV.shB, rh: 10, ant: false },
+    { x: 406, bt: 1170, w: 200, h: 142, col: [234, 198, 144], fl: 3, bays: 5, sh: 0, rh: 22, ch: [150], lit: 0.3 },
+    { x: 856, bt: 1100, w: 128, h: 150, col: [200, 192, 176], fl: 4, bays: 3, sh: TIV.shG, rh: 14, ch: [100] },
+    { x: 984, bt: 1122, w: 122, h: 126, col: [232, 176, 158], fl: 3, bays: 3, sh: TIV.shB, rh: 14 },
+  ];
+  for (const b of front) add(Object.assign({ mat: 'p', win: 'r', hz: 0, lit: 0.14, ch: [] }, b));
   return out;
 })();
-// tree clusters for the gorge: each a knot of overlapping crowns
-const TREES = (() => { const r = rng(314), out = [];
-  const spots = [[40, 1560, 1.3], [210, 1700, 1.5], [420, 1820, 1.7], [700, 1770, 1.6], [930, 1620, 1.5], [1060, 1800, 1.8], [620, 1560, 1.0], [300, 1500, 0.9], [860, 1470, 0.9], [120, 1880, 1.8]];
-  for (const [x, y, k] of spots) { const crowns = []; for (let i = 0; i < 7; i++) crowns.push([x + (r() - 0.5) * 170 * k, y + (r() - 0.6) * 90 * k, (46 + r() * 40) * k, r()]); out.push({ y, crowns }); }
-  return out.sort((p, q) => p.y - q.y); })();
-function house(c, h, lit) {
-  const facade = mix(mix([244, 224, 202], [232, 206, 180], h.tone), [248, 236, 220], h.row === 0 ? 0.25 : 0);
-  const shade = mix(facade, [140, 118, 104], 0.3);
-  const top = h.base - h.h;
-  c.fillStyle = rgba(facade); c.fillRect(h.x, top, h.w, h.h + 40);
-  c.fillStyle = rgba(shade); c.fillRect(h.x, top, h.w * 0.18, h.h + 40);
-  const rc = mix([200, 150, 116], [176, 128, 98], h.roof);
-  c.fillStyle = rgba(rc);
-  c.beginPath(); c.moveTo(h.x - 7, top + 2); c.lineTo(h.x + h.w * 0.5, top - 14 - h.w * 0.1); c.lineTo(h.x + h.w + 7, top + 2); c.closePath(); c.fill();
-  c.fillStyle = rgba(mix(rc, [104, 76, 58], 0.4)); c.fillRect(h.x - 7, top, h.w + 14, 6);
-  if (h.roof > 0.55) { c.fillStyle = rgba(shade); c.fillRect(h.x + h.w * 0.68, top - 30, 11, 26); }
-  const r = rng(h.seed), cols = Math.max(1, Math.floor(h.w / 30)), rows = Math.max(1, Math.floor((h.h - 16) / 36));
-  for (let i = 0; i < rows; i++) for (let j = 0; j < cols; j++) {
-    if (r() < 0.2) continue;
-    const cw = (h.w - 20) / cols, wx = h.x + 10 + j * cw + (cw - 12) / 2, wy = top + 18 + i * 36;
-    const on = r() < 0.2 * lit;
-    c.fillStyle = on ? 'rgba(255,224,164,0.95)' : 'rgba(98,80,66,0.72)'; c.fillRect(wx, wy, 12, 19);
-    if (!on) { c.fillStyle = 'rgba(120,96,80,0.5)'; c.fillRect(wx - 3, wy - 2, 18, 3); }
+function tvBuilding(c, b, px) {
+  const top = b.bt - b.h, col = tvHz(b.col, b.hz), sw = b.w * px;
+  if (b.side) { c.fillStyle = rgba(mix(col, [96, 70, 52], 0.36)); c.fillRect(b.x + b.w, top + 3, b.side, b.h + 90); }
+  c.fillStyle = rgba(col); c.fillRect(b.x, top, b.w, b.h + 90);
+  if (sw > 18) {
+    const g = c.createLinearGradient(b.x, top, b.x + b.w, top + b.h);
+    g.addColorStop(0, 'rgba(255,240,206,0.16)'); g.addColorStop(1, 'rgba(70,44,26,0.16)');
+    c.fillStyle = g; c.fillRect(b.x, top, b.w, b.h + 90);
+    // patches of newer and older plaster
+    c.fillStyle = rgba(mix(col, hash(b.seed, 1) < 0.5 ? [255, 246, 226] : [120, 90, 64], 0.12));
+    c.fillRect(b.x + b.w * hash(b.seed, 2) * 0.6, top + b.h * hash(b.seed, 3) * 0.6, b.w * (0.2 + hash(b.seed, 4) * 0.3), b.h * (0.15 + hash(b.seed, 5) * 0.25));
+  }
+  if (b.mat === 's' && sw > 34) {
+    if (!b.st) b.st = tvStones(b.x, top, b.w, b.h + 90, b.seed, 6.5);
+    c.fillStyle = 'rgba(70,50,34,0.14)'; c.fill(b.st[0]); c.fillStyle = 'rgba(255,244,224,0.13)'; c.fill(b.st[1]);
+  }
+  // windows, floor by floor: the piano nobile a little taller, some bays left blank
+  const fh = b.h / b.fl, bw = b.w / b.bays, ww = Math.min(bw * 0.4, fh * 0.38);
+  if (ww * px > 1.2) {
+    for (let f = 0; f < b.fl; f++) for (let i = 0; i < b.bays; i++) {
+      const h1 = hash(b.seed + f * 31, i);
+      if (h1 < 0.1) continue;
+      const wh = Math.min(fh * (f === 1 ? 0.6 : 0.52), ww * (f === 1 ? 2.0 : 1.75)), cx = b.x + (i + 0.5) * bw, wy = top + f * fh + fh * 0.24;
+      const st = !b.sh ? 'glass' : h1 < 0.42 ? 'closed' : h1 < 0.76 ? 'open' : h1 < 0.86 ? 'half' : 'glass';
+      const lit = hash(b.seed + f * 7, i + 5) < b.lit ? 1 : 0;
+      if (ww * px < 5) {
+        c.fillStyle = rgba(st === 'closed' ? tvHz(b.sh, b.hz) : tvHz(mix(TIV.glass, TIV.lit, lit * 0.9), b.hz * 0.6));
+        c.fillRect(cx - ww / 2, wy, ww, wh);
+      } else {
+        tvWindow(c, cx, wy, ww, wh, st, px, { sh: b.sh ? tvHz(b.sh, b.hz) : 0, lit, arch: b.win === 'a', frame: tvHz(mix(col, [255, 246, 230], 0.45), b.hz), glow: false, curtain: h1 > 0.6 });
+        // a little balcony on some piano nobile windows
+        if (f === 1 && hash(b.seed, i + 40) < 0.3 && px * ww > 9) {
+          c.fillStyle = rgba(tvHz(TIV.trav, b.hz)); c.fillRect(cx - ww * 0.9, wy + wh + ww * 0.1, ww * 1.8, ww * 0.14);
+          c.strokeStyle = rgba(tvHz(TIV.iron, b.hz), 0.9); c.lineWidth = ww * 0.05; c.beginPath(); c.moveTo(cx - ww * 0.86, wy + wh - ww * 0.4); c.lineTo(cx + ww * 0.86, wy + wh - ww * 0.4);
+          for (let k = -4; k <= 4; k++) { c.moveTo(cx + k * ww * 0.2, wy + wh - ww * 0.4); c.lineTo(cx + k * ww * 0.2, wy + wh + ww * 0.1); } c.stroke();
+        }
+      }
+    }
+  }
+  // cornice under the eave
+  if (sw > 14) { c.fillStyle = rgba(tvHz(mix(col, [255, 246, 226], 0.4), b.hz)); c.fillRect(b.x - 1.5, top, b.w + 3 + (b.side || 0), Math.max(1.2, b.rh * 0.22)); }
+  for (const cx of b.ch) {
+    const chx = b.x + cx, chh = b.rh * 1.6;
+    c.fillStyle = rgba(tvHz([186, 128, 92], b.hz)); c.fillRect(chx - b.rh * 0.3, top - chh, b.rh * 0.6, chh);
+    c.fillStyle = rgba(tvHz(TIV.roofD, b.hz)); c.fillRect(chx - b.rh * 0.42, top - chh - b.rh * 0.2, b.rh * 0.84, b.rh * 0.26);
+  }
+  const ov = Math.max(2, b.w * 0.035), sd = b.side || 0;
+  if (b.altana) {
+    // a roof terrace with a pergola and plants, like the yellow house in the photo
+    c.fillStyle = rgba(tvHz(mix(b.col, [120, 90, 60], 0.2), b.hz)); c.fillRect(b.x + 4, top - 26, b.w * 0.55, 26);
+    c.fillStyle = rgba(tvHz(TIV.leafM, b.hz)); c.beginPath(); c.arc(b.x + 14, top - 28, 7, 0, TAU); c.arc(b.x + 28, top - 30, 8, 0, TAU); c.arc(b.x + 40, top - 27, 6, 0, TAU); c.fill();
+    c.strokeStyle = rgba(tvHz([120, 90, 60], b.hz)); c.lineWidth = 1.2; c.beginPath(); c.moveTo(b.x + 4, top - 36); c.lineTo(b.x + b.w * 0.55 + 4, top - 36); c.moveTo(b.x + 6, top - 36); c.lineTo(b.x + 6, top); c.moveTo(b.x + b.w * 0.55, top - 36); c.lineTo(b.x + b.w * 0.55, top); c.stroke();
+    tvRoofTile(c, b.x + b.w * 0.55, b.x + b.w + sd + ov, b.x + b.w * 0.62, b.x + b.w + sd - b.rh, top - b.rh, top, px, tvHz(b.rc || TIV.roof, b.hz));
+  } else tvRoofTile(c, b.x - ov, b.x + b.w + sd + ov, b.x + Math.min(b.w * 0.28, b.rh * 1.8), b.x + b.w + sd - Math.min(b.w * 0.28, b.rh * 1.8), top - b.rh, top, px, tvHz(b.rc || TIV.roof, b.hz));
+  c.fillStyle = 'rgba(60,34,18,0.26)'; c.fillRect(b.x, top, b.w + sd, Math.max(1, b.rh * 0.3));
+  if (b.ant && px > 1.4) {
+    const ax = b.x + b.w * (0.3 + hash(b.seed, 9) * 0.4), ah = b.rh * 2.4;
+    c.strokeStyle = rgba(tvHz([70, 66, 62], b.hz), 0.8); c.lineWidth = 0.5; c.beginPath(); c.moveTo(ax, top - b.rh * 0.6); c.lineTo(ax, top - b.rh * 0.6 - ah);
+    for (let k = 0; k < 3; k++) { c.moveTo(ax - 4 + k, top - b.rh * 0.6 - ah + k * 2.2); c.lineTo(ax + 4 - k, top - b.rh * 0.6 - ah + k * 2.2); } c.stroke();
   }
 }
-function panorama(c, t, heroExtra) {
-  const g = c.createLinearGradient(0, 0, 0, 1180);
-  g.addColorStop(0, rgba([112, 172, 210])); g.addColorStop(0.4, rgba([196, 224, 240])); g.addColorStop(0.72, rgba([244, 232, 218])); g.addColorStop(1, rgba([248, 212, 178]));
-  c.fillStyle = g; c.fillRect(-500, -500, W + 1000, 1700);
-  glow(c, 790, 980, 460, [255, 232, 196], 0.9);
-  c.fillStyle = 'rgba(255,250,236,0.96)'; c.beginPath(); c.arc(790, 980, 50, 0, TAU); c.fill();
-  // slow clouds
+// the Albergo with Venetian-gothic windows at the far left, over the rock arch
+function tvVilla(c, px) {
+  const x = -44, w = 290, top = 1016, bt = 1238, col = [240, 174, 114];
+  c.fillStyle = rgba(col); c.fillRect(x, top, w, bt - top + 60);
+  let g = c.createLinearGradient(x, top, x + w, bt); g.addColorStop(0, 'rgba(255,236,200,0.18)'); g.addColorStop(1, 'rgba(90,50,24,0.16)');
+  c.fillStyle = g; c.fillRect(x, top, w, bt - top + 60);
+  // upper floor: tall pointed windows with grey-green persiane and a balustrade
+  const lite = [248, 214, 176];
+  for (let i = 0; i < 5; i++) {
+    const cx = x + 30 + i * 57, wt = top + 26, ww = 22, wh = 62;
+    c.fillStyle = rgba(lite); c.beginPath(); c.moveTo(cx - ww / 2 - 4, wt + wh + 3); c.lineTo(cx - ww / 2 - 4, wt + 14); c.quadraticCurveTo(cx - ww / 2 - 4, wt - 4, cx, wt - 12); c.quadraticCurveTo(cx + ww / 2 + 4, wt - 4, cx + ww / 2 + 4, wt + 14); c.lineTo(cx + ww / 2 + 4, wt + wh + 3); c.closePath(); c.fill();
+    c.fillStyle = rgba(i === 2 ? mix(TIV.glass, TIV.lit, 0.9) : [120, 140, 128]); c.beginPath(); c.moveTo(cx - ww / 2, wt + wh); c.lineTo(cx - ww / 2, wt + 14); c.quadraticCurveTo(cx - ww / 2, wt, cx, wt - 7); c.quadraticCurveTo(cx + ww / 2, wt, cx + ww / 2, wt + 14); c.lineTo(cx + ww / 2, wt + wh); c.closePath(); c.fill();
+    if (px * ww > 10) { c.strokeStyle = 'rgba(40,50,44,0.5)'; c.lineWidth = 0.9; c.beginPath(); c.moveTo(cx, wt - 6); c.lineTo(cx, wt + wh); for (let yy = wt + 16; yy < wt + wh; yy += 3.2) { c.moveTo(cx - ww / 2 + 1, yy); c.lineTo(cx + ww / 2 - 1, yy); } c.stroke(); }
+  }
+  // balustrade balcony across the middle three
+  tvBalustrade(c, x + 76, x + 222, top + 110, 20, px);
+  c.fillStyle = 'rgba(80,44,20,0.28)'; c.fillRect(x + 78, top + 110, 142, 4);
+  // string course and a row of little arched windows
+  c.fillStyle = rgba(lite); c.fillRect(x, top + 120, w, 6);
+  for (let i = 0; i < 9; i++) { const cx = x + 22 + i * 31.5; c.fillStyle = rgba(lite); c.beginPath(); c.moveTo(cx - 9, top + 150); c.lineTo(cx - 9, top + 138); c.arc(cx, top + 138, 9, Math.PI, 0); c.lineTo(cx + 9, top + 150); c.fill(); c.fillStyle = rgba(TIV.glass); c.beginPath(); c.moveTo(cx - 6, top + 148); c.lineTo(cx - 6, top + 139); c.arc(cx, top + 139, 6, Math.PI, 0); c.lineTo(cx + 6, top + 148); c.fill(); }
+  // ground floor: big arched French windows with white frames
   for (let i = 0; i < 4; i++) {
-    const cx = ((i * 330 + t * (14 + i * 5)) % 1500) - 250, cy = 470 + i * 70, k = 0.8 + (i % 2) * 0.35;
-    c.fillStyle = `rgba(255,255,255,${0.5 - i * 0.07})`;
-    c.beginPath(); c.ellipse(cx, cy, 130 * k, 34 * k, 0, 0, TAU); c.ellipse(cx + 70 * k, cy - 22 * k, 80 * k, 34 * k, 0, 0, TAU); c.ellipse(cx - 60 * k, cy - 12 * k, 70 * k, 26 * k, 0, 0, TAU); c.fill();
+    const cx = x + 44 + i * 70, wt = top + 166, ww = 36, wh = 58;
+    c.fillStyle = rgba([250, 246, 236]); c.beginPath(); c.moveTo(cx - ww / 2 - 4, wt + wh); c.lineTo(cx - ww / 2 - 4, wt + ww / 2); c.arc(cx, wt + ww / 2, ww / 2 + 4, Math.PI, 0); c.lineTo(cx + ww / 2 + 4, wt + wh); c.closePath(); c.fill();
+    c.fillStyle = rgba(mix(TIV.glass, [120, 150, 170], 0.25)); c.beginPath(); c.moveTo(cx - ww / 2, wt + wh); c.lineTo(cx - ww / 2, wt + ww / 2); c.arc(cx, wt + ww / 2, ww / 2, Math.PI, 0); c.lineTo(cx + ww / 2, wt + wh); c.closePath(); c.fill();
+    if (px * ww > 9) { c.strokeStyle = 'rgba(250,246,236,0.9)'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(cx, wt + 2); c.lineTo(cx, wt + wh); c.moveTo(cx - ww / 2, wt + ww / 2); c.lineTo(cx + ww / 2, wt + ww / 2); for (let k = 0; k < 5; k++) { const a = Math.PI + (k + 0.5) * Math.PI / 5; c.moveTo(cx, wt + ww / 2); c.lineTo(cx + Math.cos(a) * ww / 2, wt + ww / 2 + Math.sin(a) * ww / 2); } c.stroke(); }
   }
-  // distant hills in haze
-  c.fillStyle = rgba([178, 200, 214]);
-  c.beginPath(); c.moveTo(-500, 1030); c.bezierCurveTo(60, 930, 360, 990, 600, 972); c.bezierCurveTo(820, 956, 1000, 990, 1580, 960); c.lineTo(1580, 1300); c.lineTo(-500, 1300); c.fill();
-  c.fillStyle = rgba([152, 180, 198]);
-  c.beginPath(); c.moveTo(-500, 1080); c.bezierCurveTo(180, 1010, 480, 1050, 740, 1040); c.bezierCurveTo(940, 1032, 1200, 1066, 1580, 1046); c.lineTo(1580, 1300); c.lineTo(-500, 1300); c.fill();
-  // swifts
-  for (let i = 0; i < 7; i++) {
-    const bx = ((i * 173 + t * (60 + i * 9)) % 1400) - 160, by = 640 + i * 38 + Math.sin(t * 2 + i) * 22;
-    c.strokeStyle = rgba(C.ink, 0.5); c.lineWidth = 3; c.beginPath();
-    const fl = Math.sin(t * 14 + i * 2) * 6;
-    c.moveTo(bx - 12, by - 4 - fl); c.quadraticCurveTo(bx - 4, by - 2, bx, by + 2); c.quadraticCurveTo(bx + 4, by - 2, bx + 12, by - 4 - fl); c.stroke();
+  // terrace balustrade in front
+  tvBalustrade(c, x, x + w, bt, 22, px);
+  c.fillStyle = 'rgba(70,44,26,0.25)'; c.fillRect(x, bt, w, 5);
+  tvRoofTile(c, x - 10, x + w + 10, x + 40, x + w - 40, top - 22, top, px, TIV.roof);
+  c.fillStyle = 'rgba(60,34,18,0.26)'; c.fillRect(x, top, w, 6);
+  c.fillStyle = rgba([188, 128, 92]); c.fillRect(x + 60, top - 44, 12, 26); c.fillRect(x + 214, top - 40, 12, 22);
+}
+// a travertine balustrade: rails and turned balusters (a light band from far away)
+function tvBalustrade(c, x0, x1, y, h, px) {
+  c.fillStyle = rgba([244, 234, 214]);
+  c.fillRect(x0, y - h, x1 - x0, h * 0.2); c.fillRect(x0, y - h * 0.16, x1 - x0, h * 0.16);
+  if (px * h > 7) {
+    const bw = h * 0.34; c.beginPath();
+    for (let x = x0 + bw; x < x1 - bw * 0.4; x += bw * 1.45) {
+      c.moveTo(x - bw * 0.22, y - h * 0.16); c.quadraticCurveTo(x - bw * 0.62, y - h * 0.4, x - bw * 0.16, y - h * 0.62);
+      c.lineTo(x - bw * 0.3, y - h * 0.8); c.lineTo(x + bw * 0.3, y - h * 0.8); c.lineTo(x + bw * 0.16, y - h * 0.62);
+      c.quadraticCurveTo(x + bw * 0.62, y - h * 0.4, x + bw * 0.22, y - h * 0.16); c.closePath();
+    }
+    c.fill();
+    c.fillStyle = 'rgba(120,96,70,0.28)'; c.fillRect(x0, y - h * 0.8, x1 - x0, h * 0.64);
+    c.fillStyle = rgba([244, 234, 214]); c.fill();
+  } else { c.fillStyle = 'rgba(236,224,200,0.8)'; c.fillRect(x0, y - h * 0.8, x1 - x0, h * 0.64); }
+}
+// the terrace under the sold house: its balustrade, then the stone wall down to the rock
+let TV_LWALL = null;
+function tvHouseTerrace(c, px) {
+  const g = c.createLinearGradient(0, 1156, 0, 1270); g.addColorStop(0, rgba([214, 188, 150])); g.addColorStop(1, rgba([170, 142, 106]));
+  c.fillStyle = g; c.beginPath(); c.moveTo(236, 1156); c.lineTo(412, 1156); c.lineTo(408, 1270); c.lineTo(236, 1276); c.closePath(); c.fill();
+  if (px > 0.3) { if (!TV_LWALL) TV_LWALL = tvStones(232, 1152, 184, 130, 555, 8); c.save(); c.clip(); c.fillStyle = 'rgba(84,62,42,0.2)'; c.fill(TV_LWALL[0]); c.fillStyle = 'rgba(255,242,218,0.14)'; c.fill(TV_LWALL[1]); c.restore(); }
+  c.fillStyle = rgba([236, 222, 196]); c.fillRect(236, 1152, 176, 6);
+  tvBalustrade(c, 240, 408, 1152, 17, px);
+  // ivy spilling over the wall
+  for (const [x, y, s] of [[252, 1162, 1.1], [398, 1160, 1.2], [322, 1236, 1.3]]) tvIvy(c, x, y, s);
+}
+
+// ------------------------------------------------------ the temple of Vesta
+// A round Corinthian tholos: a travertine podium drum, a rubble cella with its
+// window, eighteen fluted columns (we see the front half), and the entablature
+// with its garland frieze. The roof is long gone. Seen from just above.
+const TEMPLE = { x: 724, yb: 1146, R: 112, e: 0.07, ch: 156, cd: 17, eh: 42 };
+function tvCyl(c, cx, y0, r, e, h, cl, cdk, lx = 0.28) {
+  const g = c.createLinearGradient(cx - r, 0, cx + r, 0);
+  g.addColorStop(0, rgba(mix(cl, cdk, 0.4))); g.addColorStop(lx, rgba(cl)); g.addColorStop(0.72, rgba(mix(cl, cdk, 0.55))); g.addColorStop(1, rgba(cdk));
+  c.fillStyle = g;
+  c.beginPath(); c.moveTo(cx - r, y0); c.ellipse(cx, y0, r, r * e, 0, Math.PI, 0, true); c.lineTo(cx + r, y0 + h); c.ellipse(cx, y0 + h, r, r * e, 0, 0, Math.PI, false); c.closePath(); c.fill();
+}
+function tvArc(c, cx, y, r, e, a0 = 0, a1 = Math.PI) { c.moveTo(cx + Math.cos(a0) * r, y + Math.sin(a0) * r * e); c.ellipse(cx, y, r, r * e, 0, a0, a1, false); }
+let TV_CELLA = null;
+function tvTemple(c, px) {
+  const { x, yb, R, e, ch, cd, eh } = TEMPLE, n = 18, T0 = yb - ch, Re = R + cd * 0.8, Rc = R * 0.7;
+  // podium: a drum with its mouldings
+  const pr = R + 18, ph = 48;
+  tvCyl(c, x, yb, pr, e, ph, [226, 206, 170], [150, 126, 96]);
+  c.strokeStyle = 'rgba(255,248,230,0.55)'; c.lineWidth = 2.2; c.beginPath(); tvArc(c, x, yb + 4, pr, e); tvArc(c, x, yb + ph - 7, pr, e); c.stroke();
+  c.strokeStyle = 'rgba(90,70,50,0.35)'; c.lineWidth = 1.6; c.beginPath(); tvArc(c, x, yb + 8, pr, e); tvArc(c, x, yb + ph - 3, pr, e); c.stroke();
+  c.fillStyle = rgba([236, 220, 190]); c.beginPath(); c.ellipse(x, yb, pr, pr * e, 0, 0, TAU); c.fill();
+  // columns: back ones first, the cella, then the front ones
+  const cols = [];
+  for (let i = 0; i < n; i++) {
+    const a = (i + 0.5) / n * TAU, sx = Math.sin(a) * R, d = Math.cos(a);
+    if (d < 0 && Math.abs(sx) < Rc + cd * 0.4) continue;
+    cols.push({ x: x + sx, y: yb + d * R * e, d, s: Math.sin(a) });
   }
-  for (const h of TOWN) if (h.row === 0) house(c, h, 1);
-  for (const h of TOWN) if (h.row === 1) house(c, h, 1);
-  // the hero house: the one we just sold
-  casaTag(c, HERO.x, HERO.y, HERO.s, { facade: 1, lit: 1 });
-  if (heroExtra) heroExtra(c);
-  for (const h of TOWN) if (h.row === 2) house(c, h, 1);
-  // hillside under the town on the right, the rock face the waterfall runs down
-  const hg = c.createLinearGradient(0, 1100, 0, 1700);
-  hg.addColorStop(0, rgba([196, 176, 150])); hg.addColorStop(0.45, rgba([120, 128, 112])); hg.addColorStop(1, rgba([46, 76, 80]));
-  c.fillStyle = hg; c.beginPath(); c.moveTo(560, 1120); c.lineTo(1160, 1100); c.lineTo(1160, 1760); c.lineTo(560, 1760); c.closePath(); c.fill();
-  c.fillStyle = 'rgba(60,96,96,0.55)';
-  for (let i = 0; i < 9; i++) { c.beginPath(); c.arc(800 + i * 44 + Math.sin(i * 2) * 20, 1300 + (i % 3) * 60, 40 + (i % 2) * 18, 0, TAU); c.fill(); }
-  c.fillStyle = rgba([150, 134, 116]); c.beginPath(); c.moveTo(670, 1250); c.lineTo(820, 1240); c.lineTo(840, 1800); c.lineTo(650, 1800); c.closePath(); c.fill();
-  // cliff with its arched substructures
-  const cg = c.createLinearGradient(0, 1140, 0, 1600);
-  cg.addColorStop(0, rgba([218, 198, 172])); cg.addColorStop(1, rgba([160, 136, 112]));
-  c.fillStyle = cg;
-  c.beginPath(); c.moveTo(-60, 1150); c.lineTo(660, 1160); c.bezierCurveTo(700, 1300, 640, 1450, 700, 1700); c.lineTo(-60, 1720); c.closePath(); c.fill();
-  c.fillStyle = 'rgba(104,84,66,0.5)';
-  for (let i = 0; i < 5; i++) { const ax = 40 + i * 100; c.beginPath(); c.moveTo(ax, 1330); c.lineTo(ax, 1272); c.arc(ax + 34, 1272, 34, Math.PI, 0); c.lineTo(ax + 68, 1330); c.closePath(); c.fill(); }
-  c.strokeStyle = 'rgba(130,108,86,0.32)'; c.lineWidth = 2; c.beginPath();
-  for (let y = 1180; y < 1620; y += 30) { c.moveTo(-60, y); c.lineTo(660, y + 6); } c.stroke();
-  // temple of Vesta on the cliff edge
-  c.save();
-  c.translate(250, 1156);
-  const tg = c.createLinearGradient(-170, 0, 170, 0);
-  tg.addColorStop(0, rgba([206, 186, 160])); tg.addColorStop(0.6, rgba([250, 240, 226])); tg.addColorStop(1, rgba([230, 212, 188]));
-  c.fillStyle = rgba([196, 176, 152]); c.fillRect(-196, -40, 392, 40);
-  c.fillStyle = rgba([212, 194, 170]); c.fillRect(-168, -290, 336, 252);
-  c.fillStyle = 'rgba(120,98,78,0.35)'; c.fillRect(-60, -250, 50, 110);
-  for (let i = 0; i < 11; i++) {
-    const f = -Math.cos((i + 0.5) / 11 * Math.PI), x = f * 164, wc = 16 * (1 - Math.abs(f) * 0.42);
-    if (i === 9) continue;
-    c.fillStyle = tg; c.fillRect(x - wc, -284, wc * 2, 246);
-    c.fillStyle = 'rgba(150,124,98,0.32)'; c.fillRect(x - wc, -284, wc * 0.55, 246);
-    c.fillStyle = rgba([236, 222, 202]); c.fillRect(x - wc - 3, -290, wc * 2 + 6, 10);
+  cols.sort((p, q) => p.d - q.d);
+  const col = (p) => tvColumn(c, p.x, p.y, ch, cd, clamp(0.78 - 0.34 * p.s + 0.12 * p.d, 0.25, 1), px);
+  for (const p of cols) if (p.d < 0) col(p);
+  // cella: rubble masonry, the window on the left
+  tvCyl(c, x, T0 + 4, Rc, e, ch - 4, [150, 112, 80], [84, 62, 46], 0.3);
+  if (px > 0.35) {
+    if (!TV_CELLA) TV_CELLA = tvStones(x - Rc, T0, Rc * 2, ch + Rc * e * 2, 1994, 7);
+    c.save(); c.beginPath(); c.moveTo(x - Rc, T0 + 4); c.lineTo(x + Rc, T0 + 4); c.lineTo(x + Rc, yb); c.ellipse(x, yb, Rc, Rc * e, 0, 0, Math.PI, false); c.closePath(); c.clip();
+    c.fillStyle = 'rgba(60,40,26,0.22)'; c.fill(TV_CELLA[0]); c.fillStyle = 'rgba(230,200,160,0.14)'; c.fill(TV_CELLA[1]);
+    c.restore();
   }
-  c.fillStyle = rgba([240, 228, 210]); c.fillRect(-184, -324, 368, 36);
-  c.fillStyle = 'rgba(150,124,98,0.45)'; c.fillRect(-184, -296, 368, 6);
-  for (let i = 0; i < 14; i++) { c.fillStyle = 'rgba(160,134,108,0.35)'; c.fillRect(-176 + i * 26, -316, 12, 14); }
+  const wa = -0.5, wx = x + Math.sin(wa) * Rc, wwid = 24 * Math.cos(wa);
+  c.fillStyle = rgba([222, 204, 172]); c.fillRect(wx - wwid / 2 - 5, T0 + 34, wwid + 10, 76);
+  c.fillStyle = rgba([40, 30, 24]); c.fillRect(wx - wwid / 2, T0 + 40, wwid, 64);
+  for (const p of cols) if (p.d >= 0) col(p);
+  // entablature (front half), then its top: a thin travertine rim around the open, shaded interior
+  tvCyl(c, x, T0 - eh, Re, e, eh, [236, 220, 188], [150, 126, 96]);
+  c.fillStyle = rgba([242, 230, 204]); c.beginPath(); c.ellipse(x, T0 - eh, Re + 3, (Re + 3) * e, 0, 0, TAU); c.fill();
+  c.fillStyle = rgba([112, 90, 68]); c.beginPath(); c.ellipse(x, T0 - eh + 0.5, Re - 8, (Re - 8) * e, 0, 0, TAU); c.fill();
+  c.fillStyle = rgba([150, 124, 94]); c.beginPath(); c.ellipse(x, T0 - eh - 1, Re - 8, (Re - 8) * e * 0.55, 0, Math.PI, 0); c.fill();
+  c.strokeStyle = 'rgba(96,74,52,0.45)'; c.lineWidth = 1.4; c.beginPath();
+  tvArc(c, x, T0 - 6, Re, e); tvArc(c, x, T0 - 13, Re, e); tvArc(c, x, T0 - 29, Re, e); tvArc(c, x, T0 - 33, Re, e);
+  c.stroke();
+  if (px > 0.9) {
+    // festoons hanging between bucrania, and the dentil course
+    c.strokeStyle = 'rgba(110,86,60,0.55)'; c.lineWidth = 1.6; c.beginPath();
+    for (let a = -1.45; a < 1.45; a += 0.24) {
+      const a2 = a + 0.24, x1 = x + Math.sin(a) * Re, y1 = T0 - 26 + Math.cos(a) * Re * e, x2 = x + Math.sin(a2) * Re, y2 = T0 - 26 + Math.cos(a2) * Re * e;
+      c.moveTo(x1, y1); c.quadraticCurveTo((x1 + x2) / 2, (y1 + y2) / 2 + 9, x2, y2);
+    }
+    c.stroke();
+    c.fillStyle = 'rgba(110,86,60,0.5)'; c.beginPath();
+    for (let a = -1.45; a < 1.5; a += 0.24) { const x1 = x + Math.sin(a) * Re, y1 = T0 - 25 + Math.cos(a) * Re * e; c.moveTo(x1 + 2.6, y1); c.arc(x1, y1, 2.6, 0, TAU); }
+    for (let a = -1.5; a < 1.5; a += 0.07) { const x1 = x + Math.sin(a) * (Re + 1), y1 = T0 - 34 + Math.cos(a) * Re * e; c.rect(x1 - 1.1 * Math.cos(a), y1, 2.2 * Math.cos(a), 3); }
+    c.fill();
+  }
+}
+function tvColumn(c, cx, yb, ch, cd, k, px) {
+  const top = yb - ch, hw = cd / 2;
+  const L = mix([176, 150, 118], [244, 230, 202], k), D = mix([110, 88, 64], [172, 146, 112], k);
+  const g = c.createLinearGradient(cx - hw, 0, cx + hw, 0);
+  g.addColorStop(0, rgba(mix(L, D, 0.3))); g.addColorStop(0.32, rgba(L)); g.addColorStop(0.72, rgba(mix(L, D, 0.6))); g.addColorStop(1, rgba(D));
+  c.fillStyle = g; c.fillRect(cx - hw * 0.92, top + 16, cd * 0.92, ch - 22);
+  if (px * cd > 8) {
+    c.strokeStyle = rgba(D, 0.45); c.lineWidth = cd * 0.05; c.beginPath();
+    for (let q = 1; q < 6; q++) { const fx = cx - hw * 0.92 + cd * 0.92 * q / 6; c.moveTo(fx, top + 18); c.lineTo(fx, yb - 8); }
+    c.stroke();
+  }
+  // attic base: torus over plinth
+  c.fillStyle = rgba(L); c.fillRect(cx - hw * 1.25, yb - 8, cd * 1.25, 4);
+  c.fillStyle = rgba(mix(L, D, 0.45)); c.fillRect(cx - hw * 1.38, yb - 4, cd * 1.38, 4);
+  // Corinthian capital: the acanthus bell under the abacus
+  c.fillStyle = rgba(L);
+  c.beginPath(); c.moveTo(cx - hw * 0.92, top + 17); c.quadraticCurveTo(cx - hw * 1.2, top + 8, cx - hw * 1.6, top + 4); c.lineTo(cx + hw * 1.6, top + 4); c.quadraticCurveTo(cx + hw * 1.2, top + 8, cx + hw * 0.92, top + 17); c.closePath(); c.fill();
+  if (px * cd > 12) {
+    c.fillStyle = rgba(D, 0.55); c.beginPath();
+    for (let q = -1; q <= 1; q++) { const lx = cx + q * hw * 0.62; c.moveTo(lx, top + 17); c.quadraticCurveTo(lx - hw * 0.34, top + 11, lx, top + 7); c.quadraticCurveTo(lx + hw * 0.34, top + 11, lx, top + 17); }
+    c.fill();
+  }
+  c.fillStyle = rgba(mix(L, D, 0.2)); c.fillRect(cx - hw * 1.75, top, cd * 1.75, 4.5);
+}
+// the ruined rectangular temple (of Tiburnus) beside it, and the Roman terrace wall below
+function tvRuin(c, px) {
+  const pts = [[830, 1196], [830, 1086], [846, 1080], [858, 1090], [880, 1074], [902, 1082], [930, 1066], [952, 1076], [952, 1196]];
+  const g = c.createLinearGradient(830, 0, 952, 0); g.addColorStop(0, rgba([228, 196, 156])); g.addColorStop(1, rgba([176, 146, 110]));
+  c.fillStyle = g; c.beginPath(); pathPts(c, pts, true); c.fill();
+  if (px > 0.3) { c.save(); c.clip(); if (!tvRuin.st) tvRuin.st = tvStones(826, 1060, 130, 140, 77, 7); c.fillStyle = 'rgba(80,58,40,0.2)'; c.fill(tvRuin.st[0]); c.fillStyle = 'rgba(255,240,214,0.14)'; c.fill(tvRuin.st[1]); c.restore(); }
+  c.fillStyle = 'rgba(60,40,28,0.55)'; c.fillRect(858, 1120, 16, 30); c.fillRect(904, 1112, 14, 36);
+  c.fillStyle = 'rgba(70,90,40,0.6)'; c.beginPath(); c.arc(846, 1084, 8, 0, TAU); c.arc(934, 1070, 7, 0, TAU); c.fill();
+}
+let TV_WALL = null;
+function tvTerraceWall(c, px) {
+  const pts = [[396, 1194], [1012, 1194], [1016, 1262], [990, 1300], [930, 1318], [860, 1330], [760, 1324], [660, 1336], [560, 1322], [470, 1310], [400, 1290]];
+  const g = c.createLinearGradient(0, 1194, 0, 1340); g.addColorStop(0, rgba([222, 190, 150])); g.addColorStop(1, rgba([180, 150, 114]));
+  c.fillStyle = g; c.beginPath(); pathPts(c, pts, true); c.fill();
+  if (px > 0.28) {
+    c.save(); c.clip();
+    if (!TV_WALL) TV_WALL = tvStones(390, 1190, 630, 150, 314, 8.5);
+    c.fillStyle = 'rgba(84,62,42,0.2)'; c.fill(TV_WALL[0]); c.fillStyle = 'rgba(255,242,218,0.13)'; c.fill(TV_WALL[1]);
+    c.restore();
+  }
+  // blind arches under the ruin, a few dark openings, ivy
+  c.fillStyle = 'rgba(96,72,50,0.55)';
+  for (const ax of [846, 900, 954]) { c.beginPath(); c.moveTo(ax - 18, 1296); c.lineTo(ax - 18, 1256); c.arc(ax, 1256, 18, Math.PI, 0); c.lineTo(ax + 18, 1296); c.closePath(); c.fill(); }
+  c.fillStyle = 'rgba(44,32,24,0.6)'; c.fillRect(560, 1236, 12, 16); c.fillRect(700, 1244, 10, 14);
+  c.fillStyle = rgba([222, 204, 176]); c.fillRect(396, 1190, 616, 6);
+  for (const [x, y, s] of [[424, 1198, 1.3], [616, 1198, 1.1], [798, 1198, 1.2], [1000, 1198, 1.3], [520, 1290, 1.0], [700, 1300, 1.1]]) tvIvy(c, x, y, s);
+  // railing along the top
+  c.strokeStyle = 'rgba(40,36,34,0.8)'; c.lineWidth = 1.3; c.beginPath(); c.moveTo(406, 1176); c.lineTo(1006, 1176);
+  for (let xx = 408; xx < 1006; xx += 7) { c.moveTo(xx, 1176); c.lineTo(xx, 1190); }
+  c.stroke();
+}
+// the Sibilla terrace: white umbrellas over the tables, a box hedge
+function tvUmbrellas(c) {
+  fillRR(c, 410, 1164, 200, 14, 7, [66, 84, 44]);
+  for (const [ux, uw] of [[446, 64], [512, 70], [584, 60]]) {
+    c.strokeStyle = 'rgba(80,70,60,0.8)'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(ux, 1144); c.lineTo(ux, 1172); c.stroke();
+    c.fillStyle = rgba([196, 192, 182]); c.beginPath(); c.moveTo(ux - uw / 2, 1146); c.lineTo(ux + uw / 2, 1146); c.lineTo(ux + uw / 2 - 4, 1150); c.lineTo(ux - uw / 2 + 4, 1150); c.fill();
+    c.fillStyle = rgba([246, 244, 238]); c.beginPath(); c.moveTo(ux - uw / 2, 1146); c.lineTo(ux - uw * 0.2, 1134); c.lineTo(ux + uw * 0.2, 1134); c.lineTo(ux + uw / 2, 1146); c.closePath(); c.fill();
+  }
+}
+
+// -------------------------------------------------------- rock, trees, water
+// the rock arch at the left (the grotto under the villa) and the pale cliffs of the gorge
+function tvRocks(c) {
+  let g = c.createLinearGradient(80, 1230, 330, 1520); g.addColorStop(0, rgba(TIV.rock)); g.addColorStop(1, rgba(TIV.rockS));
+  c.fillStyle = g; c.beginPath(); c.moveTo(40, 1236); c.lineTo(410, 1250); c.bezierCurveTo(420, 1330, 380, 1440, 350, 1560); c.lineTo(60, 1560); c.bezierCurveTo(40, 1440, 30, 1330, 40, 1236); c.fill();
+  // the dark mouth of the arch
+  g = c.createRadialGradient(214, 1350, 10, 214, 1380, 120); g.addColorStop(0, rgba([10, 10, 9])); g.addColorStop(1, rgba([48, 40, 32]));
+  c.fillStyle = g; c.beginPath(); c.moveTo(146, 1560); c.lineTo(148, 1344); c.bezierCurveTo(150, 1278, 280, 1278, 284, 1344); c.lineTo(296, 1560); c.closePath(); c.fill();
+  c.strokeStyle = 'rgba(110,84,58,0.55)'; c.lineWidth = 3; c.beginPath();
+  c.moveTo(84, 1262); c.lineTo(98, 1340); c.lineTo(88, 1440); c.moveTo(344, 1276); c.lineTo(330, 1360); c.lineTo(342, 1460);
+  c.moveTo(146, 1344); c.bezierCurveTo(150, 1270, 282, 1270, 284, 1344); c.stroke();
+  c.fillStyle = 'rgba(255,236,200,0.22)'; c.beginPath(); c.moveTo(60, 1250); c.lineTo(140, 1256); c.lineTo(120, 1380); c.lineTo(70, 1400); c.closePath(); c.fill();
+  // cliff face to the right, under the Roman wall: travertine strata, lit facets, cracks, tufts
+  g = c.createLinearGradient(0, 1300, 0, 1580); g.addColorStop(0, rgba([212, 180, 132])); g.addColorStop(1, rgba([146, 114, 80]));
+  c.fillStyle = g; c.beginPath(); c.moveTo(390, 1286); c.lineTo(1020, 1256); c.lineTo(1030, 1580); c.lineTo(380, 1580); c.closePath(); c.fill();
+  if (!tvRocks.tex) {
+    const r = rng(606), dk = new Path2D(), lt = new Path2D(), ck = new Path2D(), tf = new Path2D();
+    for (let y = 1300; y < 1580; y += 16 + r() * 12) {                     // strata
+      dk.moveTo(384, y); for (let x = 384; x <= 1030; x += 40) dk.lineTo(x, y + Math.sin(x * 0.013 + y) * 4 + (r() - 0.5) * 3);
+      for (let x = 384; x < 1030; x += 40) dk.lineTo(x, y + 3);
+      dk.closePath();
+    }
+    for (let i = 0; i < 70; i++) {                                           // facets
+      const x = 390 + r() * 630, y = 1296 + r() * 270, w = 14 + r() * 34, h = 10 + r() * 26, p = r() < 0.55 ? lt : dk;
+      p.moveTo(x, y); p.lineTo(x + w, y - h * 0.2); p.lineTo(x + w * 0.9, y + h); p.lineTo(x - w * 0.1, y + h * 0.8); p.closePath();
+    }
+    for (let i = 0; i < 26; i++) { const x = 400 + r() * 610, y = 1300 + r() * 240; ck.moveTo(x, y); ck.lineTo(x + (r() - 0.5) * 10, y + 20 + r() * 30); ck.lineTo(x + (r() - 0.5) * 16, y + 50 + r() * 40); }
+    for (let i = 0; i < 40; i++) { const x = 396 + r() * 620, y = 1300 + r() * 250, rr = 4 + r() * 8; tf.moveTo(x + rr, y); tf.arc(x, y, rr, 0, TAU); tf.moveTo(x + rr * 1.6 + rr * 0.7, y + 2); tf.arc(x + rr * 1.6, y + 2, rr * 0.7, 0, TAU); }
+    tvRocks.tex = { dk, lt, ck, tf };
+  }
+  c.save(); c.beginPath(); c.moveTo(390, 1286); c.lineTo(1020, 1256); c.lineTo(1030, 1580); c.lineTo(380, 1580); c.closePath(); c.clip();
+  c.fillStyle = 'rgba(96,70,46,0.22)'; c.fill(tvRocks.tex.dk);
+  c.fillStyle = 'rgba(255,238,204,0.22)'; c.fill(tvRocks.tex.lt);
+  c.strokeStyle = 'rgba(70,50,34,0.5)'; c.lineWidth = 2; c.stroke(tvRocks.tex.ck);
+  c.fillStyle = rgba(TIV.leafM, 0.9); c.fill(tvRocks.tex.tf);
   c.restore();
-  // cypresses
-  for (const [x, hgt] of [[468, 300], [506, 240], [70, 230]]) {
-    c.fillStyle = rgba([38, 70, 74]);
-    c.beginPath(); c.moveTo(x, 1160 - hgt); c.bezierCurveTo(x + 30, 1160 - hgt * 0.6, x + 28, 1128, x, 1160); c.bezierCurveTo(x - 28, 1128, x - 30, 1160 - hgt * 0.6, x, 1160 - hgt); c.fill();
-    c.fillStyle = 'rgba(110,160,150,0.18)'; c.beginPath(); c.ellipse(x + 8, 1160 - hgt * 0.55, 8, hgt * 0.3, 0, 0, TAU); c.fill();
+}
+const TV_TREES = (() => {
+  const r = rng(2718), out = [];
+  const P = [[TIV.leafD, TIV.leafM, TIV.leafK], [TIV.leafM, TIV.leafO, TIV.leafD], [TIV.leafO, TIV.leafB, TIV.leafM], [TIV.leafB, TIV.leafL, TIV.leafO]];
+  const put = (x, y, rad, kind, tall, dk = 0) => {
+    const lobes = [], nl = 7 + Math.floor(r() * 5);
+    for (let i = 0; i < nl; i++) {
+      const a = r() * TAU, d = Math.sqrt(r()) * rad * 0.62;
+      lobes.push([x + Math.cos(a) * d * (tall ? 0.5 : 1.15), y + Math.sin(a) * d * (tall ? 1.7 : 0.72) - rad * (tall ? 0.8 : 0.18), rad * (tall ? 0.3 + r() * 0.2 : 0.36 + r() * 0.34)]);
+    }
+    const p = P[kind].map(col => mix(col, TIV.leafK, dk));
+    out.push({ x, y, r: rad, p, lobes, tall, dark: dk > 0.3 && kind === 0 });
+  };
+  // the gorge, back to front: bare rock and Roman wall up top, denser and darker below
+  for (let y = 1252; y < 2090; y += 26 + ((y - 1252) / 840) * 18) {
+    const k = (y - 1252) / 840;
+    for (let x = -70 + r() * 50; x < 1160; x += (48 + k * 96) * (0.75 + r() * 0.6)) {
+      if (x > 116 && x < 326 && y < 1560) continue;                  // the rock arch
+      if (x > 944 && x < 1096 && y < 1680) continue;                 // the falls
+      const upper = y < 1440, underTemple = x > 400 && x < 960;
+      if (upper && underTemple && r() < 0.82) continue;               // the cliff face shows
+      if (upper && !underTemple && r() < 0.35) continue;
+      const rad = (24 + k * 78) * (0.65 + r() * 0.6);
+      if (upper && rad < 34) continue;
+      const kind = k > 0.55 ? (r() < 0.7 ? 0 : 1) : Math.floor(r() * r() * 4 * 0.999 + (r() < 0.25 ? 0 : 0));
+      put(x, y + r() * 14, rad, kind, r() < 0.06 && k < 0.7, clamp(k * 0.5 - 0.1, 0, 0.35));
+    }
   }
-  // the umbrella pine, towering on the right
-  c.strokeStyle = rgba([98, 78, 62]); c.lineWidth = 20; c.lineCap = 'round';
-  c.beginPath(); c.moveTo(975, 1560); c.bezierCurveTo(950, 1250, 940, 980, 890, 760); c.stroke();
-  c.lineWidth = 10; c.beginPath(); c.moveTo(910, 860); c.quadraticCurveTo(840, 790, 760, 760); c.moveTo(900, 800); c.quadraticCurveTo(980, 760, 1040, 748); c.stroke();
-  for (const [x, y, rx, ry, k] of [[880, 720, 270, 80, 0], [760, 742, 150, 56, 1], [1010, 732, 170, 58, 1], [890, 676, 200, 58, 2], [800, 690, 90, 34, 2]]) {
-    c.fillStyle = rgba(k === 2 ? [72, 112, 108] : k === 1 ? [52, 90, 92] : [44, 80, 84]); c.beginPath(); c.ellipse(x, y, rx, ry, 0, 0, TAU); c.fill();
+  // shrubs and trees along the cliff top, clear of the sold house
+  for (const [x, y, rad, kind] of [[-30, 1238, 40, 1], [620, 1186, 20, 3], [1010, 1186, 30, 1], [1086, 1198, 46, 0], [48, 1250, 30, 2], [424, 1250, 26, 1]]) put(x, y, rad, kind, false);
+  return out.sort((p, q) => p.y - q.y);
+})();
+function tvTree(c, t, px) {
+  const [base, hi, lo] = t.p, rr = t.r;
+  if (!t.path) {
+    t.path = [new Path2D(), new Path2D(), new Path2D()];
+    for (const [x, y, r] of t.lobes) {
+      t.path[0].moveTo(x + r * 1.1 + rr * 0.12, y + rr * 0.1); t.path[0].arc(x + rr * 0.12, y + rr * 0.1, r * 1.1, 0, TAU);
+      t.path[1].moveTo(x + r, y); t.path[1].arc(x, y, r, 0, TAU);
+      t.path[2].moveTo(x - r * 0.22 + r * 0.5, y - r * 0.3); t.path[2].arc(x - r * 0.22, y - r * 0.3, r * 0.5, 0, TAU);
+    }
   }
-  // the waterfall pouring into the gorge
-  c.save();
-  c.fillStyle = 'rgba(236,246,250,0.92)';
-  for (let i = 0; i < 12; i++) {
-    const x = 700 + i * 7 + Math.sin(i * 3) * 3, off = (t * 760 + i * 70) % 150;
-    for (let y = 1330 - 150 + off; y < 1780; y += 150) c.fillRect(x, y, 5, 100);
+  c.fillStyle = rgba(lo); c.fill(t.path[0]);
+  c.fillStyle = rgba(base); c.fill(t.path[1]);
+  if (!t.dark) { c.fillStyle = rgba(hi, 0.8); c.fill(t.path[2]); }
+  if (px * rr > 60) {
+    // leaf clusters catching the light
+    c.fillStyle = rgba(mix(hi, [255, 240, 170], 0.25), 0.5); c.beginPath();
+    for (let i = 0; i < 16; i++) { const a = hash(Math.round(t.x), i) * TAU, d = hash(Math.round(t.y), i) * rr * 0.7, x = t.x + Math.cos(a) * d - rr * 0.15, y = t.y + Math.sin(a) * d * 0.6 - rr * 0.35; c.moveTo(x + rr * 0.07, y); c.arc(x, y, rr * 0.07, 0, TAU); }
+    c.fill();
   }
-  glow(c, 740, 1790, 190, C.white, 0.65);
-  c.restore();
-  // gorge floor and tree crowns
-  c.fillStyle = rgba([30, 58, 66]); c.fillRect(-60, 1600, W + 120, 500);
-  for (const tr of TREES) for (const [x, y, rr, k] of tr.crowns) {
-    const dk = clamp((y - 1400) / 520);
-    c.fillStyle = rgba(mix(mix([46, 86, 88], [58, 102, 100], k), [22, 44, 54], dk));
-    c.beginPath(); c.arc(x, y, rr, 0, TAU); c.fill();
-    c.fillStyle = `rgba(150,200,184,${0.16 * (1 - dk)})`; c.beginPath(); c.arc(x - rr * 0.25, y - rr * 0.35, rr * 0.45, 0, TAU); c.fill();
+}
+// the umbrella pine behind the temple: a tall leaning trunk, limbs, a flat crown
+const TV_PINE = (() => {
+  const r = rng(1234), clumps = [];
+  for (let i = 0; i < 110; i++) {
+    const u = r() * 2 - 1, dome = Math.sqrt(1 - u * u);
+    if (Math.abs(u) > 0.8 && r() < 0.4) continue;                     // a ragged rim
+    clumps.push([918 + u * 196 + (r() - 0.5) * 14, 700 - dome * 70 + r() * 60 * dome - (1 - dome) * 6, 16 + r() * 18 + dome * 10, 9 + r() * 7 + dome * 3, r()]);
   }
+  return clumps.sort((p, q) => p[1] - q[1]);
+})();
+function tvPine(c) {
+  // trunk, forking high up into limbs that vanish into the crown
+  const g = c.createLinearGradient(940, 0, 992, 0); g.addColorStop(0, rgba([186, 148, 118])); g.addColorStop(0.45, rgba([142, 106, 82])); g.addColorStop(1, rgba([90, 66, 50]));
+  c.fillStyle = g;
+  c.beginPath(); c.moveTo(950, 1200); c.bezierCurveTo(946, 1040, 944, 900, 920, 790); c.lineTo(940, 786); c.bezierCurveTo(968, 900, 978, 1040, 990, 1200); c.closePath(); c.fill();
+  c.strokeStyle = 'rgba(80,56,40,0.35)'; c.lineWidth = 1.2; c.beginPath();
+  for (let y = 800; y < 1190; y += 15) { const x = 950 + (y - 800) * 0.05; c.moveTo(x - 5, y); c.lineTo(x + 8, y + 6); } c.stroke();
+  c.strokeStyle = rgba([118, 86, 64]); c.lineCap = 'round';
+  for (const [x0, y0, x1, y1, x2, y2, lw] of [[926, 800, 888, 760, 842, 690, 11], [934, 796, 968, 752, 1006, 690, 11], [930, 790, 930, 740, 922, 686, 8], [938, 806, 1010, 770, 1068, 702, 7], [924, 804, 850, 780, 790, 708, 6]]) {
+    c.lineWidth = lw; c.beginPath(); c.moveTo(x0, y0); c.quadraticCurveTo(x1, y1, x2, y2); c.stroke();
+  }
+  c.lineCap = 'butt';
+  // crown: shaded underside, the body, then sunlit tops
+  c.fillStyle = rgba([32, 44, 21]); c.beginPath();
+  for (const [x, y, rx, ry] of TV_PINE) { c.moveTo(x + rx, y + 9); c.ellipse(x, y + 9, rx, ry, 0, 0, TAU); }
+  c.fill();
+  c.fillStyle = rgba([58, 76, 33]); c.beginPath();
+  for (const [x, y, rx, ry] of TV_PINE) { c.moveTo(x + rx * 0.92, y); c.ellipse(x, y, rx * 0.92, ry * 0.86, 0, 0, TAU); }
+  c.fill();
+  c.fillStyle = rgba([100, 118, 52]); c.beginPath();
+  for (const [x, y, rx, ry, k] of TV_PINE) { if (k < 0.35) continue; c.moveTo(x - rx * 0.12 + rx * 0.55, y - ry * 0.34); c.ellipse(x - rx * 0.12, y - ry * 0.34, rx * 0.55, ry * 0.42, 0, 0, TAU); }
+  c.fill();
+  c.fillStyle = rgba([148, 156, 76], 0.8); c.beginPath();
+  for (const [x, y, rx, ry, k] of TV_PINE) { if (k < 0.75) continue; c.moveTo(x - rx * 0.2 + rx * 0.28, y - ry * 0.5); c.ellipse(x - rx * 0.2, y - ry * 0.5, rx * 0.28, ry * 0.22, 0, 0, TAU); }
+  c.fill();
+}
+// ivy hanging from a wall: a knot of small leaves, trailing downwards
+function tvIvy(c, x, y, s) {
+  const r = rng(Math.round(x * 13 + y * 7)), a = [], b = [];
+  for (let i = 0; i < 9; i++) { const dx = (r() - 0.5) * 22 * s, dy = r() * 34 * s, rr = (4 + r() * 5) * s * (1 - dy / (50 * s)); a.push([x + dx, y + dy, rr]); if (r() < 0.5) b.push([x + dx - rr * 0.3, y + dy - rr * 0.3, rr * 0.55]); }
+  c.fillStyle = rgba(TIV.leafD); c.beginPath(); for (const [px, py, rr] of a) { c.moveTo(px + rr, py); c.arc(px, py, rr, 0, TAU); } c.fill();
+  c.fillStyle = rgba(TIV.leafO, 0.9); c.beginPath(); for (const [px, py, rr] of b) { c.moveTo(px + rr, py); c.arc(px, py, rr, 0, TAU); } c.fill();
+}
+function tvCypress(c, x, base, h) {
+  c.fillStyle = rgba([36, 54, 34]); c.beginPath(); c.moveTo(x, base - h); c.bezierCurveTo(x + h * 0.13, base - h * 0.6, x + h * 0.11, base - h * 0.1, x, base); c.bezierCurveTo(x - h * 0.11, base - h * 0.1, x - h * 0.13, base - h * 0.6, x, base - h); c.fill();
+  c.fillStyle = 'rgba(150,160,90,0.35)'; c.beginPath(); c.ellipse(x - h * 0.03, base - h * 0.55, h * 0.035, h * 0.34, 0, 0, TAU); c.fill();
+}
+// the falls: a dark rock face, and white water pouring off its lip into its own spray
+function tvFallsRock(c) {
+  const g = c.createLinearGradient(0, 1250, 0, 1700); g.addColorStop(0, rgba(TIV.rockS)); g.addColorStop(1, rgba(TIV.rockD));
+  c.fillStyle = g; c.beginPath(); c.moveTo(950, 1262); c.lineTo(1100, 1246); c.lineTo(1110, 1700); c.lineTo(944, 1700); c.closePath(); c.fill();
+  c.fillStyle = rgba(TIV.rockD); c.beginPath(); c.moveTo(986, 1280); c.lineTo(1070, 1272); c.lineTo(1066, 1294); c.lineTo(990, 1300); c.closePath(); c.fill();
+}
+function tvFallsWater(c, t) {
+  // three strands: the main sheet and two thinner ones, their edges trembling
+  const strands = [[1000, 1052, 976, 1084, 1], [986, 996, 962, 976, 0.7], [1058, 1066, 1086, 1098, 0.6]];
+  for (const [x0, x1, x2, x3, a] of strands) {
+    const g = c.createLinearGradient(0, 1290, 0, 1690); g.addColorStop(0, `rgba(240,248,250,${(0.97 * a).toFixed(3)})`); g.addColorStop(1, `rgba(236,244,246,${(0.78 * a).toFixed(3)})`);
+    c.fillStyle = g; c.beginPath(); c.moveTo(x0, 1292);
+    for (let y = 1292; y <= 1690; y += 14) { const u = (y - 1292) / 398; c.lineTo(lerp(x0, x2, u) + Math.sin(y * 0.09 + t * 7 + x0) * 2.2, y); }
+    for (let y = 1690; y >= 1292; y -= 14) { const u = (y - 1292) / 398; c.lineTo(lerp(x1, x3, u) + Math.sin(y * 0.08 - t * 6 + x1) * 2.2, y); }
+    c.closePath(); c.fill();
+  }
+  // falling streaks
+  c.fillStyle = 'rgba(150,186,198,0.36)';
+  for (let i = 0; i < 12; i++) { const x = 1003 + i * 4.4, off = (t * 560 + i * 53) % 90; for (let y = 1296 - 90 + off; y < 1680; y += 90) c.fillRect(x + (y - 1296) * 0.07 * (i - 6) / 6, y, 1.8, 44); }
+  c.fillStyle = 'rgba(255,255,255,0.7)';
+  for (let i = 0; i < 12; i++) { const x = 1003 + i * 4.4, off = (t * 560 + i * 37 + 45) % 90; for (let y = 1296 - 90 + off; y < 1680; y += 90) c.fillRect(x + (y - 1296) * 0.07 * (i - 6) / 6 + 1.5, y, 1.2, 26); }
+  // foam where it leaves the lip, spray where it lands
+  c.fillStyle = 'rgba(255,255,255,0.9)'; c.beginPath();
+  for (let i = 0; i < 9; i++) { const x = 990 + i * 9, y = 1294 + Math.sin(t * 5 + i) * 1.5; c.moveTo(x + 7, y); c.arc(x, y, 7, 0, TAU); }
+  c.fill();
+  for (let i = 0; i < 7; i++) { const ph = t * 0.8 + i * 1.1; glow(c, 1030 + Math.sin(ph * 1.3) * 44, 1680 - (ph % 1) * 60, 80 + i * 14, [255, 255, 255], 0.34); }
+}
+// sky, clouds, swifts and Monte Catillo
+function tvSky(c, t, V) {
+  const y0 = Math.max(V.y0, -200), y1 = Math.min(V.y1, 1300);
+  if (y1 > y0) {
+    const g = c.createLinearGradient(0, -100, 0, 1060);
+    g.addColorStop(0, rgba(TIV.sky0)); g.addColorStop(0.46, rgba(TIV.sky1)); g.addColorStop(0.8, rgba(TIV.sky2)); g.addColorStop(1, rgba(TIV.sky3));
+    c.fillStyle = g; c.fillRect(V.x0 - 10, y0, V.x1 - V.x0 + 20, y1 - y0);
+  }
+  if (V.y0 < 760) {
+    for (let i = 0; i < 4; i++) {
+      const cx = ((i * 370 + t * (10 + i * 4)) % 1600) - 300, cy = 150 + i * 150, k = 0.9 + (i % 2) * 0.5;
+      c.fillStyle = `rgba(255,250,242,${0.62 - i * 0.08})`;
+      c.beginPath(); c.ellipse(cx, cy, 150 * k, 30 * k, 0, 0, TAU); c.ellipse(cx + 70 * k, cy - 24 * k, 84 * k, 36 * k, 0, 0, TAU); c.ellipse(cx - 60 * k, cy - 14 * k, 70 * k, 28 * k, 0, 0, TAU); c.fill();
+      c.fillStyle = `rgba(232,196,170,${0.3 - i * 0.04})`; c.beginPath(); c.ellipse(cx + 10 * k, cy + 12 * k, 140 * k, 12 * k, 0, 0, TAU); c.fill();
+    }
+    for (let i = 0; i < 7; i++) {
+      const bx = ((i * 173 + t * (60 + i * 9)) % 1400) - 160, by = 560 + i * 34 + Math.sin(t * 2 + i) * 20, fl = Math.sin(t * 14 + i * 2) * 5;
+      c.strokeStyle = 'rgba(40,40,44,0.55)'; c.lineWidth = 2.6; c.beginPath();
+      c.moveTo(bx - 11, by - 4 - fl); c.quadraticCurveTo(bx - 4, by - 2, bx, by + 2); c.quadraticCurveTo(bx + 4, by - 2, bx + 11, by - 4 - fl); c.stroke();
+    }
+  }
+}
+function tvCatillo(c) {
+  const g = c.createLinearGradient(0, 560, 0, 1000); g.addColorStop(0, rgba([150, 148, 116])); g.addColorStop(1, rgba([120, 122, 86]));
+  c.fillStyle = g; c.beginPath(); c.moveTo(460, 1000); c.bezierCurveTo(640, 900, 820, 780, 980, 660); c.bezierCurveTo(1050, 610, 1110, 580, 1170, 566); c.lineTo(1170, 1100); c.lineTo(460, 1100); c.closePath(); c.fill();
+  if (!tvCatillo.scrub) { const r = rng(88), p = new Path2D(), q = new Path2D(); for (let i = 0; i < 220; i++) { const x = 520 + r() * 660, y = 580 + r() * 420, lim = 1000 - (x - 460) * 0.62; if (y < lim) continue; const rr = 3 + r() * 7, pp = r() < 0.7 ? p : q; pp.moveTo(x + rr, y); pp.arc(x, y, rr, 0, TAU); } tvCatillo.scrub = [p, q]; }
+  c.fillStyle = 'rgba(86,92,56,0.6)'; c.fill(tvCatillo.scrub[0]); c.fillStyle = 'rgba(206,196,164,0.5)'; c.fill(tvCatillo.scrub[1]);
+}
+
+// ------------------------------------------------------------- the whole view
+// everything that does not move, back to front (the settled view is cached)
+function tvStatic(c, V) {
+  const px = V.z;
+  const seen = (x0, y0, x1, y1) => x1 > V.x0 && x0 < V.x1 && y1 > V.y0 && y0 < V.y1;
+  const bseen = b => seen(b.x - 10, b.bt - b.h - b.rh * 2.6, b.x + b.w + (b.side || 0) + 10, b.bt + 90);
+  if (seen(460, 560, 1170, 1100)) tvCatillo(c);
+  for (const b of TOWN) if (b.hz >= 0.3 && bseen(b)) tvBuilding(c, b, px);
+  if (seen(700, 560, 1140, 1210)) tvPine(c);
+  for (const b of TOWN) if (b.hz > 0.05 && b.hz < 0.3 && bseen(b)) tvBuilding(c, b, px);
+  if (seen(-60, 950, 260, 1300)) tvVilla(c, px);
+  for (const b of TOWN) if (b.hz === 0 && bseen(b)) tvBuilding(c, b, px);
+  if (seen(820, 1050, 960, 1200)) tvRuin(c, px);
+  if (seen(590, 950, 860, 1210)) tvTemple(c, px);
+  if (seen(400, 1120, 620, 1180)) tvUmbrellas(c);
+  tvHouse(c, HERO.x, HERO.y, HERO.s, { lit: 1, z: V.z });
+  if (seen(-80, 1110, 1170, 2200)) {
+    c.fillStyle = rgba(TIV.leafK); c.fillRect(-80, 1234, 1250, 1000);
+    c.fillStyle = rgba(TIV.leafD); c.beginPath(); c.moveTo(978, 1122); c.lineTo(1170, 1106); c.lineTo(1170, 1300); c.lineTo(990, 1300); c.closePath(); c.fill();
+  }
+  if (seen(30, 1200, 1100, 1600)) tvRocks(c);
+  if (seen(232, 1140, 416, 1280)) tvHouseTerrace(c, px);
+  if (seen(380, 1170, 1030, 1350)) tvTerraceWall(c, px);
+  for (const [x, b, h] of [[1044, 1236, 240], [1070, 1244, 180]]) if (seen(x - 40, b - h, x + 40, b)) tvCypress(c, x, b, h);
+  if (seen(940, 1240, 1110, 1700)) tvFallsRock(c);
+  for (const tr of TV_TREES) if (seen(tr.x - tr.r * 1.6, tr.y - tr.r * 1.9, tr.x + tr.r * 1.6, tr.y + tr.r)) tvTree(c, tr, px);
+}
+function panorama(c, t, V) {
+  tvSky(c, t, V);
+  tvStatic(c, V);
+}
+// the settled view, drawn once per canvas size: the long hold and the pan only blit it
+let TV_CACHE = null;
+const TV_CACHE_Z = 1.3;               // below this zoom the camera reads the cache
+function tvCache() {
+  const key = cvs.width + 'x' + cvs.height;
+  if (TV_CACHE && TV_CACHE.key === key) return TV_CACHE;
+  const cv2 = document.createElement('canvas');
+  cv2.width = Math.ceil(1260 * K); cv2.height = Math.ceil(2140 * K);
+  const c2 = cv2.getContext('2d');
+  c2.setTransform(K, 0, 0, K, 90 * K, 90 * K);
+  tvStatic(c2, { z: TV_CACHE_Z, x0: -90, y0: -90, x1: 1170, y1: 2050 });
+  TV_CACHE = { key, cv: cv2 };
+  return TV_CACHE;
 }
 function statCard(c, x, y, big, lab1, lab2, u) {
   if (u <= 0) return;
@@ -2010,28 +2619,46 @@ function statCard(c, x, y, big, lab1, lab2, u) {
   c.restore();
 }
 function scenePanorama(c, t) {
-  if (t < T.pull - 0.02 || t > T.office + 1.0) return;
+  if (t < T.pull || t > T.office + 1.0) return;
   const zu = E.inOutCubic(inv(T.pull, T.pull + 1.15, t));
   const z = Math.pow(PZ, 1 - zu) * (1 - 0.035 * ss(T.pull + 1.15, T.office + 0.3, t));
-  // camera: focus on the hero house apex, screen focus slides from the SOLD position home
+  // camera: the house's roof stays put while the town opens around it, then settles
   const fx = lerp(CX, HERO.x, zu), fy = lerp(690, HERO.y, zu);
   const pan = E.inOutCubic(inv(T.office, T.office + 0.8, t)) * 1920;
-  c.save();
-  c.translate(0, -pan);
-  c.translate(fx, fy); c.scale(z, z); c.translate(-HERO.x, -HERO.y);
-  panorama(c, t, c2 => {
-    // the SOLD ribbon rides the house out, then a pin marks it in town
-    const ra = 1 - ss(T.pull + 0.3, T.pull + 0.8, t);
-    if (ra > 0) ribbon(c2, HERO.x, HERO.y + 400 * HERO.s - 40 / PZ, 1 / PZ, ra);
-    const pa = ss(T.pull + 0.7, T.pull + 1.1, t);
-    if (pa > 0) {
-      const bob = Math.sin(t * 4) * 3, py = HERO.y - 40 + bob;
-      c2.save(); c2.translate(HERO.x, py); c2.scale(pa, pa);
-      c2.fillStyle = rgba(C.roof); c2.beginPath(); c2.arc(0, -34, 22, Math.PI * 0.85, Math.PI * 0.15); c2.lineTo(0, 0); c2.closePath(); c2.fill();
-      c2.fillStyle = rgba(C.white); c2.beginPath(); c2.arc(0, -36, 8, 0, TAU); c2.fill();
-      c2.restore();
-    }
-  });
+  const cam = () => { c.translate(0, -pan); c.translate(fx, fy); c.scale(z, z); c.translate(-HERO.x, -HERO.y); };
+  const V = { z, x0: HERO.x - fx / z, x1: HERO.x + (W - fx) / z, y0: HERO.y + (pan - fy) / z, y1: HERO.y + (H + pan - fy) / z };
+  c.save(); cam();
+  if (z > TV_CACHE_Z) panorama(c, t, V);
+  else {
+    tvSky(c, t, V);
+    const cc = tvCache();
+    c.imageSmoothingQuality = 'high';
+    c.drawImage(cc.cv, -90, -90, cc.cv.width / K, cc.cv.height / K);
+  }
+  if (V.x1 > 940 && V.y1 > 1240 && V.y0 < 1700) tvFallsWater(c, t);
+  c.restore();
+  // the SOLD paper lets go of the house: it fades while the camera pulls back
+  const pa = 1 - ss(T.pull, T.pull + 0.5, t);
+  if (pa > 0) {
+    paperField(c, pa); grid(c, C.primary, 0.14 * pa, 0, -t * 14);
+    c.save(); cam();
+    c.fillStyle = `rgba(40,30,20,${(0.16 * pa).toFixed(3)})`; c.beginPath(); c.ellipse(HERO.x, HERO.y + 466 * HERO.s, 230 * HERO.s, 18 * HERO.s, 0, 0, TAU); c.fill();
+    tvHouse(c, HERO.x, HERO.y, HERO.s, { lit: 1, z });
+    c.restore();
+    c.save(); c.globalAlpha = pa; confetti(c, T.sold + 0.08, t, CX, 1060); c.restore();
+  }
+  c.save(); cam();
+  // the VENDUTO ribbon rides the house out, then a pin marks it in town
+  const ra = 1 - ss(T.pull + 0.3, T.pull + 0.8, t);
+  if (ra > 0) ribbon(c, HERO.x, HERO.y + RIB_Y * HERO.s, 1 / PZ, ra);
+  const pp = ss(T.pull + 0.7, T.pull + 1.1, t);
+  if (pp > 0) {
+    const bob = Math.sin(t * 4) * 3, py = HERO.y - 24 + bob;
+    c.save(); c.translate(HERO.x, py); c.scale(pp, pp);
+    shadowed(c, 10, 4, 0.3, () => { c.fillStyle = rgba(C.roof); c.beginPath(); c.arc(0, -34, 22, Math.PI * 0.85, Math.PI * 0.15); c.lineTo(0, 0); c.closePath(); c.fill(); });
+    c.fillStyle = rgba(C.white); c.beginPath(); c.arc(0, -36, 8, 0, TAU); c.fill();
+    c.restore();
+  }
   c.restore();
   // stats replace the caption
   const so = 1 - ss(T.office - 0.1, T.office + 0.25, t);
@@ -2976,7 +3603,7 @@ function filmTime() {
 }
 function startRecording() {
   if (!window.MediaRecorder || !cvs.captureStream || !P.ac.createMediaStreamDestination) return;
-  P.fixedK = 1; resize();
+  P.fixedK = 1; resize(); tvCache();
   const dest = P.ac.createMediaStreamDestination();
   P.G.post.connect(dest);
   const stream = new MediaStream([...cvs.captureStream(60).getVideoTracks(), ...dest.stream.getAudioTracks()]);
@@ -3004,6 +3631,7 @@ function drawPoster(c, now) {
     POSTER = true; render(1.56); POSTER = false;
     P.poster = document.createElement('canvas'); P.poster.width = cvs.width; P.poster.height = cvs.height;
     P.poster.getContext('2d').drawImage(cvs, 0, 0);
+    setTimeout(() => { if (P.state === 'poster') tvCache(); }, 400);
   }
   c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(P.poster, 0, 0);
   c.setTransform(K, 0, 0, K, 0, 0);
