@@ -5,7 +5,7 @@
 
    Renders every frame of index.html at 1080 × 1920 and 60 fps in headless
    Chromium, renders the score offline at 48 kHz, and encodes H.264 High 4.2
-   plus AAC-LC 256 kb/s with ffmpeg (BT.709, moov first for fast start). The
+   plus AAC-LC 320 kb/s with ffmpeg (BT.709, moov first for fast start). The
    picture and the sound come from the same timeline, so sync is sample-exact.
    The audio is limited so that it stays under -1 dBTP once encoded (measured on
    a trial AAC encode), with a 0.25 s tail fade for the platforms.
@@ -29,9 +29,11 @@ const flag = name => { const i = args.indexOf(name); return i >= 0 ? (args.splic
 const CRF = option('--crf', '16'), PRESET = option('--preset', 'veryslow'), GRAIN = flag('--grain');
 const OUT = path.resolve(args[0] || 'casa-2-0-social-masterpiece-60fps.mp4');
 const FFMPEG = process.env.FFMPEG || 'ffmpeg';
-// intensity stereo and noise substitution only save bits at low rates; at 256 kb/s
-// they cost fidelity and throw peaks on hard transients
-const AAC = ['-c:a', 'aac', '-b:a', '256k', '-aac_is', '0', '-aac_pns', '0', '-ar', String(SR), '-ac', '2'];
+// intensity stereo and noise substitution only save bits at low rates; here they cost
+// fidelity and throw peaks on hard transients. The encoder starts with an empty bit
+// reservoir, and at 256 kb/s the hit on the very first frame came out 3.5 dB over its
+// input; 320 kb/s codes it cleanly.
+const AAC = ['-c:a', 'aac', '-b:a', '320k', '-aac_is', '0', '-aac_pns', '0', '-ar', String(SR), '-ac', '2'];
 
 function playwright() {
   try { return require('playwright'); } catch (e) { /* try a global install */ }
