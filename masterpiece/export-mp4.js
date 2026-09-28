@@ -7,7 +7,8 @@
    Chromium, renders the score offline at 48 kHz, and encodes H.264 High 4.2
    plus AAC-LC 256 kb/s with ffmpeg (BT.709, moov first for fast start). The
    picture and the sound come from the same timeline, so sync is sample-exact.
-   The audio gets a -1 dBTP ceiling and a 0.25 s tail fade for the platforms.
+   The audio is limited so that it stays under -1 dBTP once encoded (measured on
+   a trial AAC encode), with a 0.25 s tail fade for the platforms.
 
    Needs Node 18+, Playwright with Chromium (npm i -D playwright, then
    npx playwright install chromium) and ffmpeg 6+ on PATH, or FFMPEG=/path.
@@ -26,6 +27,9 @@ const flag = name => { const i = args.indexOf(name); return i >= 0 ? (args.splic
 const CRF = option('--crf', '16'), GRAIN = flag('--grain');
 const OUT = path.resolve(args[0] || 'casa-2-0-social-masterpiece-60fps.mp4');
 const FFMPEG = process.env.FFMPEG || 'ffmpeg';
+// intensity stereo and noise substitution only save bits at low rates; at 256 kb/s
+// they cost fidelity and throw peaks on hard transients
+const AAC = ['-c:a', 'aac', '-b:a', '256k', '-aac_is', '0', '-aac_pns', '0', '-ar', String(SR), '-ac', '2'];
 
 function playwright() {
   try { return require('playwright'); } catch (e) { /* try a global install */ }
@@ -98,7 +102,25 @@ const server = http.createServer((req, res) => {
       return b.length;
     }, [film.dur, SR]);
     fs.writeFileSync(wav, floatWav(audio, n, Math.round(film.lead * SR), Math.round(film.dur * SR)));
-    console.log('done');
+    // the AAC encoder can overshoot a dense master by a few dB on the hits: find
+    // the limiter ceiling that keeps the decoded sound under -1 dBTP (the encoder
+    // is deterministic, so the film's own audio pass will measure the same)
+    const audioChain = lim => `aresample=192000,alimiter=limit=${lim.toFixed(4)}:attack=0.5:release=40:level=disabled:latency=1,aresample=${SR},afade=t=out:st=${film.dur - 0.25}:d=0.25`;
+    const trial = path.join(os.tmpdir(), `casa-2-0-trial-${process.pid}.m4a`);
+    let limit = 0.87, tp = Infinity;
+    try {
+      for (let k = 0; k < 6 && tp > -1; k++) {
+        if (k) limit *= Math.pow(10, (-1.2 - tp) / 20);
+        const enc = spawnSync(FFMPEG, ['-hide_banner', '-loglevel', 'error', '-y', '-i', wav, '-af', audioChain(limit), ...AAC, trial]);
+        if (enc.status !== 0) throw new Error('audio encode failed\n' + enc.stderr);
+        const peaks = spawnSync(FFMPEG, ['-hide_banner', '-nostats', '-i', trial, '-af', 'ebur128=peak=true:framelog=quiet', '-f', 'null', '-']).stderr.toString().match(/Peak:\s+(-?[\d.]+|-inf) dBFS/g);
+        if (!peaks) throw new Error('could not measure the true peak');
+        const v = peaks[peaks.length - 1].split(/\s+/)[1];
+        tp = v === '-inf' ? -Infinity : parseFloat(v);
+      }
+    } finally { fs.rmSync(trial, { force: true }); }
+    if (tp > -1) throw new Error(`the audio still peaks at ${tp} dBTP`);
+    console.log(`done, ${tp.toFixed(1)} dBTP after AAC`);
 
     // 2 · every frame, straight into the encoder
     let stderr = '', sent = 0;
@@ -109,8 +131,7 @@ const server = http.createServer((req, res) => {
       '-c:v', 'libx264', '-preset', 'slow', '-crf', CRF, '-profile:v', 'high', '-level:v', '4.2',
       '-maxrate', '30M', '-bufsize', '45M', '-g', String(FPS * 2),
       '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-color_range', 'tv',
-      '-af', `aresample=192000,alimiter=limit=0.87:attack=0.5:release=40:level=disabled:latency=1,aresample=${SR},afade=t=out:st=${film.dur - 0.25}:d=0.25`,
-      '-c:a', 'aac', '-b:a', '256k', '-ar', String(SR), '-ac', '2',
+      '-af', audioChain(limit), ...AAC,
       '-movflags', '+faststart', '-video_track_timescale', String(FPS * 1000),
       '-metadata', 'title=The Casa 2.0 Social Media Masterpiece', OUT], { stdio: ['pipe', 'ignore', 'pipe'] });
     ff.stderr.on('data', d => { stderr += d; });
