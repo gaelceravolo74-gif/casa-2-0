@@ -1,0 +1,1679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#07090C">
+<meta name="description" content="Casa 2.0 — Building the Digital Home. A 35-second generative motion film drawn and scored entirely in code.">
+<title>Casa 2.0 — Your Digital Home. Upgraded.</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #07090C; overflow: hidden; }
+  body { cursor: pointer; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+  #stage { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+</style>
+</head>
+<body>
+<canvas id="stage" role="img" aria-label="Casa 2.0 — Your Digital Home. Upgraded. A 35-second generative motion film."></canvas>
+<button id="start" class="sr-only" type="button">Click to Start Casa 2.0 Experience</button>
+<script>
+(() => {
+"use strict";
+
+/* =====================================================================
+   CASA 2.0 — "Building the Digital Home"
+   35 s procedural film · Canvas 2D + Web Audio · zero external assets
+   Palette from the Casa 2.0 site: navy-teal #326273 / #4A8FA3,
+   navy #1A2A3C, ink #0E1116, paper #FAF7F4, coral #E8674F, red #C0392B
+   ===================================================================== */
+
+// ------------------------------------------------------------------ math
+const TAU = Math.PI * 2, D2R = Math.PI / 180;
+const clamp = (v, a = 0, b = 1) => (v < a ? a : v > b ? b : v);
+const lerp = (a, b, t) => a + (b - a) * t;
+const inv = (a, b, v) => clamp((v - a) / (b - a));
+const smooth = t => t * t * (3 - 2 * t);
+const E = {
+  inQuad: t => t * t,
+  inCubic: t => t * t * t,
+  outCubic: t => 1 - (1 - t) ** 3,
+  outQuart: t => 1 - (1 - t) ** 4,
+  inOutCubic: t => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2),
+  inOutSine: t => -(Math.cos(Math.PI * t) - 1) / 2,
+  outBack: t => 1 + 2.70158 * (t - 1) ** 3 + 1.70158 * (t - 1) ** 2,
+};
+// 0 before a · rises to 1 at b · holds · falls to 0 at d
+const env = (t, a, b, c, d) => smooth(inv(a, b, t)) * (1 - smooth(inv(c, d, t)));
+
+function rng(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const hash = (a, b = 0) => {
+  let h = (Math.imul(a | 0, 374761393) + Math.imul(b | 0, 668265263)) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+};
+
+// ---------------------------------------------------------------- colour
+const COL = {
+  ink:    [7, 9, 12],
+  ink2:   [14, 17, 22],
+  navy:   [26, 42, 60],
+  teal:   [50, 98, 115],
+  tealL:  [74, 143, 163],
+  glow:   [126, 192, 214],   // luminous tint of the brand teal
+  paper:  [250, 247, 244],
+  coral:  [232, 103, 79],
+  coralL: [255, 126, 107],
+  red:    [192, 57, 43],
+};
+const rgba = (c, a) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a <= 0 ? 0 : a >= 1 ? 1 : a.toFixed(3)})`;
+const mixC = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+
+// ---------------------------------------------------------------- canvas
+const cvs = document.getElementById('stage');
+const ctx = cvs.getContext('2d', { alpha: false });
+const layer = document.createElement('canvas');          // emissive scene layer (bloomed)
+const lctx = layer.getContext('2d');
+const bl = [0, 1].map(() => document.createElement('canvas'));      // bloom: 1/4 and 1/8 res
+const blc = bl.map(c => c.getContext('2d'));
+const HAS_FILTER = typeof blc[0].filter === 'string';
+let W = 1, H = 1, DPR = 1, U = 1, CX = 0, CY = 0, DIAG = 1;
+
+const DUR = 35.0;
+const FONT_SANS = '"Helvetica Neue", "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif';
+const FONT_MONO = 'ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Roboto Mono", "Liberation Mono", monospace';
+
+// glow sprites (procedural radial gradients)
+function makeSprite(col) {
+  const s = document.createElement('canvas'); s.width = s.height = 64;
+  const g = s.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gr.addColorStop(0, rgba(col, 1)); gr.addColorStop(0.16, rgba(col, 0.6));
+  gr.addColorStop(0.42, rgba(col, 0.14)); gr.addColorStop(1, rgba(col, 0));
+  g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+  return s;
+}
+const SPR = { glow: makeSprite(COL.glow), paper: makeSprite(COL.paper), coral: makeSprite(COL.coralL) };
+const SPR_BY = [SPR.glow, SPR.coral, SPR.paper];
+const COL_BY = [COL.glow, COL.coralL, COL.paper];
+function glowAt(c, spr, x, y, r, a) {
+  if (a <= 0.003 || r <= 0.3) return;
+  c.globalAlpha = a > 1 ? 1 : a;
+  c.drawImage(spr, x - r, y - r, r * 2, r * 2);
+  c.globalAlpha = 1;
+}
+
+// film grain tile
+const grainTile = document.createElement('canvas');
+grainTile.width = grainTile.height = 128;
+{
+  const g = grainTile.getContext('2d'), id = g.createImageData(128, 128), r = rng(3);
+  for (let i = 0; i < id.data.length; i += 4) {
+    const v = (128 + (r() - 0.5) * 230) | 0;
+    id.data[i] = id.data[i + 1] = id.data[i + 2] = v; id.data[i + 3] = 255;
+  }
+  g.putImageData(id, 0, 0);
+}
+let grainPat = null;
+
+// letter-spaced text (returns width)
+function track(c, s, x, y, sp, align) {
+  let w = 0;
+  for (const ch of s) w += c.measureText(ch).width + sp;
+  w -= sp;
+  let px = align === 'right' ? x - w : align === 'center' ? x - w / 2 : x;
+  for (const ch of s) { c.fillText(ch, px, y); px += c.measureText(ch).width + sp; }
+  return w;
+}
+function trackWidth(c, s, sp) { let w = 0; for (const ch of s) w += c.measureText(ch).width + sp; return w - sp; }
+
+// =====================================================================
+//  SCENE DATA — everything is a pure function of film time t
+// =====================================================================
+
+// ------------------------------------------------ blueprint grid (0–5 s)
+const N = 12;                                   // grid spans -N..N world units
+const LINE_T0 = 0.35, LINE_STEP = 0.12, LINE_DUR = 1.7;
+const lineStart = k => LINE_T0 + Math.abs(k) * LINE_STEP;
+const reachTime = (k, d) => lineStart(k) + (1 - Math.cbrt(Math.max(0, 1 - d / N))) * LINE_DUR;
+const nodes = [];
+{
+  const r = rng(7);
+  for (let i = -N; i <= N; i++) for (let j = -N; j <= N; j++) {
+    // a node lights when both of its lines have been drawn through it
+    const tl = Math.max(reachTime(j, Math.abs(i)), reachTime(i, Math.abs(j))) + r() * 0.12;
+    const major = i % 4 === 0 && j % 4 === 0;
+    nodes.push({ i, j, tl, major, active: (i === 0 && j === 0) || r() < 0.16, ph: r() * TAU });
+  }
+}
+
+// --------------------------------------------- blocks: plan → ecosystem
+// plan:  [x0, z0, w, d, h] on the grid        (the "strategic plan")
+// eco:   [x, yBottom, z, w, h, d, rot]         (the floating ecosystem)
+// tier:  0 base ring · 1 cross · 2 crown       accent: 0 teal · 1 coral · 2 paper
+const BLOCKS = [
+  // the plan's central 2×2 becomes the heart of the stack; the rest become an exploded axonometric
+  ['N',  [-1, -1, 2, 2, 3.2], [0, 2.46, 0, 1.0, 1.0, 1.0, 0], 1, 1],          // core
+  ['A',  [ 1, -1, 2, 1, 1.2], [1.0, 0.84, -0.4, 0.8, 0.9, 2.0, 0], 0, 1],     // pinwheel
+  ['B',  [-1,  1, 1, 2, 1.8], [-1.0, 0.84, 0.4, 0.8, 0.9, 2.0, 0], 0, 0],
+  ['C',  [-3,  0, 2, 1, 1.0], [-0.4, 0.84, -1.0, 2.0, 0.6, 0.8, 0], 0, 0],
+  ['D',  [ 0, -3, 1, 2, 2.2], [0.4, 0.84, 1.0, 2.0, 0.6, 0.8, 0], 0, 0],
+  ['c1', [ 2,  1, 1, 1, 0.6], [2.2, 1.5, 2.0, 0.42, 0.42, 0.42, 0.5], 0, 2],  // satellites
+  ['c2', [-3, -2, 1, 1, 1.4], [-2.2, 2.1, -1.9, 0.38, 0.38, 0.38, 0.9], 0, 1],
+  ['E',  [-4,  2, 3, 1, 0.5], [0, 0.7, 0, 3.6, 0.14, 3.6, 0], 0, 0],          // ground slab
+  ['F',  [ 1,  1, 1, 3, 0.8], [0, 4.05, 0, 0.5, 0.28, 3.3, 0], 1, 1],         // cross bars
+  ['G',  [ 3, -2, 1, 1, 2.0], [0.95, 2.46, 0.95, 0.5, 0.5, 0.5, 0], 1, 0],
+  ['H',  [-2, -4, 1, 1, 1.6], [-0.95, 2.46, -0.95, 0.5, 0.75, 0.5, 0], 1, 0],
+  ['I',  [ 2, -4, 1, 1, 0.9], [0.9, 6.3, -0.7, 0.34, 0.34, 0.34, 0.6], 2, 2],
+  ['J',  [ 1, -3, 2, 1, 0.4], [0, 2.34, 0, 2.6, 0.12, 2.6, 0], 1, 0],         // mid slab
+  ['K',  [ 0,  3, 1, 1, 2.6], [0, 5.14, 0, 0.36, 1.7, 0.36, 0.785], 2, 2],   // spire
+  ['L',  [-4, -1, 1, 1, 0.7], [0, 5.02, 0, 1.5, 0.12, 1.5, 0.785], 2, 0],    // crown slab
+  ['M',  [ 3,  0, 1, 1, 1.1], [0, 3.75, 0, 3.3, 0.28, 0.5, 0], 1, 0],
+];
+const blocks = BLOCKS.map(([id, p, e, tier, acc], i) => ({
+  id, i, tier, acc,
+  px: p[0] + p[2] / 2, pz: p[1] + p[3] / 2, pw: p[2], pd: p[3], ph: p[4],
+  ex: e[0], ey: e[1], ez: e[2], ew: e[3], eh: e[4], ed: e[5], er: e[6],
+  ord: 0, ord2: 0, bob: hash(i, 3) * TAU, hatch: hash(i, 5) < 0.5,
+  st: { x: 0, y: 0, z: 0, w: 0, h: 0, d: 0, r: 0 }, depth: 0,
+}));
+[...blocks].sort((a, b) => Math.hypot(a.px, a.pz) - Math.hypot(b.px, b.pz)).forEach((b, k) => (b.ord = k));
+[...blocks].sort((a, b) => a.tier - b.tier || a.ord - b.ord).forEach((b, k) => (b.ord2 = k));
+const TIER_SPIN = [0.14, -0.2, 0.28];
+const ECO_CY = 3.7;                              // centre of the floating structure
+const planStart = b => 2.3 + b.ord * 0.11;
+const extrudeStart = b => 7.9 + b.ord * 0.17;
+const traceStart = b => extrudeStart(b) - 0.85;
+const reorgStart = b => 12.0 + b.ord2 * 0.075;
+const REORG_DUR = 2.4;
+const condense = t => E.inCubic(inv(20.3, 27.85, t));
+const spinAngle = t => { const u = inv(20.0, 27.85, t); return 9.0 * 7.85 * u ** 4 / 4; };   // ω: 0 → 9 rad/s
+
+function blockState(b, t, o) {
+  const ex = E.outQuart(inv(extrudeStart(b), extrudeStart(b) + 1.1, t));
+  let x = b.px, y = 0, z = b.pz, w = b.pw, h = Math.max(0.001, b.ph * ex), d = b.pd, r = 0;
+  const ru = inv(reorgStart(b), reorgStart(b) + REORG_DUR, t);
+  if (ru > 0) {                                  // lift into the floating ecosystem
+    const ta = TIER_SPIN[b.tier] * Math.max(0, t - 12.0);
+    const ca = Math.cos(ta), sa = Math.sin(ta);
+    const tx = b.ex * ca - b.ez * sa, tz = b.ex * sa + b.ez * ca;
+    const ty = b.ey + 0.1 * Math.sin(t * 1.15 + b.bob) * smooth(inv(12.5, 15.5, t));
+    const m = E.inOutCubic(ru), my = E.outCubic(clamp(ru * 1.3));
+    x = lerp(x, tx, m); z = lerp(z, tz, m); y = lerp(0, ty, my);
+    w = lerp(w, b.ew, m); h = lerp(h, b.eh, m); d = lerp(d, b.ed, m);
+    r = lerp(0, b.er + ta, m);
+  }
+  if (t > 20.0) {                                // launch: spin + condense into the core
+    const c = condense(t), sp = spinAngle(t), cs = Math.cos(sp), sn = Math.sin(sp);
+    const f = 1 - 0.95 * c, rx = x * f, rz = z * f;
+    const ny = ECO_CY + (y + h / 2 - ECO_CY) * f;
+    x = rx * cs - rz * sn; z = rx * sn + rz * cs;
+    const sf = 1 - 0.88 * c;
+    w *= sf; h *= sf; d *= sf;
+    y = ny - h / 2; r += sp;
+  }
+  o.x = x; o.y = y; o.z = z; o.w = w; o.h = h; o.d = d; o.r = r;
+  return o;
+}
+
+// ------------------------------------------------ orbitals (UI / UX)
+const RINGS = [
+  { R: 3.5, ax: 0.38, az: 0.12, w: 0.52, n: 6 },
+  { R: 4.3, ax: -0.24, az: 0.40, w: -0.36, n: 8 },
+  { R: 3.0, ax: 0.98, az: -0.22, w: 0.70, n: 5 },
+  { R: 4.9, ax: 0.10, az: -0.14, w: 0.24, n: 9 },
+  { R: 3.3, ax: -1.08, az: 0.58, w: -0.58, n: 4 },
+].map((g, k) => ({
+  ...g, cx: Math.cos(g.ax), sx: Math.sin(g.ax), cz: Math.cos(g.az), sz: Math.sin(g.az),
+  parts: Array.from({ length: g.n }, (_, i) => ({
+    th: (i / g.n) * TAU + hash(k, i) * 0.5,
+    type: Math.floor(hash(i, k + 9) * 4),
+    size: 0.8 + hash(k + 3, i) * 0.6,
+    ph: hash(k + 5, i) * TAU,
+  })),
+}));
+const ringAngle = (g, t) => { const u = inv(20.0, 27.85, t); return g.w * Math.max(0, t - 12) + g.w * 10 * 7.85 * u ** 4 / 4; };
+const ringRadius = (g, t) => g.R * (1 - 0.93 * condense(t)) * lerp(1.3, 1, E.outCubic(inv(12.6, 15.6, t)));
+function ringPoint(g, R, th, o) {
+  const x = R * Math.cos(th), z0 = R * Math.sin(th);
+  const y1 = -z0 * g.sx, z1 = z0 * g.cx;
+  o.x = x * g.cz - y1 * g.sz; o.y = ECO_CY + x * g.sz + y1 * g.cz; o.z = z1;
+  return o;
+}
+// user interactions: beams from orbiting UI elements to the structure
+const BEAMS = [];
+{
+  const r = rng(31);
+  for (let t = 15.0; t < 20.2; t += 0.3 + r() * 0.32)
+    BEAMS.push({ t, g: Math.floor(r() * RINGS.length), p: r(), b: Math.floor(r() * blocks.length), col: r() < 0.5 ? 1 : 0 });
+}
+
+// ------------------------------------------------ launch: inflow + burst
+const INFLOW = [];
+{
+  const r = rng(57);
+  for (let i = 0; i < 280; i++) {
+    const u = Math.pow(r(), 0.55);
+    const ts = 20.4 + u * 7.1;
+    let dur = lerp(1.35, 0.5, u) * (0.8 + r() * 0.4);
+    if (ts + dur > 27.85) dur = Math.max(0.2, 27.85 - ts);
+    INFLOW.push({ ts, dur, a: r() * TAU, R0: 0.5 + r() * 0.35, col: r() < 0.6 ? 0 : r() < 0.6 ? 1 : 2, w: 0.6 + r() * 1.2 });
+  }
+}
+const BOOM = 28.0;
+const BURST = [];
+{
+  const r = rng(99);
+  for (let i = 0; i < 1800; i++) {
+    const dust = i < 1150;
+    const a = r() * TAU;
+    BURST.push({
+      dust, a, ca: Math.cos(a), sa: Math.sin(a),
+      rf: dust ? 0.05 + Math.pow(r(), 0.8) * 0.37 : 0.48 + r() * 0.5,
+      dur: dust ? 1.0 + r() * 0.8 : 0.9 + r() * 0.7,
+      col: r() < 0.5 ? 0 : r() < 0.55 ? 1 : 2,
+      flat: r() < 0.5 ? 0.62 + r() * 0.3 : 1,
+      size: 0.6 + r() * 1.4, dx: r() - 0.5, dy: r() - 0.5, ph: r() * TAU, tw: 0.6 + r() * 2.2,
+      tgt: -1,
+    });
+  }
+}
+function burstPos(p, t, o) {
+  const T = Math.max(0, t - BOOM), u = clamp(T / p.dur), e = 1 - (1 - u) ** 4;
+  const R = p.rf * DIAG * e, drift = U * 0.014 * T, wob = U * 0.004 * clamp(T);
+  o.x = CX + p.ca * R + p.dx * drift + Math.sin(t * 0.9 + p.ph) * wob;
+  o.y = CY + p.sa * R * p.flat + p.dy * drift + Math.cos(t * 0.7 + p.ph) * wob;
+  o.v = p.rf * DIAG * 4 * (1 - u) ** 3 / p.dur;
+  return o;
+}
+
+// =====================================================================
+//  CODE-DRAWN TYPE — a geometric monoline face built from lines + arcs
+//  units: cap height = 1, y up · segments: ['L',x0,y0,x1,y1] | ['E',cx,cy,rx,ry,a0°,a1°]
+// =====================================================================
+const GLYPH = {
+  C: { w: 0.92, s: [[['E', 0.46, 0.5, 0.46, 0.5, 44, 316]]], g: [[0.46, 0.5, 0.46, 0.5]] },
+  A: { w: 0.92, s: [[['L', -0.0286, -0.06, 0.46, 0.965], ['L', 0.46, 0.965, 0.9486, -0.06]], [['L', 0.1478, 0.31, 0.7722, 0.31]]], g: [] },
+  S: { w: 0.64, s: [[['E', 0.32, 0.76, 0.29, 0.24, 18, 270], ['E', 0.32, 0.26, 0.32, 0.26, 90, -160]]], g: [[0.32, 0.76, 0.29, 0.24], [0.32, 0.26, 0.32, 0.26]] },
+  '.': { w: 0.12, dot: [0.06, 0.05] },
+  '0': { w: 0.62, s: [[['E', 0.31, 0.5, 0.31, 0.5, 90, 450]]], g: [[0.31, 0.5, 0.31, 0.5]], closed: true },
+};
+{ // "2": top bowl + a diagonal that leaves the bowl exactly on its tangent
+  const cx = 0.30, cy = 0.715, r = 0.285, bx = 0, by = 0;
+  const base = Math.atan2(cy - by, cx - bx), off = Math.asin(r / Math.hypot(cx - bx, cy - by));
+  const la = base - off, aT = Math.atan2(-Math.cos(la), Math.sin(la));
+  const tx = cx + r * Math.cos(aT), ty = cy + r * Math.sin(aT);
+  GLYPH['2'] = { w: 0.62, s: [[['E', cx, cy, r, r, 158, aT / D2R], ['L', tx, ty, bx, by], ['L', bx, by, 0.62, 0]]], g: [[cx, cy, r, r]] };
+}
+const TRACK = 0.16, SPACE = 0.42, KERN = { '2.': 0.1, '.0': 0.1 };
+
+// polyline (px, y down) from segments
+function buildStroke(segs, S, ox, closed) {
+  const pts = [];
+  const push = (x, y) => {
+    const px = ox + x * S, py = -y * S, n = pts.length;
+    if (n && Math.abs(pts[n - 2] - px) < 0.01 && Math.abs(pts[n - 1] - py) < 0.01) return;
+    pts.push(px, py);
+  };
+  for (const sg of segs) {
+    if (sg[0] === 'L') { push(sg[1], sg[2]); push(sg[3], sg[4]); continue; }
+    const [, cx, cy, rx, ry, a0, a1] = sg;
+    const span = Math.abs(a1 - a0) * D2R, n = Math.max(8, Math.ceil(span * Math.max(rx, ry) * S / 1.6));
+    for (let i = 0; i <= n; i++) { const a = (a0 + (a1 - a0) * (i / n)) * D2R; push(cx + rx * Math.cos(a), cy + ry * Math.sin(a)); }
+  }
+  const P = new Float32Array(pts), cnt = P.length / 2, cum = new Float32Array(cnt);
+  for (let i = 1; i < cnt; i++) cum[i] = cum[i - 1] + Math.hypot(P[2 * i] - P[2 * i - 2], P[2 * i + 1] - P[2 * i - 1]);
+  return { pts: P, cum, len: cum[cnt - 1], closed: !!closed };
+}
+function strokeAt(st, d, o) {                      // point at arclength d
+  const c = st.cum, p = st.pts;
+  if (d <= 0) { o.x = p[0]; o.y = p[1]; return o; }
+  let lo = 0, hi = c.length - 1;
+  if (d >= c[hi]) { o.x = p[2 * hi]; o.y = p[2 * hi + 1]; return o; }
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (c[m] < d) lo = m; else hi = m; }
+  const f = (d - c[lo]) / (c[hi] - c[lo] || 1);
+  o.x = lerp(p[2 * lo], p[2 * hi], f); o.y = lerp(p[2 * lo + 1], p[2 * hi + 1], f);
+  return o;
+}
+function tracePartial(c, st, len, ox, oy) {      // path of the first `len` px
+  const p = st.pts, cum = st.cum;
+  c.moveTo(ox + p[0], oy + p[1]);
+  for (let i = 1; i < cum.length; i++) {
+    if (cum[i] <= len) { c.lineTo(ox + p[2 * i], oy + p[2 * i + 1]); continue; }
+    const f = (len - cum[i - 1]) / (cum[i] - cum[i - 1] || 1);
+    c.lineTo(ox + lerp(p[2 * i - 2], p[2 * i], f), oy + lerp(p[2 * i - 1], p[2 * i + 1], f));
+    return;
+  }
+  if (st.closed && len >= st.len - 0.01) c.closePath();
+}
+function buildWord(text, S) {
+  const word = { S, glyphs: [], width: 0 };
+  let x = 0, prev = null;
+  for (const ch of text) {
+    if (ch === ' ') { x += SPACE; prev = null; continue; }
+    if (prev) x += KERN[prev + ch] ?? TRACK;
+    const gd = GLYPH[ch], g = { ch, x: x * S, strokes: [], len: 0, dot: null, guides: [] };
+    if (gd.dot) g.dot = { x: (x + gd.dot[0]) * S, y: -gd.dot[1] * S };
+    else {
+      g.strokes = gd.s.map(sg => buildStroke(sg, S, x * S, gd.closed));
+      g.len = g.strokes.reduce((a, s) => a + s.len, 0);
+      g.guides = gd.g.map(([cx, cy, rx, ry]) => ({ x: (x + cx) * S, y: -cy * S, rx: rx * S, ry: ry * S }));
+    }
+    word.glyphs.push(g);
+    x += gd.w; prev = ch;
+  }
+  word.width = x * S;
+  return word;
+}
+function glyphPoint(g, d, o) {                    // point at arclength d across a glyph's strokes
+  for (const st of g.strokes) { if (d <= st.len) return strokeAt(st, d, o); d -= st.len; }
+  const st = g.strokes[g.strokes.length - 1];
+  return strokeAt(st, st.len, o);
+}
+
+// ------------------------------------------------ title layout & timing
+const TITLE_T0 = 29.45, GLYPH_STAGGER = 0.12, GLYPH_DUR = 0.78, TRAVEL = 1.0;
+const SUB_TEXT = 'Your Digital Home. Upgraded.';
+const SUB_SPLIT = SUB_TEXT.indexOf('Upgraded');
+const SUB_T0 = 31.2;
+const SUB_TIMES = [];
+{
+  let tt = SUB_T0;
+  for (let k = 0; k < SUB_TEXT.length; k++) {
+    if (k === SUB_SPLIT) tt += 0.2;                  // a breath before the payoff word
+    SUB_TIMES.push(tt);
+    tt += (SUB_TEXT[k] === ' ' ? 0.028 : 0.042) + (hash(k, 11) - 0.5) * 0.02;
+  }
+}
+const GLINT_T0 = 32.75;
+let TT = null;
+
+function layoutTitle() {
+  const portrait = H > W * 1.1;
+  const S = Math.min(W * (portrait ? 0.84 : 0.64) / 5.86, H * (portrait ? 0.11 : 0.17));
+  const word = buildWord('CASA 2.0', S);
+  const ox = CX - word.width / 2, base = Math.round(CY - 0.05 * S);
+  word.glyphs.forEach((g, k) => { g.t0 = TITLE_T0 + k * GLYPH_STAGGER; g.dur = g.dot ? 0.22 : GLYPH_DUR; g.coral = k >= 4; });
+  // particle targets distributed along the strokes, in drawing order
+  const total = word.glyphs.reduce((a, g) => a + g.len, 0);
+  const NP = Math.round(clamp(total / (2.6 * DPR), 320, 1100));
+  const targets = [], o = { x: 0, y: 0 }, r = rng(5);
+  for (const g of word.glyphs) {
+    if (g.dot) {
+      for (let k = 0; k < 14; k++) {
+        const a = r() * TAU, rr = r() * S * 0.035;
+        targets.push({ x: ox + g.dot.x + Math.cos(a) * rr, y: base + g.dot.y + Math.sin(a) * rr, ta: g.t0 + (k / 14) * g.dur, coral: true });
+      }
+      continue;
+    }
+    const n = Math.max(6, Math.round(NP * g.len / total));
+    for (let k = 0; k < n; k++) {
+      const f = (k + r()) / n;
+      glyphPoint(g, f * g.len, o);
+      targets.push({ x: ox + o.x, y: base + o.y, ta: g.t0 + f * g.dur, coral: g.coral });
+    }
+  }
+  // match dust → targets by angle so the gathering never crosses itself
+  const tcx = CX, tcy = base - S * 0.5;
+  targets.forEach(tg => (tg.ang = Math.atan2(tg.y - tcy, tg.x - tcx)));
+  const tSorted = targets.map((tg, i) => i).sort((a, b) => targets[a].ang - targets[b].ang);
+  const dust = BURST.filter(p => p.dust).sort((a, b) => Math.atan2(a.sa * a.flat, a.ca) - Math.atan2(b.sa * b.flat, b.ca));
+  BURST.forEach(p => (p.tgt = -1));
+  tSorted.forEach((ti, k) => { dust[Math.floor(k * dust.length / tSorted.length)].tgt = ti; });
+  // subtitle metrics
+  const subSize = Math.max(Math.round(S * 0.235), Math.round(13 * DPR));
+  const subFont = `300 ${subSize}px ${FONT_SANS}`;
+  ctx.font = subFont;
+  const subSp = subSize * 0.035;
+  const subW = [...SUB_TEXT].map(ch => ctx.measureText(ch).width);
+  const subTotal = subW.reduce((a, w) => a + w + subSp, -subSp);
+  const subBase = Math.round(base + S * 0.72);
+  const urlSize = Math.max(Math.round(S * 0.08), Math.round(10 * DPR));
+  TT = { S, word, ox, base, lw: Math.max(1.5 * DPR, S * 0.062), targets, subSize, subFont, subSp, subW, subTotal, subBase,
+    urlSize, urlBase: Math.round(subBase + Math.max(S * 0.5, subSize * 2.2)) };
+}
+// =====================================================================
+//  CAMERA — one continuous move: plan view → isometric → orbit → push-in
+// =====================================================================
+const cam = { yaw: 0, el: Math.PI / 2, k: 1, D: 46, ox: 0, oy: 0, cyw: 1, syw: 0, cel: 0, sel: 1, ty: 0, bx: 0, by: 0, zx: 0, zy: 0, s0: 1 };
+function updateCamera(t) {
+  const tilt = E.inOutCubic(inv(5.0, 8.2, t));
+  let el = lerp(Math.PI / 2, 0.6, tilt);                        // 90° → ~34°
+  el = lerp(el, 0.44, E.inOutSine(inv(12.0, 16.5, t)));         // lower, to read the floating tiers
+  el = lerp(el, 0.52, E.inOutSine(inv(20.0, 26.5, t)));
+  // yaw: still and precise while drafting, then one continuous move into a slow orbit
+  const OW = 0.085, oa = 6.0, ob = 9.0;
+  const orbit = t < oa ? 0 : t < ob ? OW * (t - oa) ** 2 / (2 * (ob - oa)) : OW * ((ob - oa) / 2 + (t - ob));
+  const yaw = 0.62 * E.inOutCubic(inv(3.2, 8.2, t)) + orbit;
+  let zoom = lerp(1.12, 1.0, E.outCubic(inv(0, 5, t)));
+  zoom *= lerp(1, 0.92, tilt);
+  zoom *= lerp(1, 1.08, E.inOutCubic(inv(11.6, 15.6, t)));
+  zoom *= lerp(1, 1.45, E.inCubic(inv(20.0, 27.85, t)));
+  cam.ty = lerp(lerp(0, 0.9, E.inOutCubic(inv(8.0, 11.5, t))), ECO_CY, E.inOutCubic(inv(11.8, 15.4, t)));
+  cam.yaw = yaw; cam.el = el;
+  cam.k = U * 0.088 * zoom;
+  cam.cyw = Math.cos(yaw); cam.syw = Math.sin(yaw); cam.cel = Math.cos(el); cam.sel = Math.sin(el);
+  const sh = t < 27.85 ? inv(24.5, 27.85, t) ** 2 * U * 0.0035 : 0;
+  cam.ox = CX + sh * Math.sin(t * 91.7); cam.oy = CY + sh * Math.cos(t * 77.3);
+  // screen-space basis of the ground plane at the origin (for small ground-aligned marks)
+  P3(0, 0, 0, PA); const x0 = PA.x, y0 = PA.y; cam.s0 = PA.s;
+  P3(1, 0, 0, PA); cam.bx = PA.x - x0; cam.by = PA.y - y0;
+  P3(0, 0, 1, PA); cam.zx = PA.x - x0; cam.zy = PA.y - y0;
+}
+// world → camera space + screen (writes into o)
+function P3(x, y, z, o) {
+  y -= cam.ty;
+  const x1 = x * cam.cyw - z * cam.syw, z1 = x * cam.syw + z * cam.cyw;
+  const y2 = y * cam.cel + z1 * cam.sel, z2 = -y * cam.sel + z1 * cam.cel;
+  const s = cam.D / Math.max(cam.D + z2, 0.5);
+  o.cx = x1; o.cy = y2; o.cz = z2; o.s = s;
+  o.x = cam.ox + x1 * cam.k * s; o.y = cam.oy - y2 * cam.k * s;
+  return o;
+}
+const mkP = () => ({ x: 0, y: 0, s: 1, cx: 0, cy: 0, cz: 0 });
+const PA = mkP(), PB = mkP(), PC = mkP(), GP = { x: 0, y: 0, z: 0 };
+
+// =====================================================================
+//  BACKGROUND
+// =====================================================================
+function blob(c, x, y, r, col, a) {
+  if (a <= 0.002 || r <= 1) return;
+  const g = c.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, rgba(col, a)); g.addColorStop(1, rgba(col, 0));
+  c.fillStyle = g; c.fillRect(x - r, y - r, r * 2, r * 2);
+}
+function drawBackground(c, t) {
+  c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1;
+  c.fillStyle = '#07090C'; c.fillRect(0, 0, W, H);
+  const g = c.createRadialGradient(CX, CY, 0, CX, CY, DIAG * 0.62);
+  g.addColorStop(0, rgba(COL.navy, 0.42 + 0.08 * Math.sin(t * 0.6)));
+  g.addColorStop(0.55, rgba(COL.ink2, 0.35)); g.addColorStop(1, 'rgba(7,9,12,0)');
+  c.fillStyle = g; c.fillRect(0, 0, W, H);
+  const au = env(t, 12.5, 16, 24, 27.8);                        // ecosystem aurora
+  if (au > 0) {
+    blob(c, CX - W * 0.26 + Math.sin(t * 0.21) * W * 0.05, CY - H * 0.16, DIAG * 0.36, COL.teal, 0.24 * au);
+    blob(c, CX + W * 0.28, CY + H * 0.2 + Math.cos(t * 0.17) * H * 0.05, DIAG * 0.3, COL.coral, 0.09 * au);
+  }
+  const ch = env(t, 21, 26.5, 27.6, 27.95);                     // charge: the room darkens
+  if (ch > 0) { c.fillStyle = rgba(COL.ink, 0.55 * ch); c.fillRect(0, 0, W, H); }
+  const tb = env(t, 28.3, 30.5, 34.0, 35);                      // title backlight
+  if (tb > 0) blob(c, CX, CY - U * 0.06, DIAG * 0.42, COL.navy, 0.55 * tb);
+}
+
+// =====================================================================
+//  PHASE 1 — THE BLUEPRINT
+// =====================================================================
+function warp(x, z, w, o) {                                      // gravity well for the launch
+  if (w <= 0) { o.x = x; o.y = 0; o.z = z; return o; }
+  const r = Math.hypot(x, z), a = Math.atan2(z, x);
+  const sw = w * 2.8 * Math.exp(-r / 7.5), rr = r * (1 - 0.6 * w * Math.exp(-r / 11));
+  o.x = rr * Math.cos(a + sw); o.z = rr * Math.sin(a + sw); o.y = -w * 3.4 * Math.exp(-r * r / 40);
+  return o;
+}
+const gridAlpha = t => (1 - 0.6 * smooth(inv(12.0, 14.5, t))) * (1 - smooth(inv(24.5, 27.6, t)));
+const gridWarp = t => E.inCubic(inv(20.5, 27.8, t));
+
+function drawGrid(c, t) {
+  const ga = gridAlpha(t); if (ga <= 0.002 || t < LINE_T0) return;
+  const w = gridWarp(t);
+  c.globalCompositeOperation = 'lighter'; c.lineCap = 'round';
+  const tips = [];
+  for (let o = 0; o < 2; o++) for (let k = -N; k <= N; k++) {
+    const L = N * E.outCubic(inv(lineStart(k), lineStart(k) + LINE_DUR, t));
+    if (L <= 0.01) continue;
+    const major = k % 4 === 0, axis = k === 0;
+    const a = (axis ? 0.5 : major ? 0.3 : 0.13) * ga * (1 - 0.55 * (Math.abs(k) / N) ** 2);
+    const steps = Math.max(2, Math.ceil(L * (w > 0 ? 3 : 1)));
+    let sx = 0, sy = 0;
+    c.beginPath();
+    for (let i = 0; i <= steps; i++) {
+      const u = -L + (2 * L * i) / steps;
+      warp(o === 0 ? u : k, o === 0 ? k : u, w, GP); P3(GP.x, GP.y, GP.z, PA);
+      if (i === 0) { c.moveTo(PA.x, PA.y); sx = PA.x; sy = PA.y; } else c.lineTo(PA.x, PA.y);
+    }
+    const fe = smooth(inv(0.55, 1.0, L / N)), col = major ? COL.glow : COL.tealL;
+    const gr = c.createLinearGradient(sx, sy, PA.x, PA.y);
+    gr.addColorStop(0, rgba(col, a * (1 - fe) * 0.9)); gr.addColorStop(0.5, rgba(col, a)); gr.addColorStop(1, rgba(col, a * (1 - fe) * 0.9));
+    c.strokeStyle = gr; c.lineWidth = (major ? 1.25 : 1) * DPR; c.stroke();
+    if (L < N * 0.995) tips.push(sx, sy, PA.x, PA.y, (1 - L / N) * (major ? 1 : 0.6) * ga);
+  }
+  for (let i = 0; i < tips.length; i += 5) {                   // the drafting pen tips
+    const r = 5 * DPR;
+    glowAt(c, SPR.glow, tips[i], tips[i + 1], r, tips[i + 4]); glowAt(c, SPR.glow, tips[i + 2], tips[i + 3], r, tips[i + 4]);
+  }
+}
+
+function drawNodes(c, t) {
+  const ga = gridAlpha(t); if (ga <= 0.002 || t < LINE_T0) return;
+  const w = gridWarp(t);
+  c.globalCompositeOperation = 'lighter'; c.lineCap = 'butt';
+  const dimA = new Path2D(), dimB = new Path2D(), flashes = [];
+  for (const n of nodes) {
+    if (t < n.tl) continue;
+    warp(n.i, n.j, w, GP); P3(GP.x, GP.y, GP.z, PA);
+    if (PA.x < -40 || PA.x > W + 40 || PA.y < -40 || PA.y > H + 40) continue;
+    const arm = (n.major ? 0.13 : 0.075) * PA.s / cam.s0;
+    const ax = cam.bx * arm, ay = cam.by * arm, zx = cam.zx * arm, zy = cam.zy * arm;
+    const p = n.major || n.active ? dimB : dimA;
+    p.moveTo(PA.x - ax, PA.y - ay); p.lineTo(PA.x + ax, PA.y + ay);
+    p.moveTo(PA.x - zx, PA.y - zy); p.lineTo(PA.x + zx, PA.y + zy);
+    const dt = t - n.tl;
+    if (dt < 0.8 || n.active) flashes.push(PA.x, PA.y, dt, n.active ? 1 : 0, n.ph, n.major ? 1 : 0);
+  }
+  c.lineWidth = DPR; c.strokeStyle = rgba(COL.tealL, 0.38 * ga); c.stroke(dimA);
+  c.lineWidth = 1.2 * DPR; c.strokeStyle = rgba(COL.glow, 0.62 * ga); c.stroke(dimB);
+  const R = cam.k * 0.075;
+  for (let i = 0; i < flashes.length; i += 6) {
+    const x = flashes[i], y = flashes[i + 1], dt = flashes[i + 2], act = flashes[i + 3];
+    const fl = dt < 0.8 ? (1 - dt / 0.8) ** 2 : 0;
+    const tw = act ? (0.3 + 0.25 * Math.sin(t * 2.2 + flashes[i + 4])) * smooth(clamp(dt / 0.6)) : 0;
+    glowAt(c, SPR.glow, x, y, R * (1 + fl * 0.9), (fl * 0.75 + tw) * ga);
+    if (act && flashes[i + 5]) {
+      c.beginPath(); c.arc(x, y, R * 0.55, 0, TAU);
+      c.lineWidth = DPR; c.strokeStyle = rgba(COL.glow, 0.45 * ga * smooth(clamp(dt / 0.5))); c.stroke();
+    }
+  }
+}
+
+// ground-plane polyline helper
+function groundPath(c, pts, w) {
+  for (let i = 0; i < pts.length; i += 2) {
+    warp(pts[i], pts[i + 1], w, GP); P3(GP.x, GP.y, GP.z, PA);
+    if (i === 0) c.moveTo(PA.x, PA.y); else c.lineTo(PA.x, PA.y);
+  }
+}
+function drawConstruction(c, t) {                               // compass circles, diagonals, dimensions
+  const a = env(t, 1.2, 1.6, 5.0, 6.8); if (a <= 0) return;
+  c.globalCompositeOperation = 'lighter'; c.lineCap = 'butt';
+  c.setLineDash([4 * DPR, 6 * DPR]); c.lineWidth = DPR;
+  const circle = (R, t0, t1, alpha) => {
+    const sw = E.inOutCubic(inv(t0, t1, t)); if (sw <= 0) return;
+    const n = Math.ceil(96 * sw), pts = [];
+    for (let i = 0; i <= n; i++) { const th = -Math.PI / 2 + TAU * sw * (i / n); pts.push(R * Math.cos(th), R * Math.sin(th)); }
+    c.beginPath(); groundPath(c, pts, 0); c.strokeStyle = rgba(COL.glow, alpha * a); c.stroke();
+    if (sw < 1) {                                                // the compass arm
+      const th = -Math.PI / 2 + TAU * sw;
+      c.save(); c.setLineDash([]);
+      c.beginPath(); groundPath(c, [0, 0, R * Math.cos(th), R * Math.sin(th)], 0);
+      c.strokeStyle = rgba(COL.glow, 0.5 * a); c.stroke(); c.restore();
+      P3(R * Math.cos(th), 0, R * Math.sin(th), PB); glowAt(c, SPR.paper, PB.x, PB.y, 6 * DPR, 0.9 * a);
+    }
+  };
+  circle(3.6, 1.3, 2.6, 0.32); circle(1.6, 1.8, 2.8, 0.26);
+  const dl = N * 1.42 * E.outCubic(inv(1.6, 2.8, t));
+  if (dl > 0) {
+    const d = dl / Math.SQRT2;
+    c.beginPath(); groundPath(c, [-d, -d, d, d], 0); groundPath(c, [-d, d, d, -d], 0);
+    c.strokeStyle = rgba(COL.tealL, 0.22 * a); c.stroke();
+  }
+  c.setLineDash([]);
+  // dimension lines around the 8 × 8 plot
+  const fs = Math.round(Math.max(9 * DPR, U * 0.011));
+  c.font = `500 ${fs}px ${FONT_MONO}`; c.textAlign = 'center'; c.textBaseline = 'middle';
+  const dim = (x0, z0, x1, z1, nx, nz, t0) => {
+    const p = E.outCubic(inv(t0, t0 + 0.6, t)); if (p <= 0) return;
+    const xe = lerp(x0, x1, p), ze = lerp(z0, z1, p), tk = 0.22;
+    c.beginPath(); groundPath(c, [x0, z0, xe, ze], 0);
+    groundPath(c, [x0 - nx * tk, z0 - nz * tk, x0 + nx * tk, z0 + nz * tk], 0);
+    if (p > 0.98) groundPath(c, [x1 - nx * tk, z1 - nz * tk, x1 + nx * tk, z1 + nz * tk], 0);
+    c.strokeStyle = rgba(COL.glow, 0.42 * a); c.stroke();
+    P3((x0 + x1) / 2 + nx * 0.5, 0, (z0 + z1) / 2 + nz * 0.5, PB);
+    c.fillStyle = rgba(COL.glow, 0.6 * a * smooth(inv(0.6, 1, p)));
+    c.fillText('8.00', PB.x, PB.y);
+  };
+  dim(-4, -4.9, 4, -4.9, 0, -1, 3.0);
+  dim(-4.9, -4, -4.9, 4, -1, 0, 3.25);
+}
+
+// the plan: block footprints drafted, hatched, then "connected"
+function drawPlan(c, t) {
+  if (t < 2.25 || t > 15) return;
+  c.globalCompositeOperation = 'lighter'; c.lineCap = 'butt'; c.lineJoin = 'miter';
+  const hatchA = env(t, 3.4, 4.4, 7.4, 9.0);
+  for (const b of blocks) {
+    const p = E.inOutCubic(inv(planStart(b), planStart(b) + 0.65, t)); if (p <= 0) continue;
+    const fade = 1 - smooth(inv(reorgStart(b), reorgStart(b) + 1.1, t)); if (fade <= 0) continue;
+    const x0 = b.px - b.pw / 2, x1 = b.px + b.pw / 2, z0 = b.pz - b.pd / 2, z1 = b.pz + b.pd / 2;
+    const corners = [x0, z0, x1, z0, x1, z1, x0, z1, x0, z0];
+    const per = 2 * (b.pw + b.pd), trU = inv(traceStart(b), extrudeStart(b), t);
+    // outline (drawn progressively)
+    const pts = [x0, z0]; let acc = 0, target = p * per;
+    for (let i = 2; i < corners.length; i += 2) {
+      const seg = Math.hypot(corners[i] - corners[i - 2], corners[i + 1] - corners[i - 1]);
+      if (acc + seg <= target) { pts.push(corners[i], corners[i + 1]); acc += seg; continue; }
+      const f = (target - acc) / seg; pts.push(lerp(corners[i - 2], corners[i], f), lerp(corners[i - 1], corners[i + 1], f)); break;
+    }
+    c.beginPath(); groundPath(c, pts, 0);
+    c.lineWidth = 1.2 * DPR; c.strokeStyle = rgba(COL.glow, (0.5 + 0.45 * smooth(trU)) * fade); c.stroke();
+    // architectural hatching (poché)
+    if (b.hatch && hatchA > 0) {
+      c.beginPath();
+      for (let cc = x0 - z1 + 0.28; cc < x1 - z0; cc += 0.28) {
+        const za = Math.max(z0, x0 - cc), zb = Math.min(z1, x1 - cc); if (zb <= za) continue;
+        groundPath(c, [za + cc, za, zb + cc, zb], 0);
+      }
+      c.lineWidth = DPR; c.strokeStyle = rgba(COL.tealL, 0.2 * hatchA * fade); c.stroke();
+    }
+    // "the nodes connect": a spark runs the perimeter, corners ignite
+    if (trU > 0 && trU < 1) {
+      const head = trU * per, tail = Math.max(0, head - per * 0.35), sp = [];
+      let a2 = 0;
+      for (let i = 2; i < corners.length; i += 2) {
+        const seg = Math.hypot(corners[i] - corners[i - 2], corners[i + 1] - corners[i - 1]);
+        const s0 = Math.max(tail, a2), s1 = Math.min(head, a2 + seg);
+        if (s1 > s0) {
+          const f0 = (s0 - a2) / seg, f1 = (s1 - a2) / seg;
+          if (!sp.length) sp.push(lerp(corners[i - 2], corners[i], f0), lerp(corners[i - 1], corners[i + 1], f0));
+          sp.push(lerp(corners[i - 2], corners[i], f1), lerp(corners[i - 1], corners[i + 1], f1));
+        }
+        if (head - a2 >= 0 && head - a2 < per * 0.3) { P3(corners[i - 2], 0, corners[i - 1], PB); glowAt(c, SPR.paper, PB.x, PB.y, cam.k * 0.22, 0.8 * (1 - (head - a2) / (per * 0.3))); }
+        a2 += seg;
+      }
+      if (sp.length > 2) { c.beginPath(); groundPath(c, sp, 0); c.lineWidth = 2 * DPR; c.strokeStyle = rgba(COL.paper, 0.9 * fade); c.stroke(); }
+      const hp = sp.length ? sp.slice(-2) : [x0, z0];
+      P3(hp[0], 0, hp[1], PB); glowAt(c, SPR.glow, PB.x, PB.y, cam.k * 0.3, 0.9);
+    }
+  }
+}
+
+// =====================================================================
+//  PHASE 2 — DATA STREAMS: minimalist horizontal "rain" along the grid
+// =====================================================================
+const NPK = 46, PK_T0 = 5.3;
+const pkPath = { pts: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], n: 0, cum: [0, 0, 0, 0], len: 0 };
+function buildPacket(i, cyc) {
+  const r = rng((i * 7919 + cyc * 104729 + 17) >>> 0);
+  const P = pkPath.pts; let n = 0;
+  const along = r() < 0.5, k = Math.round((r() * 2 - 1) * 9), dir = r() < 0.5 ? 1 : -1;
+  const s0 = -dir * (6 + Math.floor(r() * 5)), L1 = 4 + Math.floor(r() * 7);
+  const fall = r() < 0.45, turn = r() < 0.6, L2 = 2 + Math.floor(r() * 5), dir2 = r() < 0.5 ? 1 : -1;
+  const pt = (a, y, b) => { if (along) { P[n * 3] = a; P[n * 3 + 1] = y; P[n * 3 + 2] = b; } else { P[n * 3] = b; P[n * 3 + 1] = y; P[n * 3 + 2] = a; } n++; };
+  if (fall) pt(s0, 2.2 + r() * 2.2, k);                        // falls onto the grid…
+  pt(s0, 0, k);                                                // …then streams horizontally
+  pt(s0 + dir * L1, 0, k);
+  if (turn) pt(s0 + dir * L1, 0, k + dir2 * L2);
+  pkPath.n = n;
+  let len = 0; pkPath.cum[0] = 0;
+  for (let j = 1; j < n; j++) { len += Math.hypot(P[j * 3] - P[j * 3 - 3], P[j * 3 + 1] - P[j * 3 - 2], P[j * 3 + 2] - P[j * 3 - 1]); pkPath.cum[j] = len; }
+  pkPath.len = len;
+  return { v: 5 + r() * 4, trail: 1.6 + r() * 2.2, coral: r() < 0.16 };
+}
+function pkPoint(s, o) {
+  const P = pkPath.pts, cum = pkPath.cum;
+  s = clamp(s, 0, pkPath.len);
+  let j = 1; while (j < pkPath.n - 1 && cum[j] < s) j++;
+  const f = (s - cum[j - 1]) / ((cum[j] - cum[j - 1]) || 1);
+  o.x = lerp(P[j * 3 - 3], P[j * 3], f); o.y = lerp(P[j * 3 - 2], P[j * 3 + 1], f); o.z = lerp(P[j * 3 - 1], P[j * 3 + 2], f);
+  return o;
+}
+function drawPackets(c, t) {
+  const A = env(t, PK_T0, 6.4, 12.8, 15.2); if (A <= 0) return;
+  c.globalCompositeOperation = 'lighter'; c.lineCap = 'round';
+  for (let i = 0; i < NPK; i++) {
+    const per = 2.6 + hash(i, 2) * 1.8, lt0 = t - PK_T0 - hash(i, 1) * 2.6;
+    if (lt0 < 0) continue;
+    const cyc = Math.floor(lt0 / per), lt = lt0 - cyc * per;
+    const pk = buildPacket(i, cyc), s = lt * pk.v;
+    if (s - pk.trail > pkPath.len) continue;
+    const col = pk.coral ? COL.coralL : COL.glow, end = Math.min(s, pkPath.len);
+    const segs = 7; let px = 0, py = 0;
+    for (let j = 0; j <= segs; j++) {
+      pkPoint(end - pk.trail * (1 - j / segs), GP); P3(GP.x, GP.y, GP.z, PA);
+      if (j > 0) {
+        const f = j / segs;
+        c.beginPath(); c.moveTo(px, py); c.lineTo(PA.x, PA.y);
+        c.lineWidth = (0.6 + 1.4 * f) * DPR; c.strokeStyle = rgba(col, 0.85 * f * f * A); c.stroke();
+      }
+      px = PA.x; py = PA.y;
+    }
+    if (s <= pkPath.len) glowAt(c, pk.coral ? SPR.coral : SPR.glow, PA.x, PA.y, cam.k * 0.2, 0.9 * A);
+    else {                                                        // absorbed: a small pulse
+      const u = clamp((s - pkPath.len) / pk.trail);
+      c.beginPath(); c.arc(PA.x, PA.y, cam.k * (0.1 + 0.35 * u), 0, TAU);
+      c.lineWidth = DPR; c.strokeStyle = rgba(col, 0.6 * (1 - u) * A); c.stroke();
+    }
+  }
+}
+// =====================================================================
+//  PHASES 2–4 — GLASS BLOCKS, ORBITALS, INTERACTIONS
+// =====================================================================
+const CORN = Array.from({ length: 8 }, mkP);
+const FACES = [                // corner loop, outward normal (local)
+  [[4, 5, 6, 7], 0, 1, 0],     // top
+  [[0, 3, 2, 1], 0, -1, 0],    // bottom
+  [[0, 1, 5, 4], 0, 0, -1],
+  [[2, 3, 7, 6], 0, 0, 1],
+  [[3, 0, 4, 7], -1, 0, 0],
+  [[1, 2, 6, 5], 1, 0, 0],
+];
+const EDGES = [[0, 1, 1, 2], [1, 2, 1, 5], [2, 3, 1, 3], [3, 0, 1, 4], [4, 5, 0, 2], [5, 6, 0, 5], [6, 7, 0, 3], [7, 4, 0, 4], [0, 4, 2, 4], [1, 5, 2, 5], [2, 6, 5, 3], [3, 7, 3, 4]];
+const FRONT = [false, false, false, false, false, false];
+
+function blockLook(b, t) {
+  const ex = inv(extrudeStart(b), extrudeStart(b) + 0.5, t);
+  const acc = smooth(inv(13.0 + b.ord2 * 0.12, 15.6 + b.ord2 * 0.12, t));   // blues → brand accents
+  const heat = E.inQuad(inv(21.0, 27.6, t));
+  let edge = b.acc === 1 ? mixC(COL.glow, COL.coralL, acc) : b.acc === 2 ? mixC(COL.glow, COL.paper, acc) : mixC(COL.tealL, COL.glow, 0.35 + 0.5 * acc);
+  edge = mixC(edge, COL.paper, heat * 0.6);
+  const face = b.acc === 1 ? mixC(COL.teal, COL.coral, acc) : b.acc === 2 ? mixC(COL.teal, COL.paper, acc * 0.55) : mixC(COL.navy, COL.tealL, 0.35 + 0.35 * acc);
+  return { edge, face, fa: (0.6 + 0.4 * acc) * ex, ea: ex * (1 - smooth(inv(27.5, 27.85, t))), dash: 1 - smooth(inv(12.5, 15, t)) };
+}
+
+function drawBlock(c, b, t) {
+  const st = b.st, L = blockLook(b, t);
+  if (L.ea <= 0.002) return;
+  const hw = st.w / 2, hd = st.d / 2, cr = Math.cos(st.r), sr = Math.sin(st.r);
+  for (let i = 0; i < 8; i++) {
+    const lx = i === 1 || i === 2 || i === 5 || i === 6 ? hw : -hw;
+    const lz = i === 2 || i === 3 || i === 6 || i === 7 ? hd : -hd;
+    P3(st.x + lx * cr - lz * sr, st.y + (i >= 4 ? st.h : 0), st.z + lx * sr + lz * cr, CORN[i]);
+  }
+  for (let f = 0; f < 6; f++) {
+    const F = FACES[f], q = F[0];
+    const nx = F[1] * cr - F[3] * sr, nz = F[1] * sr + F[3] * cr;
+    const x1 = nx * cam.cyw - nz * cam.syw, z1 = nx * cam.syw + nz * cam.cyw;
+    const ny2 = F[2] * cam.cel + z1 * cam.sel, nz2 = -F[2] * cam.sel + z1 * cam.cel;
+    let fx = 0, fy = 0, fz = 0;
+    for (let j = 0; j < 4; j++) { fx += CORN[q[j]].cx; fy += CORN[q[j]].cy; fz += CORN[q[j]].cz; }
+    FRONT[f] = x1 * fx + ny2 * fy + nz2 * (fz + 4 * cam.D) < 0;
+  }
+  const face = (f) => { const q = FACES[f][0]; c.beginPath(); c.moveTo(CORN[q[0]].x, CORN[q[0]].y); for (let j = 1; j < 4; j++) c.lineTo(CORN[q[j]].x, CORN[q[j]].y); c.closePath(); };
+  // back faces: the far side of the glass
+  c.globalCompositeOperation = 'source-over';
+  for (let f = 0; f < 6; f++) if (!FRONT[f]) { face(f); c.fillStyle = rgba(L.face, 0.05 * L.fa); c.fill(); }
+  // hidden edges: dashed like a drafting x-ray
+  c.globalCompositeOperation = 'lighter'; c.lineWidth = DPR;
+  if (L.dash > 0.01) c.setLineDash([3 * DPR, 4 * DPR]);
+  c.beginPath();
+  for (const e of EDGES) if (!FRONT[e[2]] && !FRONT[e[3]]) { c.moveTo(CORN[e[0]].x, CORN[e[0]].y); c.lineTo(CORN[e[1]].x, CORN[e[1]].y); }
+  c.strokeStyle = rgba(L.edge, (0.16 + 0.12 * L.dash) * L.ea); c.stroke();
+  c.setLineDash([]);
+  // front faces: frosted glass
+  c.globalCompositeOperation = 'source-over';
+  for (let f = 0; f < 6; f++) {
+    if (!FRONT[f]) continue;
+    const q = FACES[f][0];
+    let ax, ay, bx, by;
+    if (f === 0) { ax = CORN[4].x; ay = CORN[4].y; bx = CORN[6].x; by = CORN[6].y; }
+    else if (f === 1) { ax = CORN[0].x; ay = CORN[0].y; bx = CORN[2].x; by = CORN[2].y; }
+    else {                                           // top edge → bottom edge
+      ax = (CORN[q[2]].x + CORN[q[3]].x) / 2; ay = (CORN[q[2]].y + CORN[q[3]].y) / 2;
+      bx = (CORN[q[0]].x + CORN[q[1]].x) / 2; by = (CORN[q[0]].y + CORN[q[1]].y) / 2;
+    }
+    const g = c.createLinearGradient(ax, ay, bx + 0.01, by + 0.01);
+    const top = f === 0 ? 0.34 : f === 1 ? 0.1 : 0.27;
+    g.addColorStop(0, rgba(L.face, top * L.fa)); g.addColorStop(1, rgba(L.face, top * 0.28 * L.fa));
+    face(f); c.fillStyle = g; c.fill();
+    if (f === 0) { c.globalCompositeOperation = 'lighter'; c.fillStyle = rgba(COL.paper, 0.035 * L.fa); c.fill(); c.globalCompositeOperation = 'source-over'; }
+  }
+  // visible edges: glowing vectors
+  c.globalCompositeOperation = 'lighter'; c.lineJoin = 'round';
+  c.beginPath();
+  for (const e of EDGES) if (FRONT[e[2]] || FRONT[e[3]]) { c.moveTo(CORN[e[0]].x, CORN[e[0]].y); c.lineTo(CORN[e[1]].x, CORN[e[1]].y); }
+  c.lineWidth = 1.35 * DPR; c.strokeStyle = rgba(L.edge, 0.92 * L.ea); c.stroke();
+  // vertices become nodes again
+  const vr = Math.max(2.5 * DPR, cam.k * 0.13);
+  for (let i = 4; i < 8; i++) glowAt(c, b.acc === 1 ? SPR.coral : SPR.glow, CORN[i].x, CORN[i].y, vr, 0.28 * L.ea);
+}
+
+// orbiting UI elements
+const OP = [];
+function orbitAlpha(t) { return env(t, 12.8, 15.0, 27.35, 27.85); }
+function computeOrbit(t) {
+  OP.length = 0;
+  for (let k = 0; k < RINGS.length; k++) {
+    const g = RINGS[k], R = ringRadius(g, t), base = ringAngle(g, t);
+    for (let i = 0; i < g.n; i++) {
+      const p = g.parts[i], th = p.th + base;
+      ringPoint(g, R, th, GP); P3(GP.x, GP.y, GP.z, PA);
+      OP.push({ k, i, th, R, x: PA.x, y: PA.y, s: PA.s, cz: PA.cz, type: p.type, size: p.size, ph: p.ph });
+    }
+  }
+}
+function drawRings(c, t, a) {
+  c.globalCompositeOperation = 'lighter'; c.lineWidth = DPR;
+  for (let k = 0; k < RINGS.length; k++) {
+    const g = RINGS[k], R = ringRadius(g, t);
+    c.beginPath();
+    for (let i = 0; i <= 90; i++) { ringPoint(g, R, (i / 90) * TAU, GP); P3(GP.x, GP.y, GP.z, PA); if (i) c.lineTo(PA.x, PA.y); else c.moveTo(PA.x, PA.y); }
+    c.strokeStyle = rgba(k % 2 ? COL.tealL : COL.glow, (k === 3 ? 0.1 : 0.14) * a); c.stroke();
+  }
+}
+function drawOrbitParticle(c, o, t, a) {
+  const g = RINGS[o.k], w = Math.abs(g.w) * (1 + 10 * inv(20, 27.85, t) ** 3);
+  const trail = clamp(w * 0.32, 0.18, 2.6), col = o.type === 2 ? COL.coralL : o.type === 1 ? COL.paper : COL.glow;
+  // trail
+  c.lineCap = 'round'; let px = 0, py = 0;
+  for (let j = 0; j <= 8; j++) {
+    ringPoint(g, o.R, o.th - Math.sign(g.w) * trail * (1 - j / 8), GP); P3(GP.x, GP.y, GP.z, PB);
+    if (j) { c.beginPath(); c.moveTo(px, py); c.lineTo(PB.x, PB.y); c.lineWidth = (0.5 + j / 8) * DPR; c.strokeStyle = rgba(col, 0.5 * (j / 8) ** 2 * a); c.stroke(); }
+    px = PB.x; py = PB.y;
+  }
+  const q = U * 0.0072 * o.s * o.size, x = o.x, y = o.y;
+  c.lineWidth = Math.max(1, 1.1 * DPR); c.strokeStyle = rgba(col, 0.95 * a); c.fillStyle = rgba(col, 0.95 * a);
+  if (o.type === 0) { glowAt(c, SPR.glow, x, y, q * 2.2, 0.9 * a); }
+  else if (o.type === 1) {                                      // a UI card
+    c.beginPath(); c.roundRect ? c.roundRect(x - q * 1.25, y - q * 0.85, q * 2.5, q * 1.7, q * 0.3) : c.rect(x - q * 1.25, y - q * 0.85, q * 2.5, q * 1.7); c.stroke();
+    c.beginPath(); c.moveTo(x - q * 0.8, y - q * 0.2); c.lineTo(x + q * 0.5, y - q * 0.2); c.moveTo(x - q * 0.8, y + q * 0.3); c.lineTo(x + q * 0.1, y + q * 0.3); c.stroke();
+    glowAt(c, SPR.paper, x, y, q * 2.4, 0.25 * a);
+  } else if (o.type === 2) {                                    // a button
+    c.beginPath(); c.arc(x, y, q * 0.9, 0, TAU); c.stroke();
+    c.beginPath(); c.arc(x, y, q * 0.35, 0, TAU); c.fill();
+    glowAt(c, SPR.coral, x, y, q * 2.4, 0.4 * a);
+  } else {                                                      // a toggle that flips
+    const on = smooth(clamp(Math.sin(t * 1.3 + o.ph) * 3 + 0.5));
+    c.beginPath(); c.roundRect ? c.roundRect(x - q * 1.2, y - q * 0.55, q * 2.4, q * 1.1, q * 0.55) : c.rect(x - q * 1.2, y - q * 0.55, q * 2.4, q * 1.1); c.stroke();
+    c.fillStyle = rgba(mixC(COL.glow, COL.coralL, on), 0.95 * a);
+    c.beginPath(); c.arc(x + lerp(-q * 0.62, q * 0.62, on), y, q * 0.36, 0, TAU); c.fill();
+  }
+}
+function drawBeams(c, t, a) {
+  c.globalCompositeOperation = 'lighter';
+  for (const e of BEAMS) {
+    const u = (t - e.t) / 0.8; if (u < 0 || u > 1) continue;
+    const g = RINGS[e.g], p = g.parts[Math.floor(e.p * g.n)];
+    ringPoint(g, ringRadius(g, t), p.th + ringAngle(g, t), GP); P3(GP.x, GP.y, GP.z, PA);
+    const b = blocks[e.b], st = b.st; P3(st.x, st.y + st.h, st.z, PB);
+    const al = Math.sin(Math.PI * u) * a, col = e.col ? COL.coralL : COL.paper;
+    const lg = c.createLinearGradient(PA.x, PA.y, PB.x, PB.y);
+    lg.addColorStop(0, rgba(col, 0.05 * al)); lg.addColorStop(1, rgba(col, 0.55 * al));
+    c.beginPath(); c.moveTo(PA.x, PA.y); c.lineTo(PB.x, PB.y); c.lineWidth = DPR; c.strokeStyle = lg; c.stroke();
+    const m = E.outCubic(clamp(u * 2.2));
+    glowAt(c, e.col ? SPR.coral : SPR.paper, lerp(PA.x, PB.x, m), lerp(PA.y, PB.y, m), cam.k * 0.28, al);
+    if (u > 0.45) {                                               // tap ripple on the structure
+      const v = (u - 0.45) / 0.55, rr = 0.15 + 0.85 * E.outCubic(v);
+      c.beginPath();
+      for (let i = 0; i <= 28; i++) { const th = (i / 28) * TAU; P3(st.x + rr * Math.cos(th), st.y + st.h, st.z + rr * Math.sin(th), PC); if (i) c.lineTo(PC.x, PC.y); else c.moveTo(PC.x, PC.y); }
+      c.strokeStyle = rgba(col, 0.75 * (1 - v) * a); c.lineWidth = 1.2 * DPR; c.stroke();
+    }
+  }
+}
+
+function drawStructure(c, t) {
+  if (t < 7.8 || t > 27.9) return;
+  const live = [];
+  for (const b of blocks) {
+    if (t < extrudeStart(b)) continue;
+    blockState(b, t, b.st);
+    P3(b.st.x, b.st.y + b.st.h / 2, b.st.z, PA); b.depth = PA.cz;
+    live.push(b);
+  }
+  live.sort((a, b) => b.depth - a.depth);
+  const oa = orbitAlpha(t);
+  let zc = 0;
+  if (oa > 0) { computeOrbit(t); P3(0, ECO_CY, 0, PA); zc = PA.cz; drawRings(c, t, oa); for (const o of OP) if (o.cz >= zc) drawOrbitParticle(c, o, t, oa); }
+  for (const b of live) drawBlock(c, b, t);
+  if (oa > 0) { for (const o of OP) if (o.cz < zc) drawOrbitParticle(c, o, t, oa); drawBeams(c, t, oa); }
+}
+
+// =====================================================================
+//  PHASE 4 — THE LAUNCH: spin, condense, singularity, shockwave
+// =====================================================================
+function drawLaunch(c, t) {
+  if (t < 20.3 || t > 28.02) return;
+  P3(0, ECO_CY, 0, PA);
+  const cx = PA.x, cy = PA.y;
+  c.globalCompositeOperation = 'lighter'; c.lineCap = 'round';
+  for (const p of INFLOW) {                                        // energy drawn inward
+    const v = (t - p.ts) / p.dur; if (v <= 0 || v >= 1) continue;
+    const R0 = p.R0 * DIAG, v2 = Math.max(0, v - 0.12);
+    const r1 = R0 * (1 - E.inCubic(v)), r2 = R0 * (1 - E.inCubic(v2));
+    const a1 = p.a + 1.6 * v * v, a2 = p.a + 1.6 * v2 * v2;
+    const hx = cx + Math.cos(a1) * r1, hy = cy + Math.sin(a1) * r1 * 0.8;
+    let tx = cx + Math.cos(a2) * r2, ty = cy + Math.sin(a2) * r2 * 0.8;
+    const dx = tx - hx, dy = ty - hy, dl = Math.hypot(dx, dy), maxL = U * 0.07;
+    if (dl > maxL) { tx = hx + (dx / dl) * maxL; ty = hy + (dy / dl) * maxL; }
+    const al = Math.sin(Math.PI * v) * 0.9, colr = COL_BY[p.col], lg = c.createLinearGradient(tx, ty, hx, hy + 0.01);
+    lg.addColorStop(0, rgba(colr, 0)); lg.addColorStop(1, rgba(colr, al));
+    c.beginPath(); c.moveTo(tx, ty); c.lineTo(hx, hy); c.lineWidth = p.w * DPR; c.strokeStyle = lg; c.stroke();
+  }
+  const u = inv(20.5, 27.85, t), col = smooth(inv(27.35, 27.85, t));
+  const coreR = U * (0.03 + 0.16 * u * u) * (1 - 0.88 * col);
+  glowAt(c, SPR.glow, cx, cy, coreR * 2.4, 0.3 + 0.45 * u);
+  glowAt(c, SPR.coral, cx, cy, coreR * 1.5, 0.3 * u);
+  glowAt(c, SPR.paper, cx, cy, coreR * 0.9, 0.25 + 0.75 * u);
+  // anamorphic streak
+  const fw = U * (0.15 + 1.3 * u * u) * (1 - 0.7 * col), fh = Math.max(2 * DPR, U * 0.012 * (1 + u));
+  c.globalAlpha = clamp(0.2 + 0.7 * u); c.drawImage(SPR.glow, cx - fw / 2, cy - fh / 2, fw, fh); c.globalAlpha = 1;
+  if (t > 27.6) glowAt(c, SPR.paper, cx, cy, U * 0.02 * (1 + Math.sin(t * 80) * 0.15), env(t, 27.6, 27.8, 27.94, 28.02));
+}
+
+function shockRing(c, T, lag, dur, col, alpha, flat, maxR, width) {
+  const u = (T - lag) / dur; if (u <= 0 || u >= 1) return;
+  const r = maxR * E.outQuart(u), a = alpha * (1 - u) ** 2.2;
+  if (r < 1) return;
+  c.save(); c.translate(CX, CY); c.scale(1, flat);
+  const g = c.createRadialGradient(0, 0, r * 0.86, 0, 0, r);
+  g.addColorStop(0, rgba(col, 0)); g.addColorStop(0.9, rgba(col, 0.14 * a)); g.addColorStop(1, rgba(col, 0));
+  c.fillStyle = g; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
+  c.restore();
+  c.beginPath(); c.ellipse(CX, CY, r, r * flat, 0, 0, TAU);
+  c.lineWidth = Math.max(0.6, width * (1 - u) * DPR); c.strokeStyle = rgba(col, a); c.stroke();
+}
+const BP = { x: 0, y: 0, v: 0 };
+function drawShock(c, t) {
+  if (t < BOOM || t > 32.4) return;
+  const T = t - BOOM;
+  c.globalCompositeOperation = 'lighter';
+  if (T < 0.8) {                                                  // the flash: hot core, cool falloff
+    const fa = Math.exp(-T * 8), fg = c.createRadialGradient(CX, CY, 0, CX, CY, DIAG * 0.55);
+    fg.addColorStop(0, rgba(COL.paper, 0.75 * fa)); fg.addColorStop(0.25, rgba(COL.glow, 0.3 * fa)); fg.addColorStop(1, rgba(COL.glow, 0));
+    c.fillStyle = fg; c.fillRect(0, 0, W, H);
+  }
+  shockRing(c, T, 0.0, 1.4, COL.paper, 1.0, 1.0, DIAG * 0.62, 2.4);
+  shockRing(c, T, 0.07, 1.7, COL.glow, 0.8, 0.34, DIAG * 0.8, 1.8);
+  shockRing(c, T, 0.16, 1.9, COL.coralL, 0.45, 1.0, DIAG * 0.56, 1.2);
+  glowAt(c, SPR.paper, CX, CY, U * (0.05 + 0.25 * E.outCubic(clamp(T / 0.5))), 0.9 * Math.exp(-T * 3.2));
+  // particles — fliers clear the frame, dust lingers and gathers into the type
+  c.lineCap = 'round';
+  const tg = TT ? TT.targets : null;
+  for (const p of BURST) {
+    if (p.tgt >= 0 && tg) continue;                               // drawn by the title
+    burstPos(p, t, BP);
+    let a;
+    if (p.dust) a = (0.55 + 0.35 * Math.sin(t * p.tw + p.ph)) * (1 - smooth(inv(30.2, 32.2, t))) * smooth(clamp(T * 8));
+    else a = (1 - clamp(T / p.dur)) * 0.95;
+    if (a <= 0.01 || BP.x < -20 || BP.x > W + 20 || BP.y < -20 || BP.y > H + 20) continue;
+    drawBurstParticle(c, p, BP, a);
+  }
+}
+function drawBurstParticle(c, p, bp, a) {
+  const col = COL_BY[p.col], sz = p.size * DPR * (p.dust ? 1.3 : 1);
+  const len = Math.min(bp.v * 0.018, U * 0.05);
+  if (len > sz * 1.5) {
+    c.beginPath(); c.moveTo(bp.x - p.ca * len, bp.y - p.sa * p.flat * len); c.lineTo(bp.x, bp.y);
+    c.lineWidth = sz; c.strokeStyle = rgba(col, a); c.stroke();
+  } else { c.fillStyle = rgba(col, a); c.fillRect(bp.x - sz / 2, bp.y - sz / 2, sz, sz); }
+}
+// =====================================================================
+//  PHASE 5 — CASA 2.0: dust → construction lines → ink → solid type
+// =====================================================================
+const TP = { x: 0, y: 0 };
+function glyphProgress(g, t) { return inv(g.t0, g.t0 + g.dur, t); }
+function glyphSolid(g, t) { return E.inOutCubic(inv(g.t0 + g.dur + 0.05, g.t0 + g.dur + 0.7, t)); }
+function coralGradient(c, T) {
+  const g = c.createLinearGradient(0, T.base - T.S * 1.05, 0, T.base + T.lw);
+  g.addColorStop(0, rgba(COL.coralL, 1)); g.addColorStop(0.55, rgba(COL.coral, 1)); g.addColorStop(1, rgba(COL.red, 1));
+  return g;
+}
+function drawTitle(c, t) {
+  const T = TT; if (!T || t < 28.4) return;
+  const { S, word, ox, base, lw } = T;
+  // construction guides: baseline, cap line, compass circles
+  const gA = env(t, 28.9, 29.4, 30.9, 31.7);
+  if (gA > 0) {
+    c.globalCompositeOperation = 'lighter'; c.setLineDash([3 * DPR, 5 * DPR]); c.lineWidth = DPR;
+    const ext = (word.width / 2 + S * 0.5) * E.outCubic(inv(28.9, 29.6, t));
+    c.beginPath();
+    for (const y of [base, base - S, base - S * 0.5]) { c.moveTo(CX - ext, y); c.lineTo(CX + ext, y); }
+    c.strokeStyle = rgba(COL.tealL, 0.35 * gA); c.stroke();
+    c.beginPath();
+    word.glyphs.forEach((g, k) => {
+      const sw = E.inOutCubic(inv(29.0 + k * 0.06, 29.8 + k * 0.06, t)); if (sw <= 0) return;
+      for (const gd of g.guides) { c.moveTo(ox + gd.x + gd.rx, base + gd.y); c.ellipse(ox + gd.x, base + gd.y, gd.rx, gd.ry, 0, 0, TAU * sw); }
+    });
+    c.strokeStyle = rgba(COL.glow, 0.28 * gA); c.stroke();
+    c.setLineDash([]);
+  }
+  // particles travelling from the shockwave dust into the strokes
+  if (t < 32.2) {
+    c.globalCompositeOperation = 'lighter';
+    for (const p of BURST) {
+      if (p.tgt < 0) continue;
+      const tg = T.targets[p.tgt], td = tg.ta - TRAVEL;
+      burstPos(p, t, BP);
+      let x = BP.x, y = BP.y, a = (0.6 + 0.3 * Math.sin(t * p.tw + p.ph)) * smooth(clamp((t - BOOM) * 8)), m = 0;
+      if (t > td) {
+        m = E.inOutCubic(clamp((t - td) / TRAVEL));
+        x = lerp(BP.x, tg.x, m); y = lerp(BP.y, tg.y, m); a = lerp(a, 1, m);
+        BP.v *= 1 - m;
+      }
+      if (t > tg.ta) a *= 1 - smooth(clamp((t - tg.ta) / 0.8));
+      if (a <= 0.01) continue;
+      BP.x = x; BP.y = y;
+      drawBurstParticle(c, p, BP, a);
+      if (m > 0.15 && m < 1 && (p.tgt & 3) === 0) glowAt(c, SPR_BY[p.col], x, y, 3.2 * DPR * p.size, 0.3 * a);
+      if (t > tg.ta && t < tg.ta + 0.25) glowAt(c, tg.coral ? SPR.coral : SPR.glow, tg.x, tg.y, S * 0.05, (1 - (t - tg.ta) / 0.25) * 0.5);
+    }
+  }
+  // the strokes: thin luminous pen → solid letterform
+  c.save();
+  c.beginPath(); c.rect(0, base - S * 1.3, W, S * 1.3 + lw / 2); c.clip();  // flat baseline for the A legs
+  c.lineCap = 'butt'; c.lineJoin = 'miter'; c.miterLimit = 8;
+  let coralG = null;
+  for (const g of word.glyphs) {
+    const pg = glyphProgress(g, t); if (pg <= 0) continue;
+    const so = glyphSolid(g, t);
+    if (g.dot) {
+      const r = lw * 0.62 * E.outBack(clamp(pg));
+      c.globalCompositeOperation = 'source-over';
+      c.fillStyle = coralG || (coralG = coralGradient(c, T));
+      c.beginPath(); c.arc(ox + g.dot.x, base + g.dot.y - lw * 0.1, Math.max(0.1, r), 0, TAU); c.fill(); c.globalAlpha = 1;
+      continue;
+    }
+    const drawn = pg * g.len;
+    const path = () => {
+      c.beginPath(); let rem = drawn;
+      for (const st of g.strokes) { if (rem <= 0) break; tracePartial(c, st, Math.min(rem, st.len), ox, base); rem -= st.len; }
+    };
+    // pen (luminous construction stroke)
+    if (so < 1) {
+      c.globalCompositeOperation = 'lighter';
+      path(); c.lineWidth = lerp(Math.max(1.2 * DPR, S * 0.014), lw, so); c.strokeStyle = rgba(COL.glow, 0.95 * (1 - so)); c.stroke();
+      if (pg < 1) { glyphPoint(g, drawn, TP); glowAt(c, SPR.paper, ox + TP.x, base + TP.y, S * 0.09, 0.95); }
+    }
+    // solid letterform
+    if (so > 0) {
+      c.globalCompositeOperation = 'source-over';
+      path(); c.lineWidth = lerp(S * 0.02, lw, so);
+      c.strokeStyle = g.coral ? (coralG || (coralG = coralGradient(c, T))) : rgba(COL.paper, 1);
+      c.globalAlpha = so; c.stroke(); c.globalAlpha = 1;
+      if (g.coral) {                                               // the site's "emotion" glow
+        c.globalCompositeOperation = 'lighter';
+        path(); c.lineWidth = lw * 2.6; c.strokeStyle = rgba(COL.red, 0.12 * so); c.stroke();
+      }
+    }
+    // drafting nodes at stroke terminals
+    let acc = 0;
+    for (const st of g.strokes) {
+      for (const [d, px, py] of [[acc, st.pts[0], st.pts[1]], [acc + st.len, st.pts[st.pts.length - 2], st.pts[st.pts.length - 1]]]) {
+        const tn = g.t0 + (d / g.len) * g.dur, dt = t - tn;
+        if (dt < 0 || dt > 1.2 || st.closed) continue;
+        const a = 1 - dt / 1.2, s = S * 0.07;
+        c.globalCompositeOperation = 'lighter'; c.lineWidth = DPR; c.strokeStyle = rgba(COL.glow, 0.8 * a);
+        c.beginPath(); c.moveTo(ox + px - s, base + py); c.lineTo(ox + px + s, base + py); c.moveTo(ox + px, base + py - s); c.lineTo(ox + px, base + py + s); c.stroke();
+      }
+      acc += st.len;
+    }
+  }
+  // glint: a sheet of light slides across the finished glass
+  const gl = inv(GLINT_T0, GLINT_T0 + 0.9, t);
+  if (gl > 0 && gl < 1) {
+    const x0 = ox - S, x1 = ox + word.width + S, gx = lerp(x0, x1, E.inOutSine(gl)), bw = S * 0.7;
+    const lg = c.createLinearGradient(gx - bw, base - S, gx + bw, base);
+    lg.addColorStop(0, rgba(COL.paper, 0)); lg.addColorStop(0.5, rgba(COL.paper, 0.85)); lg.addColorStop(1, rgba(COL.paper, 0));
+    c.globalCompositeOperation = 'lighter'; c.strokeStyle = lg; c.lineWidth = lw * 1.02;
+    for (const g of word.glyphs) {
+      if (g.dot) continue;
+      c.beginPath(); for (const st of g.strokes) tracePartial(c, st, st.len, ox, base); c.stroke();
+    }
+  }
+  c.restore();
+  drawSubtitle(c, t);
+}
+
+function drawSubtitle(c, t) {
+  const T = TT; if (t < SUB_T0 - 0.4) return;
+  c.globalCompositeOperation = 'source-over';
+  c.font = T.subFont; c.textBaseline = 'alphabetic'; c.textAlign = 'left';
+  let x = CX - T.subTotal / 2, caretX = x, typed = 0;
+  const y = T.subBase, fs = T.subSize;
+  let emo = null;
+  for (let k = 0; k < SUB_TEXT.length; k++) {
+    const dt = t - SUB_TIMES[k];
+    if (dt < 0) break;
+    typed = k + 1;
+    const ch = SUB_TEXT[k], fresh = clamp(dt / 0.14);
+    if (k >= SUB_SPLIT) {
+      if (!emo) {
+        emo = c.createLinearGradient(0, y - fs * 0.8, 0, y + fs * 0.1);
+        emo.addColorStop(0, rgba(COL.coralL, 1)); emo.addColorStop(0.75, rgba(COL.red, 1));
+      }
+      c.fillStyle = emo; c.globalAlpha = fresh;
+      c.shadowColor = rgba([205, 92, 92], 0.6); c.shadowBlur = fs * 0.9;
+    } else {
+      c.fillStyle = rgba(mixC(COL.glow, COL.paper, fresh), 0.88); c.globalAlpha = 1;
+      c.shadowBlur = 0;
+    }
+    c.fillText(ch, x, y);
+    x += T.subW[k] + T.subSp; caretX = x;
+  }
+  c.shadowBlur = 0; c.globalAlpha = 1;
+  // block caret — the site's typewriter signature; turns red on the payoff word
+  const typing = typed > 0 && typed < SUB_TEXT.length && t - SUB_TIMES[typed - 1] < 0.12;
+  const breathe = 0.3 + 0.7 * (0.5 + 0.5 * Math.cos((t - SUB_T0) * TAU / 1.7));
+  const ca = (typing ? 1 : breathe) * smooth(inv(SUB_T0 - 0.4, SUB_T0 - 0.1, t));
+  if (ca > 0.01) {
+    const red = typed > SUB_SPLIT;
+    const cw = Math.max(1.5 * DPR, fs * 0.085), chh = fs * 0.84;
+    const cxp = caretX + fs * 0.14, cyp = y - fs * 0.71;
+    c.fillStyle = rgba(red ? COL.red : COL.paper, ca);
+    c.shadowColor = red ? rgba(COL.red, ca) : rgba(COL.paper, 0.55 * ca); c.shadowBlur = fs * (red ? 0.9 : 0.6);
+    c.fillRect(cxp, cyp, cw, chh);
+    c.shadowBlur = 0;
+  }
+  // signature line: where the new home lives
+  const ua = smooth(inv(GLINT_T0 + 0.1, GLINT_T0 + 0.8, t));
+  if (ua > 0) {
+    c.font = `500 ${T.urlSize}px ${FONT_MONO}`;
+    c.fillStyle = rgba(COL.glow, 0.62 * ua);
+    const txt = 'CASADUEPUNTOZERO.NET';
+    const w = trackWidth(c, txt, T.urlSize * 0.32);
+    track(c, txt, CX, T.urlBase, T.urlSize * 0.32, 'center');
+    c.fillStyle = rgba(COL.tealL, 0.4 * ua);
+    const lx = w / 2 + T.urlSize * 1.4, ll = T.urlSize * 3 * E.outCubic(inv(GLINT_T0 + 0.1, GLINT_T0 + 1.0, t));
+    c.fillRect(CX - lx - ll, T.urlBase - T.urlSize * 0.38, ll, Math.max(1, DPR * 0.8));
+    c.fillRect(CX + lx, T.urlBase - T.urlSize * 0.38, ll, Math.max(1, DPR * 0.8));
+  }
+}
+
+// =====================================================================
+//  HUD — a drafting sheet's title block
+// =====================================================================
+const CHAPTERS = [[0, 'BLUEPRINT'], [5, 'FOUNDATION'], [12, 'ECOSYSTEM'], [20, 'LAUNCH'], [28, 'CASA 2.0']];
+const SCR = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/·';
+function chapterAt(t) { let k = 0; for (let i = 0; i < CHAPTERS.length; i++) if (t >= CHAPTERS[i][0]) k = i; return k; }
+function scramble(s, t, t0, seed) {
+  const u = (t - t0) / 0.45; if (u >= 1) return s;
+  let o = '';
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] === ' ' || i / s.length < u) o += s[i];
+    else o += SCR[Math.floor(hash(Math.floor(t * 30) + i * 13, seed) * SCR.length)];
+  }
+  return o;
+}
+function drawHUD(c, t) {
+  const a = env(t, 0.8, 1.8, 26.0, 27.2); if (a <= 0) return;
+  const m = Math.round(Math.max(16 * DPR, U * 0.04)), fs = Math.round(Math.max(9.5 * DPR, U * 0.0115));
+  const narrow = W / DPR < 560;
+  c.globalCompositeOperation = 'source-over'; c.textBaseline = 'alphabetic';
+  c.font = `500 ${fs}px ${FONT_MONO}`;
+  const sp = fs * 0.22;
+  // registration marks
+  c.strokeStyle = rgba(COL.glow, 0.3 * a); c.lineWidth = DPR;
+  const L = fs * 1.3, q = m * 0.45;
+  c.beginPath();
+  for (const [x, y, sx, sy] of [[q, q, 1, 1], [W - q, q, -1, 1], [q, H - q, 1, -1], [W - q, H - q, -1, -1]]) { c.moveTo(x + sx * L, y); c.lineTo(x, y); c.lineTo(x, y + sy * L); }
+  c.stroke();
+  const k = chapterAt(t), ch = CHAPTERS[k];
+  const label = `0${k + 1} — ${ch[1]}`;
+  c.fillStyle = rgba(COL.paper, 0.72 * a);
+  track(c, scramble(label, t, ch[0], k + 1), m, m + fs, sp);
+  c.fillStyle = rgba(COL.glow, 0.5 * a);
+  const tc = (v) => `00:${String(Math.floor(v)).padStart(2, '0')}.${String(Math.floor((v % 1) * 100)).padStart(2, '0')}`;
+  track(c, `${tc(Math.max(0, t))} / ${tc(DUR)}`, W - m, m + fs, sp, 'right');
+  // progress hairline under the chapter label
+  const pw = Math.min(W * 0.18, fs * 16);
+  c.fillStyle = rgba(COL.tealL, 0.25 * a); c.fillRect(m, m + fs * 1.9, pw, Math.max(1, DPR));
+  c.fillStyle = rgba(COL.glow, 0.8 * a); c.fillRect(m, m + fs * 1.9, pw * clamp(t / DUR), Math.max(1, DPR));
+  // coordinates of the office (Tivoli, from the site's structured data)
+  c.fillStyle = rgba(COL.glow, 0.45 * a);
+  track(c, '41.9626° N · 12.7958° E', m, H - m, sp);
+  if (narrow) return;
+  // title block
+  const rows = ['CASA 2.0 — DIGITAL HOME', 'TIVOLI (RM) · EST. 1994', `SHEET 0${k + 1}/05 · ${ch[1]}`];
+  const rw = Math.max(...rows.map(r => trackWidth(c, r, sp))) + fs * 2.8, rh = fs * 1.9;
+  const bx = W - m - rw, by = H - m - rh * 3 + fs * 0.6;
+  c.strokeStyle = rgba(COL.glow, 0.28 * a); c.lineWidth = DPR;
+  c.strokeRect(bx, by, rw, rh * 3);
+  c.beginPath(); c.moveTo(bx, by + rh); c.lineTo(bx + rw, by + rh); c.moveTo(bx, by + rh * 2); c.lineTo(bx + rw, by + rh * 2); c.stroke();
+  rows.forEach((r, i) => {
+    c.fillStyle = rgba(i === 0 ? COL.paper : COL.glow, (i === 0 ? 0.7 : 0.5) * a);
+    track(c, i === 2 ? scramble(r, t, ch[0], 40 + k) : r, bx + fs * 1.4, by + rh * i + rh * 0.66, sp);
+  });
+}
+
+// =====================================================================
+//  POST — bloom, grain, vignette
+// =====================================================================
+function bloom(k) {
+  if (k <= 0) return;
+  const [c1, c2] = blc;
+  c1.globalCompositeOperation = c2.globalCompositeOperation = 'copy';
+  c1.drawImage(layer, 0, 0, bl[0].width, bl[0].height);            // 1/4 res
+  if (HAS_FILTER) c2.filter = `blur(${Math.max(1, bl[1].width / 480).toFixed(1)}px)`;
+  c2.drawImage(bl[0], 0, 0, bl[1].width, bl[1].height);            // 1/8 res, softened
+  if (HAS_FILTER) c2.filter = 'none';
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  ctx.globalAlpha = 0.45 * k; ctx.drawImage(bl[0], 0, 0, W, H);
+  ctx.globalAlpha = 0.8 * k; ctx.drawImage(bl[1], 0, 0, W, H);
+  ctx.restore();
+}
+function drawGrain(c, t) {
+  if (!grainPat) grainPat = c.createPattern(grainTile, 'repeat');
+  const f = Math.floor(t * 24), ox = (hash(f, 1) * 128) | 0, oy = (hash(f, 2) * 128) | 0;
+  c.save(); c.globalCompositeOperation = 'overlay'; c.globalAlpha = 0.08;
+  c.translate(-ox, -oy); c.fillStyle = grainPat; c.fillRect(ox, oy, W, H); c.restore();
+}
+function drawVignette(c) {
+  const g = c.createRadialGradient(CX, CY, DIAG * 0.28, CX, CY, DIAG * 0.62);
+  g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0.55)');
+  c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1; c.fillStyle = g; c.fillRect(0, 0, W, H);
+}
+// =====================================================================
+//  SOUND — one continuous score, synthesised live with the Web Audio API
+// =====================================================================
+const Sound = (() => {
+  let ac = null, out = null, verbIn = null, dlyIn = null, noiseBuf = null, S_ = null;
+  const hasPan = () => !!(ac && ac.createStereoPanner);
+
+  function impulse(sec, decay) {
+    const sr = ac.sampleRate, len = Math.floor(sr * sec), buf = ac.createBuffer(2, len, sr), r = rng(21);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = buf.getChannelData(ch); let lp = 0;
+      for (let i = 0; i < len; i++) {
+        const x = i / len, k = 0.2 + 0.72 * x;                 // the tail darkens as it decays
+        lp += ((r() * 2 - 1) - lp) * (1 - k);
+        d[i] = lp * Math.pow(1 - x, decay) * Math.min(1, i / (sr * 0.006));
+      }
+    }
+    return buf;
+  }
+  function noise(sec) {
+    const sr = ac.sampleRate, len = Math.floor(sr * sec), buf = ac.createBuffer(1, len, sr), d = buf.getChannelData(0), r = rng(8);
+    for (let i = 0; i < len; i++) d[i] = r() * 2 - 1;
+    return buf;
+  }
+  function satCurve(k) {
+    const n = 1024, c = new Float32Array(n);
+    for (let i = 0; i < n; i++) { const x = (i / (n - 1)) * 2 - 1; c[i] = Math.tanh(k * x) / Math.tanh(k); }
+    return c;
+  }
+  function ensure() {
+    if (ac) return ac;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    try { ac = new AC({ latencyHint: 'interactive' }); } catch (e) { try { ac = new AC(); } catch (e2) { return null; } }
+    const comp = ac.createDynamicsCompressor();
+    comp.threshold.value = -16; comp.knee.value = 10; comp.ratio.value = 3.5; comp.attack.value = 0.004; comp.release.value = 0.3;
+    out = ac.createGain(); out.gain.value = 0.85;
+    out.connect(comp); comp.connect(ac.destination);
+    const verb = ac.createConvolver(); verb.buffer = impulse(4.6, 2.4);
+    verbIn = ac.createGain(); const verbOut = ac.createGain(); verbOut.gain.value = 0.9;
+    verbIn.connect(verb); verb.connect(verbOut); verbOut.connect(out);
+    // ping-pong delay for the crystalline ticks (dotted eighth at 120 BPM)
+    dlyIn = ac.createGain();
+    const hp = ac.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 900;
+    const dl = ac.createDelay(1), dr = ac.createDelay(1), f1 = ac.createGain(), f2 = ac.createGain(), mg = ac.createChannelMerger(2), dOut = ac.createGain();
+    dl.delayTime.value = dr.delayTime.value = 0.375; f1.gain.value = f2.gain.value = 0.34; dOut.gain.value = 0.5;
+    dlyIn.connect(hp); hp.connect(dl); dl.connect(f1); f1.connect(dr); dr.connect(f2); f2.connect(dl);
+    dl.connect(mg, 0, 0); dr.connect(mg, 0, 1); mg.connect(dOut); dOut.connect(out);
+    const dv = ac.createGain(); dv.gain.value = 0.25; dOut.connect(dv); dv.connect(verbIn);
+    noiseBuf = noise(2.5);
+    return ac;
+  }
+
+  // ---------------------------------------------------------- the score
+  function buildEvents() {
+    const ev = [];
+    const PENTA = [1174.66, 1318.51, 1479.98, 1760.0, 1975.53];      // D major pentatonic, 6th octave
+    const note = i => PENTA[((i % 5) + 5) % 5] * Math.pow(2, Math.floor(i / 5));
+    // 0–5 s: every lighting node is a crystalline tick
+    let last = -1;
+    for (const n of [...nodes].filter(n => n.active || n.major).sort((a, b) => a.tl - b.tl)) {
+      if (n.tl - last < 0.085 || n.tl > 5) continue;
+      last = n.tl;
+      ev.push({ t: n.tl, f: note((Math.abs(n.i) + Math.abs(n.j)) % 8), g: n.major ? 0.07 : 0.045, pan: (n.i / N) * 0.8, dec: 0.09, kind: 0 });
+    }
+    for (const b of blocks) ev.push({ t: planStart(b), f: note(b.ord % 5) / 2, g: 0.028, pan: clamp(b.px / 5, -0.8, 0.8), dec: 0.2, kind: 0 });
+    // 5–20 s: the code pulse — sixteenths at 120 BPM
+    const PAT = [1, 0, 0.5, 0, 0.8, 0, 0.5, 0.4, 1, 0, 0.5, 0, 0.8, 0.4, 0.6, 0.3], MEL = [0, 2, 4, 3, 1, 4, 2, 5];
+    for (let k = 0, t = 5.0; t < 20.0; k++, t = 5.0 + k * 0.125) {
+      const v = PAT[k % 16]; if (!v) continue;
+      const fade = lerp(1, 0.55, inv(12, 14, t)) * smooth(inv(5.0, 6.0, t));
+      ev.push({ t, f: note(MEL[k % 8] + (k % 32 < 16 ? 0 : 1)), g: 0.05 * v * fade, pan: Math.sin(k * 1.7) * 0.6, dec: 0.05 + 0.04 * v, kind: 0 });
+    }
+    for (const b of blocks) ev.push({ t: extrudeStart(b), f: note(b.ord % 7) / 2, g: 0.07, pan: clamp(b.px / 5, -0.8, 0.8), dec: 0.35, kind: 1 });
+    BEAMS.forEach((e, i) => ev.push({ t: e.t + 0.3, f: note(5 + (i % 5)), g: 0.035, pan: hash(i, 77) - 0.5, dec: 0.3, kind: 2 }));
+    // 20–27.85 s: the ticks accelerate and climb
+    for (let k = 0, t = 20.0; t < 27.8; k++) {
+      const u = inv(20, 27.8, t);
+      ev.push({ t, f: 1760 * Math.pow(2, u) * (k % 2 ? 1.5 : 1), g: 0.035 + 0.05 * u, pan: (k % 2 ? 0.5 : -0.5) * (1 - u * 0.5), dec: lerp(0.06, 0.025, u), kind: 0 });
+      t += lerp(0.125, 0.03, u * u);
+    }
+    // 28 s+: each glyph rings a note of D major 9; the subtitle types softly
+    const ARP = [1174.66, 1479.98, 1760.0, 2217.46, 2637.02, 2349.32, 2959.96];
+    for (let k = 0; k < 7; k++) ev.push({ t: TITLE_T0 + k * GLYPH_STAGGER, f: ARP[k], g: 0.05, pan: (k - 3) / 4, dec: 1.1, kind: 2 });
+    SUB_TIMES.forEach((tt, k) => { if (SUB_TEXT[k] !== ' ') ev.push({ t: tt, f: 3600 + hash(k, 5) * 1400, g: 0.014, pan: (k / SUB_TEXT.length - 0.5) * 0.6, dec: 0.025, kind: 3 }); });
+    return ev.filter(e => e.g > 0.002).sort((a, b) => a.t - b.t);
+  }
+  const PARTIALS = [
+    [[1, 1, 'sine'], [2.76, 0.28, 'sine']],                       // crystal tick
+    [[1, 1, 'triangle'], [2, 0.3, 'sine']],                       // pluck
+    [[1, 1, 'sine'], [2, 0.24, 'sine'], [3.01, 0.12, 'sine']],    // bell
+    [[1, 1, 'sine']],                                             // key click
+  ];
+  const SEND_D = [0.35, 0.2, 0.3, 0.05], SEND_V = [0.25, 0.35, 0.55, 0.15];
+  function tick(e, s) {
+    const t0 = s.T0 + e.t; if (t0 < ac.currentTime - 0.005) return;
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(e.g, t0 + 0.0015); g.gain.exponentialRampToValueAtTime(0.0001, t0 + e.dec);
+    let dst = g;
+    if (hasPan()) { const p = ac.createStereoPanner(); p.pan.value = clamp(e.pan, -1, 1); g.connect(p); dst = p; }
+    dst.connect(s.bus);
+    const sd = ac.createGain(); sd.gain.value = SEND_D[e.kind]; dst.connect(sd); sd.connect(s.ds);
+    const sv = ac.createGain(); sv.gain.value = SEND_V[e.kind]; dst.connect(sv); sv.connect(s.vs);
+    for (const [mul, amp, type] of PARTIALS[e.kind]) {
+      const o = ac.createOscillator(), og = ac.createGain();
+      o.type = type; o.frequency.setValueAtTime(e.f * mul * (e.kind === 3 ? 1.4 : 1), t0);
+      if (e.kind === 3) o.frequency.exponentialRampToValueAtTime(e.f * mul, t0 + 0.015);
+      og.gain.value = amp; o.connect(og); og.connect(g);
+      o.start(t0); o.stop(t0 + e.dec + 0.05);
+    }
+  }
+
+  function continuous(s) {
+    const at = t => s.T0 + Math.max(0, t), { bus, vs } = s;
+    const osc = (type, f, t0, t1) => { const o = ac.createOscillator(); o.type = type; o.frequency.setValueAtTime(f, at(t0)); o.start(at(t0)); o.stop(at(t1)); s.nodes.push(o); return o; };
+    const gain = (v, ...to) => { const g = ac.createGain(); g.gain.value = v; to.forEach(d => g.connect(d)); return g; };
+    const pan = (v, to) => { if (!hasPan()) return to; const p = ac.createStereoPanner(); p.pan.value = v; p.connect(to); return p; };
+
+    // ---------- 0–27.85 s: deep, slow sine bass (D → G → E → A pedal)
+    const bassEnv = gain(0, bus), bassLP = ac.createBiquadFilter(), trem = gain(1);
+    bassLP.type = 'lowpass'; bassLP.frequency.value = 420; trem.connect(bassLP); bassLP.connect(bassEnv);
+    const ROOTS = [[0, 73.42], [12, 98.0], [16, 82.41], [20, 55.0]];
+    const voice = (type, mul, amp) => {
+      const o = osc(type, ROOTS[0][1] * mul, 0, 28.1), g = gain(amp, trem); o.connect(g);
+      for (let i = 1; i < ROOTS.length; i++) o.frequency.setTargetAtTime(ROOTS[i][1] * mul, at(ROOTS[i][0]), 0.35);
+      return g;
+    };
+    voice('sine', 1, 0.62); voice('sine', 0.5, 0.42); voice('triangle', 2, 0.07);
+    const fifth = voice('sine', 1.5, 0); fifth.gain.setValueAtTime(0, at(5)); fifth.gain.linearRampToValueAtTime(0.22, at(8));
+    bassEnv.gain.setValueAtTime(0, at(0)); bassEnv.gain.linearRampToValueAtTime(0.34, at(2.5));
+    bassEnv.gain.setValueAtTime(0.34, at(12)); bassEnv.gain.linearRampToValueAtTime(0.27, at(15));   // room for the pad
+    bassEnv.gain.setValueAtTime(0.27, at(20)); bassEnv.gain.linearRampToValueAtTime(0.5, at(27.6));
+    bassEnv.gain.setTargetAtTime(0, at(27.85), 0.015);
+    const lfo = osc('sine', 0.14, 0, 28.1), lfoG = gain(0);
+    lfo.frequency.setValueAtTime(0.14, at(20)); lfo.frequency.exponentialRampToValueAtTime(11, at(27.8));
+    lfoG.gain.setValueAtTime(0, at(0)); lfoG.gain.linearRampToValueAtTime(0.18, at(3)); lfoG.gain.setValueAtTime(0.18, at(20)); lfoG.gain.linearRampToValueAtTime(0.4, at(27.6));
+    lfo.connect(lfoG); lfoG.connect(trem.gain);
+
+    // ---------- 12–27.85 s: warm low-passed sawtooth pad, swelling, then climbing
+    const padF = ac.createBiquadFilter(); padF.type = 'lowpass'; padF.Q.value = 0.9;
+    padF.frequency.setValueAtTime(160, at(12)); padF.frequency.exponentialRampToValueAtTime(1500, at(20)); padF.frequency.exponentialRampToValueAtTime(6500, at(27.85));
+    const padLfo = osc('sine', 0.11, 12, 28.1), padLfoG = gain(0); padLfoG.gain.setValueAtTime(0, at(12)); padLfoG.gain.linearRampToValueAtTime(260, at(18));
+    padLfo.connect(padLfoG); padLfoG.connect(padF.frequency);
+    const padG = gain(0, bus, gain(0.55, vs));
+    padG.gain.setValueAtTime(0.0001, at(12)); padG.gain.exponentialRampToValueAtTime(0.11, at(20));
+    padG.gain.linearRampToValueAtTime(0.2, at(27.7)); padG.gain.setTargetAtTime(0, at(27.85), 0.012);
+    padF.connect(padG);
+    const CHORDS = [[12, [98.0, 146.83, 185.0, 246.94]], [16, [82.41, 146.83, 185.0, 246.94]], [20, [110.0, 164.81, 220.0, 277.18]]];
+    const rise = new Float32Array(48);
+    [-8, 8].forEach(det => {
+      for (let i = 0; i < 48; i++) rise[i] = det + 700 * (i / 47) ** 2;   // +7 semitones of tension
+      for (let v = 0; v < 4; v++) {
+        const o = osc('sawtooth', CHORDS[0][1][v], 12, 28.1);
+        o.detune.setValueAtTime(det, at(12)); o.detune.setValueCurveAtTime(rise.slice(), at(20), 7.85);
+        CHORDS.slice(1).forEach(([tt, fr]) => o.frequency.setTargetAtTime(fr[v], at(tt), 0.3));
+        const g = gain(0.5); o.connect(g); g.connect(pan([-0.55, -0.18, 0.18, 0.55][v], padF));
+      }
+    });
+
+    // ---------- 20–27.85 s: white-noise riser
+    [[-0.6, 0.8, 0], [0.6, 1.1, 0.7]].forEach(([p, q, off]) => {
+      const src = ac.createBufferSource(); src.buffer = noiseBuf; src.loop = true;
+      const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = q;
+      bp.frequency.setValueAtTime(320, at(20)); bp.frequency.exponentialRampToValueAtTime(9500, at(27.85));
+      const g = gain(0); g.gain.setValueAtTime(0.0001, at(20)); g.gain.exponentialRampToValueAtTime(0.3, at(27.8)); g.gain.setTargetAtTime(0, at(27.85), 0.01);
+      src.connect(bp); bp.connect(g); g.connect(pan(p, bus)); const sv = gain(0.3, vs); g.connect(sv);
+      src.start(at(20), off); src.stop(at(28.2)); s.nodes.push(src);
+    });
+
+    // ---------- 28 s: the boom — exponentially decaying oscillator into a long room
+    const B = 28.0;
+    const body = osc('sine', 130, B, B + 5), bodyG = gain(0, bus, gain(0.45, vs)), sat = ac.createWaveShaper();
+    body.frequency.exponentialRampToValueAtTime(38, at(B + 0.85)); body.frequency.exponentialRampToValueAtTime(30, at(B + 3));
+    sat.curve = satCurve(2.2); sat.oversample = '2x'; body.connect(sat); sat.connect(bodyG);
+    bodyG.gain.setValueAtTime(0.0001, at(B)); bodyG.gain.exponentialRampToValueAtTime(0.95, at(B + 0.008));
+    bodyG.gain.exponentialRampToValueAtTime(0.25, at(B + 0.6)); bodyG.gain.exponentialRampToValueAtTime(0.0001, at(B + 4.2));
+    const sub = osc('sine', 52, B, B + 5.2), subG = gain(0, bus);
+    sub.frequency.exponentialRampToValueAtTime(31, at(B + 3.5)); sub.connect(subG);
+    subG.gain.setValueAtTime(0.0001, at(B)); subG.gain.exponentialRampToValueAtTime(0.4, at(B + 0.02)); subG.gain.exponentialRampToValueAtTime(0.0001, at(B + 5));
+    const nb = ac.createBufferSource(); nb.buffer = noiseBuf;
+    const nlp = ac.createBiquadFilter(); nlp.type = 'lowpass'; nlp.frequency.setValueAtTime(2400, at(B)); nlp.frequency.exponentialRampToValueAtTime(120, at(B + 1.5));
+    const nG = gain(0, bus, gain(0.8, vs));
+    nG.gain.setValueAtTime(0.0001, at(B)); nG.gain.exponentialRampToValueAtTime(0.5, at(B + 0.005)); nG.gain.exponentialRampToValueAtTime(0.0001, at(B + 2.2));
+    nb.connect(nlp); nlp.connect(nG); nb.start(at(B)); nb.stop(at(B + 2.4)); s.nodes.push(nb);
+
+    // ---------- 28–35 s: lush D major 9 chord, slowly fading out
+    const chF = ac.createBiquadFilter(); chF.type = 'lowpass'; chF.Q.value = 0.6;
+    chF.frequency.setValueAtTime(700, at(B)); chF.frequency.exponentialRampToValueAtTime(2600, at(30.5)); chF.frequency.exponentialRampToValueAtTime(900, at(35));
+    const chG = gain(0, bus, gain(0.7, vs)); chF.connect(chG);
+    chG.gain.setValueAtTime(0.0001, at(B + 0.05)); chG.gain.exponentialRampToValueAtTime(0.16, at(29.3));
+    chG.gain.setValueAtTime(0.16, at(32.0)); chG.gain.exponentialRampToValueAtTime(0.045, at(34.2));   // slow fade…
+    chG.gain.exponentialRampToValueAtTime(0.0001, at(35.2));                                          // …out with the picture
+    const CH = [73.42, 110.0, 146.83, 185.0, 220.0, 277.18, 329.63];   // D2 A2 D3 F#3 A3 C#4 E4
+    CH.forEach((f, i) => {
+      const p = pan((i / (CH.length - 1)) * 1.2 - 0.6, chF);
+      [[-6, 'sawtooth', 0.32], [6, 'sawtooth', 0.32], [0, i < 2 ? 'sine' : 'triangle', 0.45]].forEach(([det, type, amp]) => {
+        const o = osc(type, f, B, 35.4); o.detune.value = det; const g = gain(amp); o.connect(g); g.connect(p);
+      });
+    });
+
+    // ---------- master: fade with the picture
+    [s.bus, s.vs, s.ds].forEach(g => { g.gain.setValueAtTime(1, at(34.2)); g.gain.exponentialRampToValueAtTime(0.0001, at(35.25)); });
+  }
+
+  function stop() {
+    if (!S_ || !ac) return;
+    const s = S_, now = ac.currentTime;
+    [s.bus, s.vs, s.ds].forEach(g => { g.gain.cancelScheduledValues(now); g.gain.setValueAtTime(g.gain.value, now); g.gain.linearRampToValueAtTime(0, now + 0.08); });
+    setTimeout(() => { try { s.bus.disconnect(); s.vs.disconnect(); s.ds.disconnect(); } catch (e) { /* already gone */ } s.nodes.forEach(n => { try { n.stop(); } catch (e) { /* stopped */ } }); }, 250);
+    S_ = null;
+  }
+  function start() {                         // must run inside a user gesture
+    if (!ensure()) return false;
+    if (ac.state !== 'running') { const r = ac.resume(); if (r && r.catch) r.catch(() => {}); }
+    stop();
+    const s = { T0: ac.currentTime + 0.12, bus: ac.createGain(), vs: ac.createGain(), ds: ac.createGain(), nodes: [], events: buildEvents(), idx: 0 };
+    s.bus.connect(out); s.vs.connect(verbIn); s.ds.connect(dlyIn);
+    S_ = s;
+    continuous(s);
+    pump();
+    return true;
+  }
+  function pump() {                          // look-ahead scheduler for the event score
+    const s = S_; if (!s || !ac) return;
+    const horizon = ac.currentTime - s.T0 + 1.6;               // survives background-tab timer throttling
+    while (s.idx < s.events.length && s.events[s.idx].t < horizon) tick(s.events[s.idx++], s);
+  }
+  function time() {                          // film time as heard (null → use the frame clock)
+    if (!S_ || !ac || ac.state !== 'running') return null;
+    return ac.currentTime - S_.T0 - (ac.outputLatency || 0);
+  }
+  return { start, stop, pump, time };
+})();
+// =====================================================================
+//  START OVERLAY + END CARD (procedural)
+// =====================================================================
+const APP = { mode: 'intro', p0: 0, startMs: 0, endMs: 0, debugT: 0, mx: -1, my: -1, pill: null, lastNow: 0, ema: 0, lastDrop: 0 };
+let QUALITY = 1;                                                    // render scale, lowered only if frames run long
+let introWord = null, introS = 0;
+function roundRectPath(c, x, y, w, h, r) {
+  r = Math.min(r, h / 2, w / 2);
+  c.beginPath();
+  c.moveTo(x + r, y); c.lineTo(x + w - r, y); c.arc(x + w - r, y + r, r, -Math.PI / 2, 0);
+  c.lineTo(x + w, y + h - r); c.arc(x + w - r, y + h - r, r, 0, Math.PI / 2);
+  c.lineTo(x + r, y + h); c.arc(x + r, y + h - r, r, Math.PI / 2, Math.PI);
+  c.lineTo(x, y + r); c.arc(x + r, y + r, r, Math.PI, Math.PI * 1.5); c.closePath();
+}
+function drawWordmark(c, word, ox, base, lw, a) {
+  c.save(); c.lineCap = 'butt'; c.lineJoin = 'miter'; c.miterLimit = 8;
+  c.beginPath(); c.rect(0, base - word.S * 1.3, W, word.S * 1.3 + lw / 2); c.clip();
+  const cg = c.createLinearGradient(0, base - word.S, 0, base);
+  cg.addColorStop(0, rgba(COL.coralL, a)); cg.addColorStop(1, rgba(COL.red, a));
+  word.glyphs.forEach((g, k) => {
+    c.strokeStyle = k >= 4 ? cg : rgba(COL.paper, a); c.fillStyle = cg; c.lineWidth = lw;
+    if (g.dot) { c.beginPath(); c.arc(ox + g.dot.x, base + g.dot.y - lw * 0.1, lw * 0.62, 0, TAU); c.fill(); return; }
+    c.beginPath(); for (const st of g.strokes) tracePartial(c, st, st.len, ox, base); c.stroke();
+  });
+  c.restore();
+}
+const DOTB = Array.from({ length: 8 }, () => null);
+function drawIntro(c, now, alpha) {
+  const t = now / 1000;
+  c.save();
+  c.globalCompositeOperation = 'source-over'; c.globalAlpha = alpha;
+  c.fillStyle = '#07090C'; c.fillRect(0, 0, W, H);
+  blob(c, CX, CY, DIAG * 0.5, COL.navy, 0.5 + 0.1 * Math.sin(t * 0.8));
+  // a quiet dot matrix with a radial ripple — the grid, waiting
+  const g = Math.round(Math.max(22 * DPR, U * 0.034));
+  for (let i = 0; i < 8; i++) DOTB[i] = new Path2D();
+  const ds = Math.max(1.2, DPR * 1.4);
+  for (let y = CY % g; y < H; y += g) for (let x = CX % g; x < W; x += g) {
+    const d = Math.hypot(x - CX, y - CY), wv = 0.5 + 0.5 * Math.sin(d / (g * 3) - t * 1.6);
+    const a = (0.09 + 0.22 * wv * wv) * (1 - clamp(d / (DIAG * 0.6)));
+    if (a < 0.012) continue;
+    DOTB[Math.min(7, Math.floor(a / 0.04))].rect(x - ds / 2, y - ds / 2, ds, ds);
+  }
+  for (let i = 0; i < 8; i++) { c.fillStyle = rgba(COL.glow, (i + 0.5) * 0.04); c.fill(DOTB[i]); }
+  // wordmark in the film's own code-drawn type
+  const ws = Math.round(Math.max(20 * DPR, U * 0.05));
+  if (!introWord || introS !== ws) { introWord = buildWord('CASA 2.0', ws); introS = ws; }
+  const lw = Math.max(1.4 * DPR, ws * 0.07);
+  drawWordmark(c, introWord, CX - introWord.width / 2, Math.round(CY - U * 0.085), lw, 0.92);
+  // the call to action — a frosted glass pill
+  const label = 'Click to Start Casa 2.0 Experience';
+  let fs = Math.round(Math.max(13 * DPR, U * 0.0175));
+  c.font = `400 ${fs}px ${FONT_SANS}`;
+  let tw = trackWidth(c, label, fs * 0.04);
+  const maxW = W * 0.86;
+  if (tw + fs * 5 > maxW) { fs = Math.max(9, Math.floor(fs * (maxW - fs * 5) / tw)); c.font = `400 ${fs}px ${FONT_SANS}`; tw = trackWidth(c, label, fs * 0.04); }
+  const ph = Math.round(fs * 3.3), pw = Math.round(tw + fs * 5.2), px = Math.round(CX - pw / 2), py = Math.round(CY + U * 0.03);
+  APP.pill = [px, py, pw, ph];
+  const hover = APP.mx >= px && APP.mx <= px + pw && APP.my >= py && APP.my <= py + ph;
+  const pu = (t % 2.4) / 2.4, grow = fs * 1.1 * E.outCubic(pu);
+  roundRectPath(c, px - grow, py - grow, pw + grow * 2, ph + grow * 2, ph / 2 + grow);
+  c.lineWidth = DPR; c.strokeStyle = rgba(COL.glow, 0.35 * (1 - pu)); c.stroke();
+  roundRectPath(c, px, py, pw, ph, ph / 2);
+  const pg = c.createLinearGradient(0, py, 0, py + ph);
+  pg.addColorStop(0, `rgba(255,255,255,${hover ? 0.11 : 0.075})`); pg.addColorStop(1, 'rgba(255,255,255,0.02)');
+  c.fillStyle = pg; c.fill();
+  c.lineWidth = DPR; c.strokeStyle = rgba(COL.glow, hover ? 0.75 : 0.42); c.stroke();
+  const ix = px + ph * 0.5, iy = py + ph / 2, ir = ph * 0.3;               // play glyph
+  c.beginPath(); c.arc(ix, iy, ir, 0, TAU); c.fillStyle = rgba(COL.coral, 0.95); c.fill();
+  c.beginPath(); c.moveTo(ix - ir * 0.3, iy - ir * 0.45); c.lineTo(ix + ir * 0.5, iy); c.lineTo(ix - ir * 0.3, iy + ir * 0.45); c.closePath();
+  c.fillStyle = rgba(COL.paper, 1); c.fill();
+  c.fillStyle = rgba(COL.paper, hover ? 1 : 0.9); c.textBaseline = 'middle';
+  track(c, label, px + ph * 0.95 + (pw - ph * 1.3) / 2, iy + fs * 0.04, fs * 0.04, 'center');
+  const hs = Math.round(Math.max(9 * DPR, fs * 0.66));
+  c.font = `500 ${hs}px ${FONT_MONO}`; c.fillStyle = rgba(COL.glow, 0.5);
+  track(c, 'SOUND ON  ·  35 SEC', CX, py + ph + hs * 3, hs * 0.3, 'center');
+  c.restore();
+  c.textBaseline = 'alphabetic';
+}
+function drawEnd(now) {
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+  const a = smooth(clamp((now - APP.endMs - 1200) / 1000)) * (0.6 + 0.2 * Math.sin(now / 600));
+  if (a <= 0.01) return;
+  const fs = Math.round(Math.max(11 * DPR, U * 0.014));
+  ctx.font = `500 ${fs}px ${FONT_MONO}`; ctx.textBaseline = 'middle';
+  const w = trackWidth(ctx, 'REPLAY', fs * 0.32), ix = CX - w / 2 - fs * 0.8, r = fs * 0.5;
+  ctx.strokeStyle = rgba(COL.glow, 0.7 * a); ctx.lineWidth = 1.2 * DPR;
+  ctx.beginPath(); ctx.arc(ix, CY, r, -0.2, Math.PI * 1.6); ctx.stroke();
+  const ex = ix + r * Math.cos(-0.2), ey = CY + r * Math.sin(-0.2);
+  ctx.beginPath(); ctx.moveTo(ex - r * 0.45, ey - r * 0.1); ctx.lineTo(ex, ey); ctx.lineTo(ex + r * 0.05, ey - r * 0.5); ctx.stroke();
+  ctx.fillStyle = rgba(COL.glow, 0.7 * a);
+  track(ctx, 'REPLAY', ix + fs * 1.2, CY, fs * 0.32, 'left');
+  ctx.textBaseline = 'alphabetic';
+}
+
+// =====================================================================
+//  RENDER — composite one frame of the film at time t
+// =====================================================================
+const bloomAmount = t => 0.85 + 0.55 * env(t, 22, 27.6, 28.1, 29.6);
+function render(t) {
+  updateCamera(t);
+  drawBackground(ctx, t);
+  const c = lctx;
+  c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1;
+  c.clearRect(0, 0, W, H);
+  drawGrid(c, t);
+  drawNodes(c, t);
+  drawConstruction(c, t);
+  drawPlan(c, t);
+  drawPackets(c, t);
+  drawStructure(c, t);
+  drawLaunch(c, t);
+  drawShock(c, t);
+  drawTitle(c, t);
+  c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  ctx.drawImage(layer, 0, 0);
+  bloom(bloomAmount(t));
+  drawHUD(ctx, t);
+  drawGrain(ctx, t);
+  drawVignette(ctx);
+  const fade = E.inOutSine(inv(34.2, 35.0, t));                  // fade to black
+  if (fade > 0) { ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = `rgba(0,0,0,${fade.toFixed(3)})`; ctx.fillRect(0, 0, W, H); }
+}
+
+// =====================================================================
+//  TIMELINE — the audio clock drives the picture (frame clock as fallback)
+// =====================================================================
+function frame(now) {
+  requestAnimationFrame(frame);
+  if (APP.mode === 'intro') { drawIntro(ctx, now, 1); return; }
+  if (APP.mode === 'end') { drawEnd(now); return; }
+  let t;
+  if (APP.mode === 'debug') t = APP.debugT;
+  else {
+    Sound.pump();
+    governor(now);
+    t = (now - APP.p0) / 1000;
+    const at = Sound.time();
+    if (at !== null && Math.abs(at - t) > 0.03) { APP.p0 = now - at * 1000; t = at; }
+    if (t >= DUR) { APP.mode = 'end'; APP.endMs = now; document.body.style.cursor = 'pointer'; drawEnd(now); return; }
+  }
+  render(clamp(t, 0, DUR));
+  if (APP.mode === 'play') {
+    const fo = 1 - clamp((now - APP.startMs) / 900);
+    if (fo > 0) drawIntro(ctx, now, E.inOutSine(fo));
+  }
+}
+function governor(now) {                 // adaptive resolution keeps motion smooth on weaker GPUs
+  const dt = APP.lastNow ? now - APP.lastNow : 0; APP.lastNow = now;
+  if (dt <= 0 || dt > 250) return;
+  APP.ema = APP.ema ? APP.ema * 0.94 + dt * 0.06 : dt;
+  if (APP.ema > 21 && QUALITY > 0.62 && now - APP.startMs > 1500 && now - APP.lastDrop > 1500) {
+    QUALITY *= 0.85; APP.lastDrop = now; APP.ema = 0; resize();
+  }
+}
+function startFilm() {
+  if (APP.mode === 'play') return;
+  APP.lastNow = 0; APP.ema = 0; APP.lastDrop = 0;
+  Sound.start();
+  APP.mode = 'play'; APP.startMs = performance.now(); APP.p0 = APP.startMs + 120;
+  document.body.style.cursor = 'none';
+}
+window.addEventListener('click', () => { if (APP.mode === 'intro' || APP.mode === 'end') startFilm(); });
+window.addEventListener('keydown', e => {
+  if ((e.key === 'Enter' || e.key === ' ') && (APP.mode === 'intro' || APP.mode === 'end')) { e.preventDefault(); startFilm(); }
+});
+window.addEventListener('pointermove', e => { APP.mx = e.clientX * DPR; APP.my = e.clientY * DPR; if (APP.mode === 'play') document.body.style.cursor = 'none'; }, { passive: true });
+window.addEventListener('resize', resize);
+setInterval(() => { if (APP.mode === 'play') Sound.pump(); }, 50);   // keeps the score fed if frames stall
+
+function resize() {
+  const cw = Math.max(1, window.innerWidth), ch = Math.max(1, window.innerHeight);
+  DPR = Math.max(0.75, Math.min(window.devicePixelRatio || 1, 2) * QUALITY);
+  const maxPx = 2560 * 1600;                                        // keep 60 fps on huge screens
+  if (cw * ch * DPR * DPR > maxPx) DPR = Math.sqrt(maxPx / (cw * ch));
+  W = Math.round(cw * DPR); H = Math.round(ch * DPR);
+  cvs.width = layer.width = W; cvs.height = layer.height = H;
+  bl.forEach((c, i) => { const f = 4 << i; c.width = Math.max(1, Math.round(W / f)); c.height = Math.max(1, Math.round(H / f)); });
+  blc.forEach(c => { c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high'; });
+  U = Math.min(W, H); CX = W / 2; CY = H / 2; DIAG = Math.hypot(W, H);
+  grainPat = null; introWord = null;
+  layoutTitle();
+}
+
+// review hooks: ?t=12.5 freezes the film at 12.5 s (no audio)
+const Q = new URLSearchParams(location.search);
+if (Q.has('t')) { APP.mode = 'debug'; APP.debugT = parseFloat(Q.get('t')) || 0; }
+window.__casa = { seek: t => { APP.mode = 'debug'; APP.debugT = t; }, render };
+
+resize();
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1541 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0E1116">
+<meta name="description" content="Casa 2.0 — Agenzia Immobiliare a Tivoli dal 1994. Un reel di 30 secondi disegnato con oltre 230.000 pixel, interamente in codice.">
+<title>Casa 2.0 — Tivoli, pixel per pixel</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #07090C; overflow: hidden; }
+  body { display: flex; align-items: center; justify-content: center; cursor: pointer; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+  #reel { display: block; background: #0E1116; box-shadow: 0 30px 90px rgba(0, 0, 0, 0.6); }
+  body.export { display: block; }
+  body.export #reel { box-shadow: none; }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+</style>
+</head>
+<body>
+<canvas id="reel" width="1080" height="1920" role="img" aria-label="Casa 2.0 — Vendi casa a Tivoli? Conosciamo ogni pietra. Ogni casa ha la sua storia, e il suo giusto prezzo. Il metodo Casa 2.0: valutazioni oneste, ti guidiamo fino al rogito, marketing trasparente. Non vendiamo solo mura, custodiamo sogni. Valutazione gratuita in 24 ore — casaduepuntozero.net"></canvas>
+<button id="play" class="sr-only" type="button">Guarda il video con l'audio</button>
+<script>
+(() => {
+"use strict";
+
+/* =====================================================================
+   CASA 2.0 — "Tivoli, pixel per pixel"  ·  reel verticale 9:16, 30 s
+   230.400 pixel (360 × 640) disegnati e animati interamente in codice:
+   scene procedurali, particelle, testo e colonna sonora Web Audio.
+   Copy e palette dal sito casaduepuntozero.net.
+   ===================================================================== */
+
+// ------------------------------------------------------------------ math
+const TAU = Math.PI * 2;
+const clamp = (v, a = 0, b = 1) => (v < a ? a : v > b ? b : v);
+const lerp = (a, b, t) => a + (b - a) * t;
+const inv = (a, b, v) => clamp((v - a) / (b - a));
+const smooth = t => t * t * (3 - 2 * t);
+const sstep = (a, b, v) => smooth(inv(a, b, v));
+const E = {
+  outCubic: t => 1 - (1 - t) ** 3,                   // ≈ cubic-bezier(.215,.61,.355,1)
+  inOutCubic: t => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2),
+  inOutSine: t => -(Math.cos(Math.PI * t) - 1) / 2,
+};
+function rng(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const hash = (a, b = 0) => {
+  let h = (Math.imul(a | 0, 374761393) + Math.imul(b | 0, 668265263)) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+};
+
+// Perlin gradient noise + fBm
+function Noise(seed) {
+  const r = rng(seed), perm = new Uint8Array(256), p = new Uint8Array(512);
+  for (let i = 0; i < 256; i++) perm[i] = i;
+  for (let i = 255; i > 0; i--) { const j = (r() * (i + 1)) | 0, s = perm[i]; perm[i] = perm[j]; perm[j] = s; }
+  for (let i = 0; i < 512; i++) p[i] = perm[i & 255];
+  const fade = t => t * t * t * (t * (t * 6 - 15) + 10);
+  const grad = (h, x, y) => { switch (h & 7) { case 0: return x + y; case 1: return -x + y; case 2: return x - y; case 3: return -x - y; case 4: return x; case 5: return -x; case 6: return y; default: return -y; } };
+  function n2(x, y) {
+    const X = Math.floor(x), Y = Math.floor(y), xf = x - X, yf = y - Y, xi = X & 255, yi = Y & 255;
+    const u = fade(xf), v = fade(yf);
+    const aa = p[p[xi] + yi], ab = p[p[xi] + yi + 1], ba = p[p[xi + 1] + yi], bb = p[p[xi + 1] + yi + 1];
+    return lerp(lerp(grad(aa, xf, yf), grad(ba, xf - 1, yf), u), lerp(grad(ab, xf, yf - 1), grad(bb, xf - 1, yf - 1), u), v) * 0.72;
+  }
+  function fbm(x, y, oct = 5) {
+    let a = 0.5, f = 1, s = 0, n = 0;
+    for (let i = 0; i < oct; i++) { s += a * n2(x * f, y * f); n += a; a *= 0.5; f *= 2.03; }
+    return s / n;
+  }
+  return { n2, fbm };
+}
+
+// ---------------------------------------------------------------- colour
+const hex = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+const COL = {
+  ink: hex('#0E1116'), navy: hex('#1A2A3C'), teal: hex('#326273'), tealL: hex('#4A8FA3'), glow: hex('#8EC5D6'),
+  paper: hex('#FAF7F4'), coral: hex('#E8674F'), coralL: hex('#FF7E6B'), red: hex('#C0392B'),
+};
+const css = (c, a = 1) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
+const pack = (r, g, b) => (0xFF000000 | ((b < 0 ? 0 : b > 255 ? 255 : b) << 16) | ((g < 0 ? 0 : g > 255 ? 255 : g) << 8) | (r < 0 ? 0 : r > 255 ? 255 : r)) >>> 0;
+const BG = pack(14, 17, 22);
+
+// ------------------------------------------------------- the pixel canvas
+const GW = 360, GH = 640, N = GW * GH;        // 230.400 pixel
+const PX = 3, OW = GW * PX, OH = GH * PX;     // 1080 × 1920
+const DU = 1000 / GW;                         // design units per pixel (the frame is 1000 × 1777.8 units)
+const DH = GH * DU;
+const cvs = document.getElementById('reel');
+const ctx = cvs.getContext('2d', { alpha: false });
+const pix = document.createElement('canvas'); pix.width = GW; pix.height = GH;
+const pctx = pix.getContext('2d');
+const frameImg = pctx.createImageData(GW, GH);
+const buf = new Uint32Array(frameImg.data.buffer);
+const CXA = new Uint16Array(N), CYA = new Uint16Array(N);    // cell → x, y
+for (let i = 0; i < N; i++) { CXA[i] = i % GW; CYA[i] = (i / GW) | 0; }
+const blm = document.createElement('canvas'); blm.width = GW / 4; blm.height = GH / 4;
+const bctx = blm.getContext('2d');
+
+const FONT_SERIF = '"Zodiak", "Iowan Old Style", "Charter", "Bitstream Charter", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif';
+const FONT_SANS = '"Satoshi", "Helvetica Neue", "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif';
+
+// a painter works in design units on a 360 × 640 canvas
+function painter() {
+  const c = document.createElement('canvas'); c.width = GW; c.height = GH;
+  const g = c.getContext('2d', { willReadFrequently: true });
+  g.setTransform(GW / 1000, 0, 0, GW / 1000, 0, 0);
+  return { c, g };
+}
+function pass(pt, fn) {                        // per-pixel shader over a painter
+  const id = pt.g.getImageData(0, 0, GW, GH), d = id.data;
+  for (let py = 0, i = 0; py < GH; py++) {
+    const y = (py + 0.5) * DU;
+    for (let px = 0; px < GW; px++, i += 4) fn(d, i, (px + 0.5) * DU, y, px, py);
+  }
+  pt.g.putImageData(id, 0, 0);
+}
+function mask(draw) {                          // coverage mask (0–255) of a shape
+  const m = painter(); m.g.fillStyle = '#fff'; m.g.strokeStyle = '#fff';
+  draw(m.g);
+  const d = m.g.getImageData(0, 0, GW, GH).data, out = new Uint8Array(N);
+  for (let i = 0; i < N; i++) out[i] = d[i * 4 + 3];
+  return out;
+}
+function toU32(pt) {
+  const d = pt.g.getImageData(0, 0, GW, GH).data, out = new Uint32Array(N);
+  for (let i = 0; i < N; i++) out[i] = pack(d[i * 4], d[i * 4 + 1], d[i * 4 + 2]);
+  return out;
+}
+function glowDisc(g, x, y, r, col, a) {
+  const gr = g.createRadialGradient(x, y, 0, x, y, r);
+  gr.addColorStop(0, css(col, a)); gr.addColorStop(0.35, css(col, a * 0.35)); gr.addColorStop(1, css(col, 0));
+  g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2);
+}
+function ridge(g, y0, amp, freq, seed, top, bottom, depth = 260) {
+  const n = Noise(seed);
+  g.beginPath(); g.moveTo(-10, DH + 10);
+  for (let x = -10; x <= 1010; x += 4) g.lineTo(x, y0 - amp * (0.5 + n.fbm(x * freq, 0.37, 4)));
+  g.lineTo(1010, DH + 10); g.closePath();
+  const lg = g.createLinearGradient(0, y0 - amp, 0, y0 + depth);
+  lg.addColorStop(0, top); lg.addColorStop(1, bottom);
+  g.fillStyle = lg; g.fill();
+}
+
+// =====================================================================
+//  PAINTING HELPERS
+// =====================================================================
+function poly(g, pts) { g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]); g.closePath(); }
+function region(pt, x0, y0, x1, y1, fn) {      // per-pixel shader over a design-unit box
+  const px0 = Math.max(0, Math.floor(x0 / DU)), px1 = Math.min(GW - 1, Math.ceil(x1 / DU));
+  const py0 = Math.max(0, Math.floor(y0 / DU)), py1 = Math.min(GH - 1, Math.ceil(y1 / DU));
+  if (px1 < px0 || py1 < py0) return;
+  const w = px1 - px0 + 1, h = py1 - py0 + 1, id = pt.g.getImageData(px0, py0, w, h), d = id.data;
+  for (let py = 0, i = 0; py < h; py++) {
+    const y = (py0 + py + 0.5) * DU;
+    for (let px = 0; px < w; px++, i += 4) fn(d, i, (px0 + px + 0.5) * DU, y, px0 + px, py0 + py);
+  }
+  pt.g.putImageData(id, px0, py0);
+}
+const mixIn = (d, i, r, g, b, a) => { if (a <= 0) return; if (a > 1) a = 1; d[i] += (r - d[i]) * a; d[i + 1] += (g - d[i + 1]) * a; d[i + 2] += (b - d[i + 2]) * a; };
+function grade(pt, fn) {                          // final colour grade + dither (kills banding)
+  const r = rng(77);
+  pass(pt, (d, i, x, y) => { fn && fn(d, i, x, y); const n = (r() - 0.5) * 5; d[i] += n; d[i + 1] += n; d[i + 2] += n; });
+}
+function indexList(m, thr = 8) { const out = []; for (let i = 0; i < N; i++) if (m[i] > thr) out.push(i); return Int32Array.from(out); }
+
+// =====================================================================
+//  SCENE 1 — TIVOLI: il Tempio di Vesta sulla rupe, la cascata, il tramonto
+// =====================================================================
+function edges(m) {                               // per row: first / last covered pixel of a mask
+  const L = new Int16Array(GH).fill(-1), R = new Int16Array(GH).fill(-1);
+  for (let py = 0; py < GH; py++) for (let px = 0; px < GW; px++) if (m[py * GW + px] > 127) { if (L[py] < 0) L[py] = px; R[py] = px; }
+  return { L, R };
+}
+function paintTemple() {
+  const P = painter(), g = P.g, nA = Noise(11), nB = Noise(12), nC = Noise(13), nD = Noise(14);
+  const SX = 175, SY = 992;                                          // the sun sets on the left
+  // sky
+  const sky = g.createLinearGradient(0, 0, 0, 1090);
+  [[0, '#101830'], [0.25, '#212f57'], [0.48, '#4d4b78'], [0.67, '#9c6670'], [0.81, '#d98c5e'], [0.93, '#f2b872'], [1, '#f7cf92']].forEach(([o, c]) => sky.addColorStop(o, c));
+  g.fillStyle = sky; g.fillRect(0, 0, 1000, DH);
+  const side = g.createLinearGradient(0, 0, 1000, 0);                // the sky darkens away from the sun
+  side.addColorStop(0, 'rgba(255,170,110,0.16)'); side.addColorStop(0.6, 'rgba(40,40,90,0)'); side.addColorStop(1, 'rgba(18,22,52,0.22)');
+  g.fillStyle = side; g.fillRect(0, 0, 1000, 1100);
+  glowDisc(g, SX, SY, 620, [255, 190, 120], 0.5);
+  glowDisc(g, SX, SY, 190, [255, 228, 170], 0.9);
+  g.fillStyle = '#fff6df'; g.beginPath(); g.arc(SX, SY, 28, 0, TAU); g.fill();
+  // clouds: long cirrus, lit from below by the low sun
+  pass(P, (d, i, x, y) => {
+    if (y > 970) return;
+    const band = Math.exp(-(((y - 390) / 85) ** 2)) + 0.85 * Math.exp(-(((y - 625) / 52) ** 2)) + 0.65 * Math.exp(-(((y - 800) / 30) ** 2));
+    if (band < 0.03) return;
+    const n = nA.fbm(x * 0.0028 + 3.1, y * 0.0135, 6);
+    const a = sstep(-0.02, 0.3, n) * Math.min(1, band);
+    if (a < 0.01) return;
+    const sun = clamp(1 - Math.hypot(x - SX, (y - SY) * 1.5) / 1050);
+    const lift = sstep(-0.15, 0.3, nB.fbm(x * 0.006, y * 0.03 + 7, 3));
+    mixIn(d, i, lerp(92, 255, sun) + lift * 22, lerp(82, 176, sun) + lift * 12, lerp(122, 126, sun), a * 0.82);
+  });
+  // distant hills of the Campagna, in haze
+  ridge(g, 1014, 78, 0.0034, 21, '#a27a84', '#6f5a70', 200);
+  ridge(g, 1054, 70, 0.0062, 22, '#5f4b66', '#382e45', 240);
+  const hz = g.createLinearGradient(0, 930, 0, 1150);
+  hz.addColorStop(0, 'rgba(255,190,125,0)'); hz.addColorStop(0.35, 'rgba(255,186,120,0.26)'); hz.addColorStop(1, 'rgba(255,186,120,0)');
+  g.fillStyle = hz; g.fillRect(0, 930, 1000, 220);
+  // the gorge: deep, shadowed woods
+  pass(P, (d, i, x, y) => {
+    if (y < 1086) return;
+    const leaf = 0.55 + nB.fbm(x * 0.03, y * 0.03, 4) * 0.8, depth = sstep(1100, 1500, y);
+    mixIn(d, i, lerp(46, 18, depth) * leaf, lerp(52, 30, depth) * leaf, lerp(58, 30, depth) * leaf, 1);
+  });
+  // two rock masses: the town's cliff (left, with the fall) and the acropolis (right)
+  const LEFT = [[-10, 1080], [70, 1072], [150, 1082], [214, 1094], [262, 1100], [310, 1108], [344, 1146], [366, 1236], [358, 1330], [382, 1440], [366, 1560], [396, 1790], [-10, 1790]];
+  const ACRO = [[1010, 1022], [880, 1018], [700, 1022], [520, 1024], [482, 1036], [462, 1084], [450, 1172], [468, 1262], [444, 1350], [458, 1442], [436, 1532], [452, 1642], [436, 1790], [1010, 1790]];
+  const mL = mask(m => { poly(m, LEFT); m.fill(); }), mR = mask(m => { poly(m, ACRO); m.fill(); });
+  const eL = edges(mL), eR = edges(mR);
+  const Lx = -0.86, Ly = -0.4, Lz = 0.22;                          // towards the sun: low, on the left
+  pass(P, (d, i, x, y, px, py) => {
+    const k = py * GW + px, aL = mL[k] / 255, aR = mR[k] / 255, a = Math.max(aL, aR);
+    if (a <= 0) return;
+    const right = aR >= aL;
+    // height field → normal (relief lighting)
+    const h = (u, v) => nC.fbm(u * 0.0062, v * 0.0034, 5) + 0.3 * Math.abs(nD.n2(u * 0.016, v * 0.0045));
+    const e = 3, hx = (h(x + e, y) - h(x - e, y)) / (2 * e), hy = (h(x, y + e) - h(x, y - e)) / (2 * e);
+    let nx = -hx * 230, ny = -hy * 120, nz = 1;
+    // macro orientation: the acropolis wall faces the gorge (and the sun); the town cliff turns away
+    if (right) nx -= 1.1 * Math.exp(-(px - eR.L[py]) / 26);
+    else nx += 1.1 * Math.exp(-(eL.R[py] - px) / 26);
+    const nl = Math.hypot(nx, ny, nz);
+    let diff = Math.max(0, (nx * Lx + ny * Ly + nz * Lz) / nl);
+    diff *= 1 - 0.55 * sstep(1080, 1700, y);                         // the sun only grazes the upper rock
+    const crack = sstep(0.07, 0.0, Math.abs(nD.n2(x * 0.045, y * 0.0032) + nA.n2(x * 0.01, y * 0.01) * 0.2)) * 0.45;
+    const bed = Math.sin(y * 0.07 + nC.n2(x * 0.004, y * 0.01) * 5) * 0.06;
+    const tone = 0.82 + nA.fbm(x * 0.06, y * 0.04, 3) * 0.3 + bed - crack;
+    let r = (lerp(34, 232, diff) + 12) * tone, gg = (lerp(29, 150, diff) + 8) * tone, b = (lerp(44, 92, diff) + 16) * tone;
+    // holm oaks and ivy on the ledges
+    const veg = nB.fbm(x * 0.017 + 11, y * 0.021, 4) + sstep(1330, 1760, y) * 0.26;
+    if (veg > 0.12) {
+      const v = sstep(0.12, 0.28, veg), leaf = 0.55 + nA.n2(x * 0.16, y * 0.16) * 0.45;
+      r = lerp(r, lerp(16, 124, diff * leaf), v); gg = lerp(gg, lerp(24, 118, diff * leaf), v); b = lerp(b, lerp(22, 52, diff * leaf), v);
+    }
+    mixIn(d, i, r, gg, b, a);
+  });
+
+  // the edge of the town on the left cliff: houses in shadow, windows lighting up
+  const rh = rng(61);
+  for (let x = 170, k = 0; x < 350; k++) {
+    const w = 34 + rh() * 40, h = 40 + rh() * 60, base = 1090 + (x - 170) * 0.08;
+    const wall = rh() < 0.5 ? '#3f303c' : '#483740';
+    g.fillStyle = wall; g.fillRect(x, base - h, w, h + 6);
+    g.fillStyle = 'rgba(255,170,110,0.22)'; g.fillRect(x, base - h, 3, h);          // sun-side rim
+    g.fillStyle = '#35211f'; g.beginPath(); g.moveTo(x - 4, base - h); g.lineTo(x + w / 2, base - h - 12); g.lineTo(x + w + 4, base - h); g.closePath(); g.fill();
+    g.fillStyle = 'rgba(255,184,100,0.95)';
+    for (let wy = base - h + 12; wy < base - 12; wy += 20) for (let wx = x + 7; wx < x + w - 8; wx += 14) if (rh() < 0.3) g.fillRect(wx, wy, 5, 7);
+    x += w + 2;
+  }
+
+  // ---- il tempio rotondo (Tempio di Vesta / della Sibilla)
+  const TX = 714, TR = 168, LA = -52 * Math.PI / 180;               // light from the left
+  const th = x => Math.asin(clamp((x - TX) / TR, -1, 1));
+  const stone = (lit, lum = 1) => [lerp(84, 246, lit) * lum, lerp(70, 196, lit) * lum, lerp(84, 140, lit) * lum];
+  region(P, TX - TR - 20, 976, TX + TR + 20, 1034, (d, i, x, y) => {  // podium
+    const u = (x - TX) / (TR + 16); if (Math.abs(u) > 1) return;
+    const t = Math.asin(u), yTop = 986 - 6 * Math.cos(t), yBot = 1024 - 4 * Math.cos(t);
+    if (y < yTop || y > yBot) return;
+    const lit = 0.1 + 0.9 * Math.max(0, Math.cos(t - LA));
+    const joint = (Math.abs(((y - yTop) / (yBot - yTop)) - 0.5) < 0.06 || Math.abs(Math.sin(t * 22)) < 0.12) ? 0.8 : 1;
+    const [r, gg, b] = stone(lit, (0.9 + nA.n2(x * 0.08, y * 0.08) * 0.12) * joint);
+    mixIn(d, i, r, gg, b, 1);
+  });
+  region(P, TX - 124, 800, TX + 124, 990, (d, i, x, y) => {         // cella in opus reticulatum
+    const u = (x - TX) / 120; if (Math.abs(u) > 1) return;
+    const t = Math.asin(u);
+    if (y < 812 - 10 * Math.cos(t) || y > 988 - 6 * Math.cos(t)) return;
+    const lit = 0.06 + 0.62 * Math.max(0, Math.cos(t - LA));
+    const net = Math.abs(Math.sin((x + y) * 0.2)) * Math.abs(Math.sin((x - y) * 0.2));
+    const [r, gg, b] = stone(lit, 0.76 + net * 0.14 + nB.n2(x * 0.07, y * 0.07) * 0.1);
+    mixIn(d, i, r * 0.92, gg * 0.9, b * 0.96, 1);
+  });
+  g.fillStyle = '#211a1a';
+  g.beginPath(); g.moveTo(TX + 12, 990); g.lineTo(TX + 12, 905); g.arc(TX + 35, 905, 23, Math.PI, 0); g.lineTo(TX + 58, 990); g.closePath(); g.fill();
+  g.fillRect(TX + 62, 872, 18, 32);
+  // 18 columns around the ring; the front half stands on the gorge side, the rest is ruin
+  const cols = [];
+  for (let k = 0; k < 9; k++) {
+    const deg = -80 + k * 20;
+    if (deg === 80) continue;
+    cols.push({ t: deg * Math.PI / 180, broken: deg === 60 ? 0.42 : deg === 40 ? 0.86 : 1 });
+  }
+  cols.sort((a, b) => Math.abs(b.t) - Math.abs(a.t));
+  for (const c of cols) {
+    const xc = TX + TR * Math.sin(c.t), yBase = 984 - 6 * Math.cos(c.t), yCap = 814 - 12 * Math.cos(c.t);
+    const yTop = lerp(yBase, yCap, c.broken), hw = 13;
+    region(P, xc - hw - 6, yCap - 26, xc + hw + 6, yBase + 4, (d, i, x, y) => {
+      let u = (x - xc) / hw;
+      if (y >= yTop && y <= yBase - 8 && Math.abs(u) <= 1) {
+        const diff = Math.max(0, Math.cos(c.t + Math.asin(u) - LA));
+        const flute = 0.86 + 0.14 * Math.cos(u * Math.PI * 5);
+        const ao = 0.72 + 0.28 * sstep(yCap, yCap + 40, y);
+        const [r, gg, b] = stone(0.1 + 0.9 * diff, flute * ao * (0.94 + nC.n2(x * 0.1, y * 0.05) * 0.1));
+        mixIn(d, i, r, gg, b, clamp((1 - Math.abs(u)) * hw / DU * 1.4));
+      }
+      u = (x - xc) / (hw + 4);
+      if (y > yBase - 9 && y <= yBase && Math.abs(u) <= 1) {
+        const diff = Math.max(0, Math.cos(c.t + Math.asin(u) - LA));
+        const [r, gg, b] = stone(0.16 + 0.84 * diff, 0.95);
+        mixIn(d, i, r, gg, b, 1);
+      }
+      u = (x - xc) / (hw + 5 + (yCap - y) * 0.18);
+      if (c.broken === 1 && y > yCap - 24 && y < yCap && Math.abs(u) <= 1) {
+        const diff = Math.max(0, Math.cos(c.t + Math.asin(clamp(u, -1, 1)) - LA));
+        const [r, gg, b] = stone(0.14 + 0.86 * diff, 0.8 + 0.3 * nA.n2(x * 0.3, y * 0.3));
+        mixIn(d, i, r, gg, b, 1);
+      }
+    });
+  }
+  // entablature over the standing arc, frieze of garlands; a clean broken end on the right
+  const eA = TX - TR - 16, eB = TX + TR * Math.sin(50 * Math.PI / 180);
+  region(P, eA - 4, 720, eB + 24, 800, (d, i, x, y) => {
+    const t = th(Math.max(x, TX - TR)), yT = 746 - 14 * Math.cos(t), yB = 792 - 12 * Math.cos(t);
+    if (y < yT || y > yB || x < eA) return;
+    const v = (y - yT) / (yB - yT);
+    const end = eB + 22 * (1 - v) * (0.6 + 0.4 * Math.sin(v * 9));    // stepped, weathered break
+    if (x > end) return;
+    const diff = Math.max(0, Math.cos(t - LA));
+    let lum = 0.95;
+    if (v < 0.16) lum = 1.12;
+    else if (v < 0.24) lum = 0.6;
+    else if (v < 0.78) lum = 0.9 + 0.22 * Math.max(0, Math.sin(t * 40)) * Math.sin((v - 0.24) / 0.54 * Math.PI);
+    else lum = 0.8;
+    const [r, gg, b] = stone(0.1 + 0.9 * diff, lum * (0.93 + nB.n2(x * 0.12, y * 0.12) * 0.1));
+    mixIn(d, i, r, gg, b, 1);
+  });
+  // cypresses and holm oaks around the acropolis (lit from the left)
+  const cypress = (cx, base, h, w, seed) => {
+    const nn = Noise(seed);
+    region(P, cx - w, base - h, cx + w, base, (d, i, x, y) => {
+      const v = (base - y) / h; if (v < 0 || v > 1) return;
+      const half = w * Math.sin(Math.PI * Math.min(1, v * 1.06)) ** 0.8 * (1 - v * 0.35);
+      const dx = (x - cx) / Math.max(1, half) + nn.n2(x * 0.05, y * 0.04) * 0.35;
+      if (!(Math.abs(dx) <= 1)) return;
+      const litSide = sstep(0.2, -1, dx) * (0.35 + 0.65 * v);
+      const leaf = 0.7 + nn.fbm(x * 0.12, y * 0.09, 3) * 0.6;
+      mixIn(d, i, lerp(14, 116, litSide) * leaf, lerp(22, 100, litSide) * leaf, lerp(18, 46, litSide) * leaf, 1);
+    });
+  };
+  cypress(924, 1030, 230, 26, 31); cypress(958, 1034, 180, 22, 32); cypress(496, 1040, 200, 24, 33);
+  const oak = (cx, cy, rx, ry, seed) => {
+    const nn = Noise(seed);
+    region(P, cx - rx * 1.3, cy - ry * 1.3, cx + rx * 1.3, cy + ry * 1.3, (d, i, x, y) => {
+      const q = Math.hypot((x - cx) / rx, (y - cy) / ry) + nn.fbm(x * 0.03, y * 0.03, 4) * 0.7;
+      if (q > 1) return;
+      const litSide = clamp(0.3 - (x - cx) / rx * 0.5 - (y - cy) / ry * 0.35);
+      const leaf = 0.65 + nn.fbm(x * 0.14, y * 0.14, 3) * 0.7;
+      mixIn(d, i, lerp(16, 124, litSide) * leaf, lerp(26, 112, litSide) * leaf, lerp(20, 50, litSide) * leaf, clamp((1 - q) * 5));
+    });
+  };
+  oak(566, 1044, 84, 40, 41); oak(884, 1040, 70, 34, 42); oak(478, 1112, 60, 50, 43); oak(190, 1098, 120, 42, 44);
+  // the plunge pool, catching the gold of the sky
+  region(P, 180, 1560, 560, 1660, (d, i, x, y) => {
+    const q = Math.hypot((x - 350) / 175, (y - 1604) / 42); if (q > 1) return;
+    const shimmer = Math.max(0, nA.n2(x * 0.02, y * 0.25)) * sstep(1, 0.2, q);
+    mixIn(d, i, 40 + shimmer * 200, 50 + shimmer * 140, 58 + shimmer * 70, clamp((1 - q) * 6));
+  });
+  // foreground: layered brush and an umbrella pine against the light (recorded as occluders)
+  const nF = Noise(51), occ = new Float32Array(N);
+  const occl = (px, py, a) => { const k = py * GW + px; if (a > occ[k]) occ[k] = a; };
+  pass(P, (d, i, x, y, px, py) => {
+    const top = 1660 - 90 * (0.5 + nF.fbm(x * 0.005, 1.3, 4)) - 60 * Math.exp(-(((x - 120) / 150) ** 2)) + 30 * Math.exp(-(((x - 560) / 160) ** 2));
+    if (y < top - 4) return;
+    const leaf = 0.55 + nF.fbm(x * 0.09, y * 0.09, 4) * 0.7, rim = sstep(top + 26, top, y) * (1 - sstep(0, 700, x) * 0.6);
+    const a = sstep(top - 4, top + 3, y); occl(px, py, a);
+    mixIn(d, i, (12 + rim * 150) * leaf, (15 + rim * 92) * leaf, (14 + rim * 40) * leaf, a);
+  });
+  region(P, 0, 1120, 300, 1790, (d, i, x, y, px, py) => {          // umbrella pine trunk
+    const cx = 92 + (1790 - y) * 0.12 + Math.sin(y * 0.01) * 10, hw = 9 + (y - 1150) * 0.008;
+    if (y < 1180 || Math.abs(x - cx) > hw) return;
+    occl(px, py, 1);
+    const rim = sstep(cx - hw * 0.2, cx - hw, x) * 0.6;
+    mixIn(d, i, 20 + rim * 140, 16 + rim * 80, 16 + rim * 30, 1);
+  });
+  region(P, -60, 1030, 460, 1260, (d, i, x, y, px, py) => {       // umbrella pine canopy
+    const q = Math.hypot((x - 150) / 240, (y - 1150) / 62) + nF.fbm(x * 0.02, y * 0.05, 5) * 0.8;
+    if (q > 1) return;
+    occl(px, py, clamp((1 - q) * 6));
+    const leaf = 0.5 + nF.fbm(x * 0.11, y * 0.13, 4) * 0.9, rim = sstep(1130, 1090, y + nF.n2(x * 0.05, 3) * 20) * 0.9;
+    mixIn(d, i, (14 + rim * 170) * leaf, (18 + rim * 110) * leaf, (16 + rim * 44) * leaf, clamp((1 - q) * 6));
+  });
+  grade(P, (d, i) => {                                              // warm highlights, cool shadows
+    const l = (d[i] + d[i + 1] + d[i + 2]) / 765;
+    d[i] += 10 * l - 3; d[i + 2] += 8 * (1 - l) - 4;
+  });
+  // ---- animated: the waterfall, its mist, the pool
+  const WATER = [[300, 1104], [344, 1112], [356, 1200], [372, 1330], [392, 1470], [410, 1590], [290, 1590], [290, 1470], [296, 1330], [300, 1200]];
+  const mW = mask(m => { poly(m, WATER); m.fill(); });
+  for (let k = 0; k < N; k++) if (occ[k] > 0.35) mW[k] = 0;        // the fall stays behind the pine and the brush
+  const water = indexList(mW, 20), wE = edges(mW), wS = new Float32Array(water.length), wV = new Float32Array(water.length);
+  const wTop = wE.L.findIndex(v => v >= 0), wBot = GH - 1 - [...wE.L].reverse().findIndex(v => v >= 0);
+  water.forEach((k, j) => { const x = CXA[k], y = CYA[k]; wS[j] = (x - wE.L[y]) / Math.max(1, wE.R[y] - wE.L[y]); wV[j] = (y - wTop) / Math.max(1, wBot - wTop); });
+  const mist = [], mistA = [];
+  for (let py = Math.floor(1400 / DU); py < Math.floor(1700 / DU); py++) for (let px = Math.floor(120 / DU); px < Math.floor(620 / DU); px++) {
+    const x = (px + 0.5) * DU, y = (py + 0.5) * DU, q = Math.hypot((x - 352) / 240, (y - 1585) / 120);
+    if (q < 1 && occ[py * GW + px] < 0.35) { mist.push(py * GW + px); mistA.push((1 - q) * (1 - occ[py * GW + px])); }
+  }
+  return {
+    base: toU32(P),
+    water, waterA: Float32Array.from(water, k => mW[k] / 255), waterS: wS, waterV: wV,
+    mist: Int32Array.from(mist), mistA: Float32Array.from(mistA),
+    sun: [SX, SY],
+  };
+}
+
+const nWater = Noise(71);
+const BIRDS = Array.from({ length: 7 }, (_, i) => ({ x0: hash(i, 1) * GW, y0: 150 + hash(i, 2) * 140, vx: 5 + hash(i, 3) * 7, ph: hash(i, 4) * TAU }));
+function animTemple(S, t, out) {
+  const W = S.water, A = S.waterA, WS = S.waterS, WV = S.waterV;
+  for (let j = 0; j < W.length; j++) {                              // the fall: streams, ragged edges, foam
+    const k = W[j], x = CXA[k], y = CYA[k], sx = WS[j], v0 = WV[j];
+    const dens = 0.5 + 0.5 * nWater.n2(sx * 5.5 + 3, v0 * 1.4 - t * 0.35);
+    const edge = sstep(0, 0.14, sx + nWater.n2(y * 0.07 - t * 1.6, 1) * 0.07) * sstep(1, 0.86, sx + nWater.n2(y * 0.07 - t * 1.8, 5) * 0.07);
+    const f = nWater.n2(x * 0.42, y * 0.05 - t * 3.4) * 0.6 + nWater.n2(x * 1.1 + 7, y * 0.14 - t * 6.2) * 0.4;
+    let v = clamp(0.3 + f * 0.9 + v0 * 0.45);
+    const lip = sstep(0.08, 0.0, v0);                               // smooth glassy water over the edge
+    v = lerp(v, 0.35 + 0.5 * sstep(0.03, 0.0, v0), lip);
+    const a = A[j] * edge * clamp(dens * 1.5 - 0.15 + v0 * 0.7 + lip) * (0.5 + 0.5 * v);
+    if (a <= 0.01) continue;
+    const warm = (1 - sx) * 0.6, c = out[k];
+    const r = c & 255, g = (c >>> 8) & 255, b = (c >>> 16) & 255;
+    out[k] = pack(r + (lerp(128, 252, v) + warm * 22 - r) * a, g + (lerp(122, 232, v) + warm * 6 - g) * a, b + (lerp(150, 214, v) - warm * 12 - b) * a);
+  }
+  const M = S.mist, MA = S.mistA;
+  for (let j = 0; j < M.length; j++) {                              // spray and mist rising from the pool
+    const k = M[j], x = CXA[k], y = CYA[k];
+    const m = sstep(-0.15, 0.45, nWater.fbm(x * 0.045 + t * 0.22, y * 0.06 + t * 0.55, 3)) * MA[j] * 0.85;
+    if (m <= 0.01) continue;
+    const c = out[k], r = c & 255, g = (c >>> 8) & 255, b = (c >>> 16) & 255;
+    out[k] = pack(r + (244 - r) * m, g + (206 - g) * m, b + (176 - b) * m);
+  }
+  const bird = pack(26, 22, 36);
+  for (const B of BIRDS) {                                          // swifts over the gorge
+    const x = ((B.x0 + B.vx * t) % (GW + 20)) - 10 | 0, y = (B.y0 + Math.sin(t * 0.8 + B.ph) * 6) | 0;
+    const up = Math.sin(t * 9 + B.ph) > 0;
+    const pts = up ? [[0, 0], [-1, -1], [1, -1], [-2, -1], [2, -1]] : [[0, 0], [-1, 0], [1, 0], [-2, 1], [2, 1]];
+    for (const [dx, dy] of pts) { const px = x + dx, py = y + dy; if (px >= 0 && px < GW && py >= 0 && py < GH) out[py * GW + px] = bird; }
+  }
+}
+
+// =====================================================================
+//  SCENE 2 — IL BORGO ALL'ORA BLU: tetti di Tivoli, finestre che si accendono
+// =====================================================================
+function paintTown() {
+  const P = painter(), g = P.g, R = rng(202), nA = Noise(21), nB = Noise(22);
+  const sky = g.createLinearGradient(0, 0, 0, 720);
+  [[0, '#0a1130'], [0.3, '#172249'], [0.56, '#2b3364'], [0.76, '#574872'], [0.92, '#b36c62'], [1, '#df9868']].forEach(([o, c]) => sky.addColorStop(o, c));
+  g.fillStyle = sky; g.fillRect(0, 0, 1000, DH);
+  // moon (a thin crescent) and stars
+  const MX = 100, MY = 360, MR = 27;
+  glowDisc(g, MX, MY, 150, [210, 214, 240], 0.22);
+  region(P, MX - MR - 2, MY - MR - 2, MX + MR + 2, MY + MR + 2, (d, i, x, y) => {
+    const inA = Math.hypot(x - MX, y - MY) < MR, inB = Math.hypot(x - MX - 13, y - MY + 6) < MR * 0.95;
+    if (inA && !inB) mixIn(d, i, 246, 238, 214, 1);
+  });
+  const stars = [];
+  for (let i = 0; i < 170; i++) {
+    const x = R() * 1000, y = Math.pow(R(), 1.4) * 560, b = 0.3 + Math.pow(R(), 3) * 0.7;
+    stars.push([x, y, b, R() * TAU]);
+    g.fillStyle = `rgba(235,236,255,${b.toFixed(2)})`; g.fillRect(x, y, DU, DU);
+  }
+  // hills beyond the town
+  ridge(g, 718, 70, 0.004, 23, '#1d2446', '#121833', 160);
+  // houses, back to front
+  const WALLS = ['#c9a27a', '#bf9270', '#d4b48c', '#b08468', '#c7a58e', '#a97e62', '#d9bd98'];
+  const windows = [];
+  const ROWS = [[742, 0.4], [808, 0.48], [886, 0.58], [982, 0.7], [1098, 0.86], [1238, 1.04], [1414, 1.26], [1626, 1.52], [1880, 1.82]];
+  const shade = (hexc, depth, lum) => {           // blue-hour light: cool ambient, deeper = hazier
+    const c = hex(hexc), hz = [58, 60, 100];
+    const k = lerp(0.24, 0.6, depth) * lum, amb = lerp(1, 0.45, depth);
+    const m = depth * 0.9 + 0.1;
+    return [lerp(hz[0], c[0] * k + 18 * amb, m), lerp(hz[1], c[1] * k + 20 * amb, m), lerp(hz[2], c[2] * k + 44 * amb, m)];
+  };
+  const tower = { row: 4, x: 262, w: 74, h: 470 };
+  ROWS.forEach(([base, s], ri) => {
+    const depth = ri / (ROWS.length - 1);
+    let x = -60 - R() * 80 * s;
+    while (x < 1060) {
+      const w = (86 + R() * 110) * s, h = (96 + R() * 150) * s, top = base - h;
+      const wc = WALLS[(R() * WALLS.length) | 0], lum = 0.85 + R() * 0.3;
+      const wall = shade(wc, depth, lum), roofC = shade('#b0583c', depth, 0.95);
+      // facade with a soft vertical gradient (darker in the alleys below)
+      const fg = g.createLinearGradient(0, top, 0, base);
+      fg.addColorStop(0, css(wall)); fg.addColorStop(1, css(wall.map(v => v * 0.72)));
+      g.fillStyle = fg; g.fillRect(x, top, w, h + 4);
+      g.fillStyle = 'rgba(8,10,24,0.35)'; g.fillRect(x + w - 3 * s, top, 3 * s, h);      // corner shadow
+      // roof: a gable or a low hip seen from above the town
+      const rh = (18 + R() * 26) * s;
+      g.fillStyle = css(roofC);
+      if (R() < 0.45) { g.beginPath(); g.moveTo(x - 5 * s, top); g.lineTo(x + w / 2, top - rh * 1.2); g.lineTo(x + w + 5 * s, top); g.closePath(); g.fill(); }
+      else { g.beginPath(); g.moveTo(x - 5 * s, top); g.lineTo(x + 10 * s, top - rh); g.lineTo(x + w - 10 * s, top - rh); g.lineTo(x + w + 5 * s, top); g.closePath(); g.fill(); }
+      g.strokeStyle = css(roofC.map(v => v * 0.7)); g.lineWidth = 1.2 * DU;        // tile courses
+      for (let ty = top - 4 * s; ty > top - rh; ty -= 7 * s) { g.beginPath(); g.moveTo(x + (top - ty) * 0.3, ty); g.lineTo(x + w - (top - ty) * 0.3, ty); g.stroke(); }
+      if (R() < 0.3) { g.fillStyle = css(roofC.map(v => v * 0.8)); g.fillRect(x + w * (0.2 + R() * 0.5), top - rh - 12 * s, 8 * s, 16 * s); }
+      // windows
+      const cols = Math.max(1, Math.floor(w / (46 * s))), rws = Math.max(1, Math.floor((h - 26 * s) / (58 * s)));
+      const ww = 16 * s, wh = 25 * s;
+      for (let cy = 0; cy < rws; cy++) for (let cx = 0; cx < cols; cx++) {
+        const wx = x + (w / cols) * (cx + 0.5) - ww / 2, wy = top + 18 * s + cy * 58 * s;
+        if (wy + wh > base - 6 * s) continue;
+        const shutters = R() < 0.35;
+        g.fillStyle = shutters ? css(shade('#3e6b52', depth, 0.8)) : '#0c0f1e';
+        g.fillRect(wx, wy, ww, wh);
+        if (!shutters && R() < 0.7) {
+          const on = R() < 0.3 ? -1 : 9.3 + R() * 3.9;                // some are already lit
+          windows.push({ x: wx, y: wy, w: ww, h: wh, on, s, warm: 0.75 + R() * 0.25 });
+        }
+      }
+      // a door on the nearer rows
+      if (s > 1 && R() < 0.5) { g.fillStyle = '#16100e'; g.fillRect(x + w * 0.4, base - 44 * s, 20 * s, 44 * s); }
+      x += w + (R() < 0.25 ? 8 * s : 0);
+      // cypresses between houses on the middle rows
+      if (ri >= 3 && ri <= 6 && R() < 0.14) {
+        const cx = x + 4 * s, ch = (150 + R() * 90) * s, cw = 15 * s;
+        g.fillStyle = '#0c140f'; g.beginPath(); g.moveTo(cx, base - ch); g.quadraticCurveTo(cx + cw, base - ch * 0.55, cx + cw * 0.6, base); g.lineTo(cx - cw * 0.6, base); g.quadraticCurveTo(cx - cw, base - ch * 0.55, cx, base - ch); g.fill();
+      }
+    }
+    // the bell tower rises between rows 4 and 5
+    if (ri === tower.row) {
+      const tx = tower.x, tw = tower.w, ty = base - tower.h, tc = shade('#cdb08a', 0.55, 1);
+      const tg = g.createLinearGradient(0, ty, 0, base);
+      tg.addColorStop(0, css(tc)); tg.addColorStop(1, css(tc.map(v => v * 0.75)));
+      g.fillStyle = tg; g.fillRect(tx, ty, tw, tower.h);
+      g.fillStyle = 'rgba(8,10,24,0.3)'; g.fillRect(tx + tw - 10, ty, 10, tower.h);
+      g.fillStyle = css(shade('#8d4a36', 0.55, 0.9)); g.beginPath(); g.moveTo(tx - 6, ty); g.lineTo(tx + tw / 2, ty - 70); g.lineTo(tx + tw + 6, ty); g.closePath(); g.fill();
+      g.fillStyle = '#0b0d1a';
+      for (const oy of [30, 110]) for (const ox of [12, 42]) { g.beginPath(); g.moveTo(tx + ox, ty + oy + 50); g.lineTo(tx + ox, ty + oy + 12); g.arc(tx + ox + 10, ty + oy + 12, 10, Math.PI, 0); g.lineTo(tx + ox + 20, ty + oy + 50); g.fill(); }
+      g.fillStyle = 'rgba(255,196,120,0.12)'; g.fillRect(tx, base - 180, tw, 180);     // floodlit at its foot
+    }
+    // street lamps along the lane below this row
+    if (ri >= 3) for (let lx = 60 + R() * 120; lx < 1000; lx += (180 + R() * 220)) glowDisc(g, lx, base - 6 * s, 40 * s, [255, 190, 110], 0.55);
+  });
+  // plaster texture + a touch of cold haze in the upper town
+  pass(P, (d, i, x, y) => {
+    if (y < 690) return;
+    const n = 1 + nA.fbm(x * 0.05, y * 0.05, 3) * 0.14 + nB.n2(x * 0.3, y * 0.3) * 0.04;
+    d[i] *= n; d[i + 1] *= n; d[i + 2] *= n;
+  });
+  grade(P);
+  // lit windows: pixels of each window + the light it spills on the wall
+  const lit = [];
+  for (const w of windows) {
+    const px0 = Math.floor(w.x / DU), px1 = Math.ceil((w.x + w.w) / DU) - 1, py0 = Math.floor(w.y / DU), py1 = Math.ceil((w.y + w.h) / DU) - 1;
+    const pane = [], spill = [], spillW = [];
+    const paneL = [], pw = px1 - px0 + 1, ph = py1 - py0 + 1;
+    for (let py = py0; py <= py1; py++) for (let px = px0; px <= px1; px++) if (px >= 0 && px < GW && py >= 0 && py < GH) {
+      pane.push(py * GW + px);
+      const mull = (pw >= 4 && px === px0 + (pw >> 1)) || (ph >= 6 && py === py0 + Math.round(ph * 0.4));
+      paneL.push(mull ? 0.45 : 0.78 + 0.22 * (py - py0) / Math.max(1, ph - 1));   // brighter low in the room, dark mullions
+    }
+    const rr = Math.max(2, Math.round(w.s * 13)), cx = (px0 + px1) / 2, cy = (py0 + py1) / 2 + rr * 0.35;
+    for (let py = py0 - rr; py <= py1 + rr * 1.4; py++) for (let px = px0 - rr; px <= px1 + rr; px++) {
+      if (px < 0 || px >= GW || py < 0 || py >= GH || (px >= px0 && px <= px1 && py >= py0 && py <= py1)) continue;
+      const q = Math.hypot((px - cx) / (rr + pw / 2), (py - cy) / (rr * 1.2 + ph / 2));
+      if (q < 1) { spill.push(py * GW + px); spillW.push((1 - q) ** 2 * 0.75); }
+    }
+    if (pane.length) lit.push({ on: w.on, warm: w.warm, pane: Int32Array.from(pane), paneL: Float32Array.from(paneL), spill: Int32Array.from(spill), spillW: Float32Array.from(spillW) });
+  }
+  const starPx = Int32Array.from(stars.map(([x, y]) => Math.floor(y / DU) * GW + Math.floor(x / DU)));
+  return { base: toU32(P), lit, stars: starPx, starB: Float32Array.from(stars.map(s => s[2])), starPh: Float32Array.from(stars.map(s => s[3])) };
+}
+function animTown(S, t, out) {
+  for (const w of S.lit) {
+    const on = w.on < 0 ? 1 : sstep(w.on, w.on + 0.35, t) * (0.9 + 0.1 * Math.sin(t * 17 + w.on * 5) * sstep(w.on + 0.35, w.on, t)); // a brief flicker as it comes on
+    if (on <= 0.01) continue;
+    const lr = 255, lg = lerp(176, 206, w.warm), lb = lerp(92, 128, w.warm);
+    for (let j = 0; j < w.pane.length; j++) {
+      const k = w.pane[j], c = out[k], r = c & 255, g = (c >>> 8) & 255, b = (c >>> 16) & 255;
+      const tint = w.paneL[j];
+      out[k] = pack(r + (lr * tint - r) * on, g + (lg * tint - g) * on, b + (lb * tint - b) * on);
+    }
+    for (let j = 0; j < w.spill.length; j++) {
+      const k = w.spill[j], c = out[k], a = w.spillW[j] * on;
+      out[k] = pack((c & 255) + 150 * a, ((c >>> 8) & 255) + 96 * a, ((c >>> 16) & 255) + 40 * a);
+    }
+  }
+  for (let j = 0; j < S.stars.length; j++) {                     // twinkling stars
+    const k = S.stars[j], b = S.starB[j] * (0.6 + 0.4 * Math.sin(t * 3 + S.starPh[j]));
+    const c = out[k];
+    out[k] = pack((c & 255) + 200 * b, ((c >>> 8) & 255) + 200 * b, ((c >>> 16) & 255) + 220 * b);
+  }
+}
+
+// =====================================================================
+//  SCENE 3 — LA CASA: una facciata al sole del pomeriggio
+// =====================================================================
+function paintHouse() {
+  const P = painter(), g = P.g, nA = Noise(31), nB = Noise(32), nC = Noise(33);
+  const L = { x0: 60, x1: 940, eave: 700, ground: 1640 };
+  // sky and soft cumulus
+  const sky = g.createLinearGradient(0, 0, 0, 760);
+  [[0, '#5d8ec4'], [0.5, '#8fb5dc'], [1, '#d3e3ec']].forEach(([o, c]) => sky.addColorStop(o, c));
+  g.fillStyle = sky; g.fillRect(0, 0, 1000, DH);
+  pass(P, (d, i, x, y) => {
+    if (y > 700) return;
+    const n = nA.fbm(x * 0.004 + 2, y * 0.009, 5), a = sstep(0.05, 0.3, n) * sstep(700, 420, y) * 0.9;
+    if (a <= 0.01) return;
+    const lit = sstep(-0.2, 0.3, nB.fbm(x * 0.008 - 0.01 * y, y * 0.012, 3));
+    mixIn(d, i, lerp(196, 255, lit), lerp(208, 255, lit), lerp(222, 252, lit), a);
+  });
+  // trees behind the house
+  const tree = (cx, cy, rx, ry, seed, dark) => {
+    const nn = Noise(seed);
+    region(P, cx - rx * 1.3, cy - ry * 1.3, cx + rx * 1.3, cy + ry * 1.3, (d, i, x, y) => {
+      const q = Math.hypot((x - cx) / rx, (y - cy) / ry) + nn.fbm(x * 0.02, y * 0.02, 5) * 0.75;
+      if (q > 1) return;
+      const lit = clamp(0.55 - (x - cx) / rx * 0.35 - (y - cy) / ry * 0.45 + nn.fbm(x * 0.06, y * 0.06, 3) * 0.6);
+      mixIn(d, i, lerp(22, 128, lit) * dark, lerp(46, 150, lit) * dark, lerp(26, 70, lit) * dark, clamp((1 - q) * 5));
+    });
+  };
+  tree(40, 640, 190, 230, 34, 0.9); tree(980, 600, 170, 250, 35, 0.85); tree(820, 560, 120, 150, 36, 0.8);
+  // neighbours: a clipped hedge on the left, the next house (in its own shade) on the right
+  const nH = Noise(39);
+  region(P, 0, 820, 80, L.ground, (d, i, x, y) => {
+    const lit = clamp(0.45 - (y - 820) / 2400 + nH.fbm(x * 0.09, y * 0.09, 4) * 0.8);
+    mixIn(d, i, lerp(20, 92, lit), lerp(44, 130, lit), lerp(22, 56, lit), 1);
+  });
+  region(P, 930, 680, 1000, L.ground, (d, i, x, y) => {
+    const lum = 0.62 + nH.fbm(x * 0.05, y * 0.05, 3) * 0.1;
+    const win = (y > 880 && y < 1060 && x > 968) || (y > 1290 && y < 1470 && x > 968);
+    if (win) mixIn(d, i, 44, 52, 64, 1); else mixIn(d, i, 196 * lum, 132 * lum, 116 * lum, 1);
+  });
+  region(P, 918, 640, 1000, 690, (d, i, x, y) => mixIn(d, i, 150, 74, 48, 1));
+  // roof: a band of coppi seen from the street, and the eave's dark underside
+  region(P, L.x0 - 40, 606, L.x1 + 40, L.eave + 2, (d, i, x, y) => {
+    const v = (y - 606) / (L.eave - 606), inset = (1 - v) * 40;
+    if (x < L.x0 - 40 + inset || x > L.x1 + 40 - inset) return;
+    const col = Math.cos((x + ((y / 20) | 0) * 13) * 0.24), row = ((y - 606) % 20) / 20;
+    const lum = (0.72 + 0.28 * Math.max(0, col)) * (0.8 + 0.2 * row) * (0.92 + nA.n2(x * 0.1, y * 0.1) * 0.12);
+    mixIn(d, i, 186 * lum, 92 * lum, 58 * lum, 1);
+  });
+  region(P, L.x0 - 40, L.eave, L.x1 + 40, L.eave + 34, (d, i, x, y) => {
+    const rafter = ((x - L.x0) % 40) < 14 ? 1.25 : 1;
+    mixIn(d, i, 70 * rafter, 44 * rafter, 34 * rafter, 1);
+  });
+  // the facade: warm ochre plaster, lit from the upper left, weathered
+  region(P, L.x0, L.eave + 34, L.x1, L.ground, (d, i, x, y) => {
+    const big = nA.fbm(x * 0.006, y * 0.006, 4), fine = nB.n2(x * 0.25, y * 0.25), stain = Math.max(0, nC.fbm(x * 0.04, y * 0.004, 3)) * 0.25;
+    const light = 1.02 - (x - L.x0) / 2600 - (y - L.eave) / 5200;
+    const lum = light * (0.95 + big * 0.14 + fine * 0.035 - stain);
+    mixIn(d, i, 226 * lum, 164 * lum, 96 * lum, 1);
+  });
+  const eaveShadow = g.createLinearGradient(0, L.eave + 34, 0, L.eave + 130);
+  eaveShadow.addColorStop(0, 'rgba(70,40,20,0.5)'); eaveShadow.addColorStop(1, 'rgba(70,40,20,0)');
+  g.fillStyle = eaveShadow; g.fillRect(L.x0, L.eave + 34, L.x1 - L.x0, 96);
+  // cornice between the floors
+  g.fillStyle = '#f1d6ad'; g.fillRect(L.x0, 1136, L.x1 - L.x0, 16);
+  g.fillStyle = 'rgba(80,44,20,0.35)'; g.fillRect(L.x0, 1152, L.x1 - L.x0, 16);
+  // ivy up the left corner
+  const nV = Noise(37);
+  region(P, L.x0, 900, L.x0 + 150, L.ground, (d, i, x, y) => {
+    const reach = 60 + 90 * sstep(900, 1640, y) + nV.fbm(y * 0.01, 3, 3) * 60;
+    const q = (x - L.x0) / reach + nV.fbm(x * 0.05, y * 0.05, 4) * 0.6;
+    if (q > 1) return;
+    const lit = clamp(0.5 + nV.fbm(x * 0.12, y * 0.12, 3) * 0.9);
+    mixIn(d, i, lerp(30, 110, lit), lerp(60, 150, lit), lerp(28, 60, lit), clamp((1 - q) * 4));
+  });
+  // shadows are cast down and to the right by the afternoon sun
+  const sh = (x, y, w, h, a = 0.34) => { g.fillStyle = `rgba(90,48,22,${a})`; g.beginPath(); g.moveTo(x, y); g.lineTo(x + w, y); g.lineTo(x + w + h * 0.45, y + h); g.lineTo(x + h * 0.45, y + h); g.closePath(); g.fill(); };
+  const windowAt = (x, y, w, h, curtain) => {
+    sh(x - 10, y - 10, w + 20, 16);                                 // lintel shadow
+    g.fillStyle = '#efe4d2'; g.fillRect(x - 10, y - 10, w + 20, h + 20);   // stone frame
+    const gl = g.createLinearGradient(x, y, x + w, y + h);
+    gl.addColorStop(0, '#6c8aa3'); gl.addColorStop(0.45, '#2c3a4a'); gl.addColorStop(1, '#1b232e');
+    g.fillStyle = gl; g.fillRect(x, y, w, h);
+    if (curtain) { g.fillStyle = 'rgba(245,240,230,0.55)'; g.fillRect(x + 4, y + 4, w * 0.35, h - 8); g.fillRect(x + w * 0.65 - 4, y + 4, w * 0.35, h - 8); }
+    g.fillStyle = '#f4efe6'; g.fillRect(x + w / 2 - 3, y, 6, h); g.fillRect(x, y + h * 0.42, w, 6);   // mullions
+    g.fillStyle = '#f6ead6'; g.fillRect(x - 18, y + h + 10, w + 36, 12);    // sill
+    sh(x - 18, y + h + 22, w + 36, 22, 0.4);
+  };
+  const shutter = (x, y, w, h) => {
+    g.fillStyle = '#3d6a52'; g.fillRect(x, y, w, h);
+    g.fillStyle = 'rgba(15,35,25,0.55)'; for (let yy = y + 6; yy < y + h; yy += 11) g.fillRect(x + 4, yy, w - 8, 4);
+    g.fillStyle = 'rgba(255,255,255,0.12)'; g.fillRect(x, y, 3, h);
+    g.fillStyle = 'rgba(90,48,22,0.3)'; g.fillRect(x + w, y + 8, 9, h - 4);
+  };
+  // upper floor
+  windowAt(170, 830, 120, 200, true); shutter(116, 820, 50, 220); shutter(294, 820, 50, 220);
+  windowAt(710, 830, 120, 200, false); shutter(656, 820, 50, 220); shutter(834, 820, 50, 220);
+  // balcony door, slab, railing, geraniums
+  sh(430, 780, 140, 18);
+  g.fillStyle = '#efe4d2'; g.fillRect(430, 780, 140, 290);
+  const dg = g.createLinearGradient(440, 790, 560, 1060); dg.addColorStop(0, '#5f7d96'); dg.addColorStop(0.5, '#27313d'); dg.addColorStop(1, '#161c24');
+  g.fillStyle = dg; g.fillRect(442, 792, 116, 278);
+  g.fillStyle = '#f4efe6'; g.fillRect(497, 792, 6, 278); g.fillRect(442, 900, 116, 6);
+  g.fillStyle = '#e9dcc6'; g.fillRect(392, 1066, 216, 18);
+  sh(392, 1084, 216, 40, 0.42);
+  g.strokeStyle = '#26221f'; g.lineWidth = 3.4;
+  g.beginPath(); g.moveTo(398, 978); g.lineTo(602, 978); g.stroke();
+  for (let x = 404; x <= 598; x += 13) { g.beginPath(); g.moveTo(x, 978); g.lineTo(x, 1066); g.stroke(); }
+  g.strokeStyle = 'rgba(90,48,22,0.3)'; g.lineWidth = 2.4;                // the railing's shadow on the wall
+  for (let x = 404; x <= 598; x += 13) { g.beginPath(); g.moveTo(x + 14, 986); g.lineTo(x + 50, 1062); g.stroke(); }
+  const flowers = (cx, cy, w, n, seed) => {
+    const r = rng(seed);
+    g.fillStyle = '#a4553a'; g.beginPath(); g.moveTo(cx - w / 2, cy); g.lineTo(cx + w / 2, cy); g.lineTo(cx + w * 0.38, cy + 34); g.lineTo(cx - w * 0.38, cy + 34); g.closePath(); g.fill();
+    g.fillStyle = 'rgba(255,255,255,0.18)'; g.fillRect(cx - w / 2, cy, w * 0.25, 30);
+    for (let k = 0; k < n * 3; k++) { g.fillStyle = r() < 0.5 ? '#2f6b34' : '#3f8a3e'; g.beginPath(); g.arc(cx + (r() - 0.5) * w * 1.1, cy - r() * 34, 5 + r() * 6, 0, TAU); g.fill(); }
+    for (let k = 0; k < n; k++) { g.fillStyle = r() < 0.55 ? '#d8392b' : '#f0503c'; g.beginPath(); g.arc(cx + (r() - 0.5) * w, cy - 16 - r() * 30, 4 + r() * 5, 0, TAU); g.fill(); }
+  };
+  flowers(430, 1032, 50, 9, 3); flowers(500, 1032, 56, 11, 4); flowers(570, 1032, 50, 9, 5);
+  flowers(230, 1024, 110, 14, 6);
+  // ground floor: windows with iron grilles, the arched door, a lamp
+  windowAt(170, 1270, 120, 180, false); windowAt(710, 1270, 120, 180, true);
+  g.strokeStyle = '#211d1b'; g.lineWidth = 3;
+  for (const gx of [170, 710]) { for (let x = gx + 12; x < gx + 120; x += 20) { g.beginPath(); g.moveTo(x, 1262); g.lineTo(x, 1458); g.stroke(); } g.beginPath(); g.moveTo(gx - 4, 1330); g.lineTo(gx + 124, 1330); g.moveTo(gx - 4, 1400); g.lineTo(gx + 124, 1400); g.stroke(); }
+  g.fillStyle = '#f0e2c8'; g.beginPath(); g.moveTo(420, 1600); g.lineTo(420, 1316); g.arc(500, 1316, 80, Math.PI, 0); g.lineTo(580, 1600); g.closePath(); g.fill();
+  g.fillStyle = 'rgba(60,30,14,0.5)'; g.beginPath(); g.moveTo(436, 1600); g.lineTo(436, 1318); g.arc(500, 1318, 64, Math.PI, 0); g.lineTo(564, 1600); g.closePath(); g.fill();
+  region(P, 444, 1250, 556, 1600, (d, i, x, y) => {               // wooden door: planks and grain
+    if (Math.hypot(x - 500, y - 1322) > 56 && y < 1322) return;
+    if (x < 446 || x > 554) return;
+    const plank = ((x - 446) % 27) < 2 ? 0.55 : 1, grain = 0.85 + nC.n2(x * 0.5, y * 0.02) * 0.18;
+    const light = 0.85 - (x - 446) / 400;
+    mixIn(d, i, 118 * plank * grain * light, 66 * plank * grain * light, 36 * plank * grain * light, 1);
+  });
+  g.fillStyle = '#d9b25a'; g.beginPath(); g.arc(532, 1470, 5, 0, TAU); g.fill();       // brass knob
+  g.fillStyle = '#2a2522'; g.fillRect(612, 1236, 6, 40); g.fillRect(598, 1232, 34, 6);
+  g.fillStyle = '#3b3430'; g.beginPath(); g.moveTo(604, 1276); g.lineTo(626, 1276); g.lineTo(630, 1316); g.lineTo(600, 1316); g.closePath(); g.fill();
+  g.fillStyle = '#f6f1e6'; g.fillRect(372, 1280, 30, 22); g.strokeStyle = '#3a6ea5'; g.lineWidth = 2; g.strokeRect(372, 1280, 30, 22);  // house-number tile
+  // plinth of travertine blocks
+  region(P, L.x0, 1560, L.x1, L.ground, (d, i, x, y) => {
+    const joint = ((y - 1560) % 40) < 3 || ((x + (((y - 1560) / 40) | 0) * 60) % 120) < 3 ? 0.62 : 1;
+    const lum = joint * (0.8 + nA.fbm(x * 0.05, y * 0.05, 3) * 0.3 + nB.n2(x * 0.4, y * 0.4) * 0.06) * (1.02 - (x - L.x0) / 2400);
+    mixIn(d, i, 196 * lum, 180 * lum, 150 * lum, 1);
+  });
+  // a lemon tree in a terracotta pot by the door
+  const nL = Noise(38);
+  region(P, 590, 1300, 780, 1640, (d, i, x, y) => {
+    if (y > 1520) {
+      const hw = 48 - (y - 1520) * 0.12;
+      if (Math.abs(x - 685) < hw) mixIn(d, i, 170 * (1.05 - (x - 637) / 200), 88, 56, 1);
+      return;
+    }
+    const q = Math.hypot((x - 685) / 82, (y - 1400) / 96) + nL.fbm(x * 0.04, y * 0.04, 4) * 0.5;
+    if (q > 1) { if (Math.abs(x - 685) < 5 && y > 1440) mixIn(d, i, 70, 48, 32, 1); return; }
+    const lit = clamp(0.55 - (x - 685) / 160 - (y - 1400) / 220 + nL.fbm(x * 0.13, y * 0.13, 3) * 0.7);
+    const lemon = nL.n2(x * 0.09 + 5, y * 0.09) > 0.42;
+    if (lemon) mixIn(d, i, lerp(200, 255, lit), lerp(170, 228, lit), 40, 1);
+    else mixIn(d, i, lerp(24, 96, lit), lerp(58, 150, lit), lerp(24, 60, lit), clamp((1 - q) * 5));
+  });
+  sh(637, 1640, 96, -1, 0);
+  // cobbled street
+  region(P, 0, L.ground, 1000, DH, (d, i, x, y) => {
+    const s = 34, gx = Math.floor(x / s), gy = Math.floor(y / (s * 0.6));
+    let best = 9, second = 9;
+    for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) {
+      const cx = (gx + ox + hash(gx + ox, gy + oy)) * s, cy = (gy + oy + hash(gy + oy, gx + ox + 7)) * s * 0.6;
+      const dd = Math.hypot((x - cx) / s, (y - cy) / (s * 0.6));
+      if (dd < best) { second = best; best = dd; } else if (dd < second) second = dd;
+    }
+    const edge = sstep(0.0, 0.18, second - best), dome = 1 - best * 0.5;
+    const lum = (0.35 + 0.65 * edge) * dome * (0.9 + nA.n2(x * 0.2, y * 0.2) * 0.1) * (0.75 + 0.25 * sstep(DH, L.ground, y));
+    mixIn(d, i, 150 * lum, 138 * lum, 124 * lum, 1);
+  });
+  const sg = g.createLinearGradient(0, L.ground, 0, L.ground + 60);          // house shadow on the street
+  sg.addColorStop(0, 'rgba(40,24,14,0.45)'); sg.addColorStop(1, 'rgba(40,24,14,0)');
+  g.fillStyle = sg; g.fillRect(L.x0 + 30, L.ground, L.x1 - L.x0, 60);
+  grade(P, (d, i) => { const l = (d[i] + d[i + 1] + d[i + 2]) / 765; d[i] += 6 * l; d[i + 2] -= 4 * l; });
+  // animated: facade pixels (for the valuation scan), glass (for the glints), the lamp
+  const facade = mask(m => m.fillRect(L.x0, L.eave, L.x1 - L.x0, L.ground - L.eave));
+  const glass = mask(m => { m.fillRect(170, 830, 120, 200); m.fillRect(710, 830, 120, 200); m.fillRect(442, 792, 116, 278); m.fillRect(170, 1270, 120, 180); m.fillRect(710, 1270, 120, 180); });
+  const lamp = [];
+  for (let py = Math.floor(1180 / DU); py < Math.floor(1420 / DU); py++) for (let px = Math.floor(520 / DU); px < Math.floor(720 / DU); px++) {
+    const q = Math.hypot(((px + 0.5) * DU - 615) / 95, ((py + 0.5) * DU - 1300) / 110);
+    if (q < 1) lamp.push(py * GW + px, (1 - q) ** 2);
+  }
+  return { base: toU32(P), facade: indexList(facade, 128), glass: indexList(glass, 128), lamp: Float32Array.from(lamp), L };
+}
+function animHouse(S, t, out) {
+  // 1 · valuation: a measuring beam scans the facade
+  const u = inv(15.55, 16.75, t);
+  if (u > 0 && u < 1) {
+    const yl = lerp(S.L.eave, S.L.ground, E.inOutSine(u)) / DU;
+    for (let j = 0; j < S.facade.length; j++) {
+      const k = S.facade[j], dy = Math.abs(CYA[k] - yl);
+      if (dy > 9) continue;
+      const a = (1 - dy / 9) ** 2 * 0.85 * Math.sin(Math.PI * u), c = out[k];
+      out[k] = pack((c & 255) + 60 * a, ((c >>> 8) & 255) + 170 * a, ((c >>> 16) & 255) + 200 * a);
+    }
+  }
+  // 2 · all the way to the notary: the lamp by the door comes on
+  const lampOn = sstep(16.85, 17.2, t);
+  if (lampOn > 0) for (let j = 0; j < S.lamp.length; j += 2) {
+    const k = S.lamp[j], a = S.lamp[j + 1] * lampOn * 0.9, c = out[k];
+    out[k] = pack((c & 255) + 150 * a, ((c >>> 8) & 255) + 110 * a, ((c >>> 16) & 255) + 50 * a);
+  }
+  // 3 · visibility: the light slides across every window
+  const gU = inv(18.05, 18.9, t);
+  if (gU > 0 && gU < 1) {
+    const band = lerp(-80, GW + 80, gU);
+    for (let j = 0; j < S.glass.length; j++) {
+      const k = S.glass[j], dd = Math.abs(CXA[k] + CYA[k] * 0.45 - band - 120);
+      if (dd > 14) continue;
+      const a = (1 - dd / 14) * 0.8, c = out[k];
+      out[k] = pack((c & 255) + 190 * a, ((c >>> 8) & 255) + 200 * a, ((c >>> 16) & 255) + 210 * a);
+    }
+  }
+}
+
+// =====================================================================
+//  SCENE 4 — LE CHIAVI: ottone e acciaio sotto una luce calda
+// =====================================================================
+const RING = { x: 480, y: 760, r: 118 };
+function paintKeys() {
+  const P = painter(), g = P.g, nA = Noise(41), R = rng(404);
+  const bg = g.createLinearGradient(0, 0, 0, DH);
+  bg.addColorStop(0, '#0b0f16'); bg.addColorStop(0.55, '#121c2a'); bg.addColorStop(1, '#0a0d13');
+  g.fillStyle = bg; g.fillRect(0, 0, 1000, DH);
+  glowDisc(g, 500, 600, 820, [150, 110, 70], 0.34);                // warm spotlight
+  glowDisc(g, 500, 830, 420, [255, 200, 140], 0.16);
+  for (let i = 0; i < 26; i++) {                                    // out-of-focus lights of the city
+    const x = R() * 1000, y = 120 + R() * 1500, r = 26 + R() * 70, pal = [[255, 184, 107], [232, 103, 79], [74, 143, 163], [255, 220, 170]][(R() * 4) | 0];
+    const a = 0.05 + R() * 0.16, gr = g.createRadialGradient(x, y, 0, x, y, r);
+    gr.addColorStop(0, css(pal, a * 0.55)); gr.addColorStop(0.82, css(pal, a * 0.8)); gr.addColorStop(0.95, css(pal, a)); gr.addColorStop(1, css(pal, 0));
+    g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill();
+  }
+  const km = painter();                                             // key mask (for the glint)
+  const metal = (x0, y0, x1, y1, stops) => { const gr = g.createLinearGradient(x0, y0, x1, y1); stops.forEach(([o, c]) => gr.addColorStop(o, c)); return gr; };
+  const BRASS = [[0, '#6e5020'], [0.16, '#f6e2a4'], [0.32, '#cfa65a'], [0.6, '#9b7433'], [0.84, '#dcb96e'], [1, '#553c14']];
+  const STEEL = [[0, '#343a42'], [0.18, '#eef3f7'], [0.38, '#a2acb6'], [0.66, '#68717b'], [0.86, '#bcc6ce'], [1, '#262b31']];
+  const ringPath = (c, a0, a1) => { c.beginPath(); c.arc(RING.x, RING.y, RING.r, a0, a1); };
+  const drawRing = (c, a0, a1) => {
+    ringPath(c, a0, a1); c.lineWidth = 16; c.strokeStyle = '#5b636c'; c.stroke();
+    ringPath(c, a0, a1); c.lineWidth = 7; c.strokeStyle = '#c9d2da'; c.stroke();
+    c.beginPath(); c.arc(RING.x, RING.y, RING.r - 4, a0, a1); c.lineWidth = 2.2; c.strokeStyle = 'rgba(255,255,255,0.8)'; c.stroke();
+  };
+  drawRing(g, 0, TAU); drawRing(km.g, 0, TAU);
+  const onRing = deg => [RING.x + RING.r * Math.cos(deg * Math.PI / 180), RING.y + RING.r * Math.sin(deg * Math.PI / 180)];
+  // the modern brass key
+  const brass = c => {
+    const [hx, hy] = onRing(58);
+    c.save(); c.translate(hx, hy); c.rotate(64 * Math.PI / 180); c.translate(-48, 0);
+    c.beginPath(); c.moveTo(80, -95); c.arc(80, 0, 95, -Math.PI / 2, Math.PI / 2, true); c.lineTo(150, 95); c.quadraticCurveTo(196, 92, 206, 56);
+    c.lineTo(228, 44); c.lineTo(686, 44);
+    c.lineTo(722, 14); c.lineTo(704, -30);
+    const cuts = [[640, 20], [575, 8], [505, 26], [438, 14], [370, 22], [300, 10]];
+    let x = 704;
+    for (const [cx, dd] of cuts) { c.lineTo(cx + 22, -44); c.lineTo(cx, -44 + dd); c.lineTo(cx - 22, -44); x = cx - 22; }
+    c.lineTo(242, -44); c.lineTo(228, -58); c.lineTo(206, -58); c.quadraticCurveTo(196, -92, 150, -95); c.closePath();
+    c.moveTo(72, 0); c.arc(48, 0, 24, 0, TAU, true);
+    c.fillStyle = c === g ? metal(0, -95, 0, 95, BRASS) : '#fff'; c.fill('evenodd');
+    if (c === g) {
+      c.strokeStyle = 'rgba(80,56,18,0.8)'; c.lineWidth = 3;          // keyway grooves
+      c.beginPath(); c.moveTo(250, 2); c.lineTo(690, 2); c.moveTo(250, 20); c.lineTo(684, 20); c.stroke();
+      c.strokeStyle = 'rgba(255,240,200,0.55)'; c.lineWidth = 2;
+      c.beginPath(); c.moveTo(250, -8); c.lineTo(690, -8); c.stroke();
+      c.beginPath(); c.arc(80, 0, 78, -1.2, 1.2); c.strokeStyle = 'rgba(255,236,190,0.35)'; c.lineWidth = 4; c.stroke();
+    }
+    c.restore();
+  };
+  // the antique steel key ("chiave a mappa")
+  const steel = c => {
+    const [hx, hy] = onRing(122);
+    c.save(); c.translate(hx, hy); c.rotate(108 * Math.PI / 180); c.translate(-62, 0);
+    c.beginPath(); c.ellipse(70, 0, 72, 60, 0, 0, TAU); c.moveTo(70 + 42, 0); c.ellipse(70, 0, 42, 32, 0, 0, TAU, true);
+    c.rect(138, -16, 470, 32);
+    c.rect(146, -24, 14, 48); c.rect(168, -21, 10, 42);
+    c.moveTo(526, 16); c.lineTo(600, 16); c.lineTo(600, 96); c.lineTo(586, 96); c.lineTo(586, 58); c.lineTo(572, 58); c.lineTo(572, 96); c.lineTo(548, 96); c.lineTo(548, 70); c.lineTo(538, 70); c.lineTo(538, 96); c.lineTo(526, 96); c.closePath();
+    c.fillStyle = c === g ? metal(0, -60, 0, 96, STEEL) : '#fff'; c.fill('nonzero');
+    if (c === g) {
+      c.save(); c.beginPath(); c.rect(138, -16, 470, 32); c.clip();
+      c.fillStyle = metal(0, -16, 0, 16, STEEL); c.fillRect(138, -16, 470, 32); c.restore();
+      c.beginPath(); c.ellipse(70, 0, 57, 46, 0, 0, TAU); c.strokeStyle = 'rgba(255,255,255,0.35)'; c.lineWidth = 3; c.stroke();
+    }
+    c.restore();
+  };
+  steel(g); brass(g); steel(km.g); brass(km.g);
+  // the ring passes in front of each bow: redraw the short arcs over them
+  drawRing(g, 44 * Math.PI / 180, 72 * Math.PI / 180); drawRing(g, 108 * Math.PI / 180, 136 * Math.PI / 180);
+  // metal texture: fine scratches and speckle on the keys
+  const kd = km.g.getImageData(0, 0, GW, GH).data;
+  pass(P, (d, i, x, y, px, py) => {
+    if (kd[i + 3] < 40) return;
+    const scratch = nA.n2(x * 0.02 + y * 0.09, y * 0.02 - x * 0.09) > 0.55 ? 1.12 : 1;
+    const sp = 0.94 + nA.n2(x * 0.4, y * 0.4) * 0.08;
+    d[i] *= scratch * sp; d[i + 1] *= scratch * sp; d[i + 2] *= scratch * sp;
+  });
+  grade(P);
+  const keyIdx = [];
+  for (let k = 0; k < N; k++) if (kd[k * 4 + 3] > 100) keyIdx.push(k);
+  const motes = Array.from({ length: 80 }, (_, i) => ({ x: 120 + hash(i, 1) * 250, y: 60 + hash(i, 2) * 520, v: 1.5 + hash(i, 3) * 4, ph: hash(i, 4) * TAU, b: 0.3 + hash(i, 5) * 0.7 }));
+  return { base: toU32(P), keys: Int32Array.from(keyIdx), motes };
+}
+function animKeys(S, t, out) {
+  for (const gl of [[22.35, 23.35], [24.95, 25.8]]) {              // a glint travels along the metal
+    const u = inv(gl[0], gl[1], t); if (u <= 0 || u >= 1) continue;
+    const band = lerp(80, 520, E.inOutSine(u));
+    for (let j = 0; j < S.keys.length; j++) {
+      const k = S.keys[j], dd = Math.abs(CXA[k] * 0.55 + CYA[k] - band);
+      if (dd > 16) continue;
+      const a = (1 - dd / 16) ** 1.5 * Math.sin(Math.PI * u) * 0.95, c = out[k];
+      out[k] = pack((c & 255) + 210 * a, ((c >>> 8) & 255) + 190 * a, ((c >>> 16) & 255) + 150 * a);
+    }
+  }
+  for (const m of S.motes) {                                          // dust drifting in the beam
+    const x = (m.x + Math.sin(t * 0.4 + m.ph) * 14) | 0, y = ((m.y - t * m.v) % 560 + 560) % 560 + 60 | 0;
+    if (x < 0 || x >= GW || y < 0 || y >= GH) continue;
+    const k = y * GW + x, b = m.b * (0.5 + 0.5 * Math.sin(t * 2.3 + m.ph)), c = out[k];
+    out[k] = pack((c & 255) + 170 * b, ((c >>> 8) & 255) + 140 * b, ((c >>> 16) & 255) + 100 * b);
+  }
+}
+
+// =====================================================================
+//  SCENE 5 — CASA 2.0: il marchio, fatto di pixel
+// =====================================================================
+function paintEnd() {
+  const P = painter(), g = P.g, nA = Noise(51);
+  const bg = g.createRadialGradient(500, 700, 0, 500, 760, 1200);
+  bg.addColorStop(0, '#22384d'); bg.addColorStop(0.5, '#152433'); bg.addColorStop(1, '#0b1119');
+  g.fillStyle = bg; g.fillRect(0, 0, 1000, DH);
+  // wordmark in the site's display serif, rasterised at pixel scale
+  g.textAlign = 'center'; g.textBaseline = 'alphabetic';
+  let fs = 238;
+  const measure = () => { g.font = `500 ${fs}px ${FONT_SERIF}`; const a = g.measureText('Casa').width; g.font = `italic 500 ${fs}px ${FONT_SERIF}`; return [a, g.measureText('2.0').width]; };
+  let [wCasa, w20] = measure();
+  const fitW = 760, gap0 = 0.22;
+  if (wCasa + w20 + fs * gap0 > fitW) { fs = Math.floor(fs * fitW / (wCasa + w20 + fs * gap0)); [wCasa, w20] = measure(); }
+  g.font = `500 ${fs}px ${FONT_SERIF}`;
+  const gap = fs * gap0, total = wCasa + gap + w20;
+  const x0 = 500 - total / 2, base = 790;
+  const paper = g.createLinearGradient(0, base - fs * 0.75, 0, base);
+  paper.addColorStop(0, '#ffffff'); paper.addColorStop(1, '#e9e2d8');
+  g.textAlign = 'left'; g.fillStyle = paper; g.fillText('Casa', x0, base);
+  const coral = g.createLinearGradient(0, base - fs * 0.75, 0, base);
+  coral.addColorStop(0, '#ff8a70'); coral.addColorStop(0.6, '#e8674f'); coral.addColorStop(1, '#c0392b');
+  g.font = `italic 500 ${fs}px ${FONT_SERIF}`; g.fillStyle = coral; g.fillText('2.0', x0 + wCasa + gap, base);
+  // a hairline in the brand teal under the mark
+  g.fillStyle = '#4a8fa3'; g.fillRect(500 - 120, base + 64, 240, 4);
+  pass(P, (d, i, x, y) => { const n = 1 + nA.n2(x * 0.3, y * 0.3) * 0.03; d[i] *= n; d[i + 1] *= n; d[i + 2] *= n; });
+  grade(P);
+  const mk = mask(m => { m.font = `500 ${fs}px ${FONT_SERIF}`; m.fillText('Casa', x0, base); m.font = `italic 500 ${fs}px ${FONT_SERIF}`; m.fillText('2.0', x0 + wCasa + gap, base); });
+  return { base: toU32(P), mark: indexList(mk, 90), baseY: base };
+}
+function animEnd(S, t, out) {
+  const u = inv(28.4, 29.3, t);                                      // a sheet of light across the mark
+  if (u <= 0 || u >= 1) return;
+  const band = lerp(-40, GW + 40, E.inOutSine(u));
+  for (let j = 0; j < S.mark.length; j++) {
+    const k = S.mark[j], dd = Math.abs(CXA[k] + CYA[k] * 0.35 - band - 90);
+    if (dd > 12) continue;
+    const a = (1 - dd / 12) * 0.7, c = out[k];
+    out[k] = pack((c & 255) + 120 * a, ((c >>> 8) & 255) + 120 * a, ((c >>> 16) & 255) + 120 * a);
+  }
+}
+
+// =====================================================================
+//  TIMELINE — 30 s on a 96 BPM grid (one beat = 0.625 s)
+// =====================================================================
+const DUR = 30.0;
+const PAINTERS = [paintTemple, paintTown, paintHouse, paintKeys, paintEnd];
+const ANIMS = [animTemple, animTown, animHouse, animKeys, animEnd];
+const SCENES = [];
+const MORPHS = [                                  // a → b, start, bottom-up spread, flight time
+  { a: -1, b: 0, t0: 0.0, spread: 1.85, flight: 1.25 },
+  { a: 0, b: 1, t0: 7.5, spread: 0.55, flight: 0.95 },
+  { a: 1, b: 2, t0: 13.75, spread: 0.55, flight: 0.95 },
+  { a: 2, b: 3, t0: 20.0, spread: 0.55, flight: 0.95 },
+  { a: 3, b: 4, t0: 26.25, spread: 0.55, flight: 0.95 },
+];
+MORPHS.forEach(m => (m.t1 = m.t0 + m.spread + m.flight));
+
+function sceneFrame(s, t, out) { out.set(SCENES[s].base); ANIMS[s](SCENES[s], t, out); return out; }
+function lumOrder(col) {                          // counting sort by luminance, stable (row-major within a band)
+  const B = 1024, cnt = new Uint32Array(B + 1), key = new Uint16Array(N);
+  for (let i = 0; i < N; i++) {
+    const c = col[i], l = (c & 255) * 0.2126 + ((c >>> 8) & 255) * 0.7152 + ((c >>> 16) & 255) * 0.0722;
+    const k = Math.min(B - 1, (l * B / 256) | 0); key[i] = k; cnt[k + 1]++;
+  }
+  for (let b = 0; b < B; b++) cnt[b + 1] += cnt[b];
+  const out = new Int32Array(N);
+  for (let i = 0; i < N; i++) out[cnt[key[i]]++] = i;
+  return out;
+}
+function prepMorph(m, mi) {
+  m.dst = sceneFrame(m.b, m.t1, new Uint32Array(N));
+  m.map = new Int32Array(N);
+  if (m.a >= 0) {
+    m.src = sceneFrame(m.a, m.t0, new Uint32Array(N));
+    const oa = lumOrder(m.src), ob = lumOrder(m.dst);
+    for (let k = 0; k < N; k++) m.map[oa[k]] = ob[k];
+  } else for (let k = 0; k < N; k++) m.map[k] = k;
+  const r = rng(900 + mi);
+  m.delay = new Float32Array(N); m.bend = new Float32Array(N);
+  for (let c = 0; c < N; c++) {
+    const yv = CYA[m.map[c]] / GH;                // the new picture is built from the ground up
+    m.delay[c] = m.spread * clamp((1 - yv) * 0.8 + r() * 0.2);
+    m.bend[c] = (0.16 + r() * 0.36) * (r() < 0.82 ? 1 : -1);
+  }
+  if (m.a < 0) {                                  // the opening: a spiral galaxy of dimmed pixels
+    m.rho = new Float32Array(N); m.th = new Float32Array(N); m.om = new Float32Array(N);
+    for (let c = 0; c < N; c++) {                   // three spiral arms, a bright core
+      const q = r(), arm = (r() * 3) | 0;
+      m.rho[c] = 4 + Math.pow(q, 0.85) * 262;
+      m.th[c] = arm * TAU / 3 + m.rho[c] * 0.021 + (r() - 0.5) * (0.5 + 1.4 * (1 - q)) ;
+      m.om[c] = 1.4 / (0.35 + m.rho[c] / 90);
+    }
+  }
+}
+let SPIN = 0;                                     // idle rotation of the opening galaxy (start screen only)
+function renderMorph(m, t) {
+  buf.fill(BG);
+  const lt = t - m.t0, src = m.src, dst = m.dst, map = m.map, delay = m.delay, bend = m.bend, fl = m.flight;
+  const dust = m.a < 0, gx = GW / 2, gy = GH * 0.44;
+  for (let c = 0; c < N; c++) {
+    const tgt = map[c], u = (lt - delay[c]) / fl;
+    if (u >= 1) { buf[tgt] = dst[tgt]; continue; }
+    let x0, y0;
+    if (dust) { const a = m.th[c] + m.om[c] * (t > 0 ? t : 0) + SPIN; x0 = gx + Math.cos(a) * m.rho[c]; y0 = gy + Math.sin(a) * m.rho[c] * 0.62; }
+    else { x0 = CXA[c]; y0 = CYA[c]; }
+    const cd = dst[tgt];
+    if (u <= 0) {
+      if (!dust) { buf[c] = src[c]; continue; }
+      const xi = x0 | 0, yi = y0 | 0;
+      if (xi >= 0 && xi < GW && yi >= 0 && yi < GH) {
+        const k = 0.55 + 0.75 * (1 - m.rho[c] / 266) ** 3;
+        buf[yi * GW + xi] = pack((cd & 255) * k + 40 * k, ((cd >>> 8) & 255) * k + 34 * k, ((cd >>> 16) & 255) * k + 46 * k);
+      }
+      continue;
+    }
+    const e = u < 0.5 ? 4 * u * u * u : 1 - (-2 * u + 2) ** 3 / 2;
+    const x1 = CXA[tgt], y1 = CYA[tgt], dx = x1 - x0, dy = y1 - y0, b = bend[c];
+    const cx = (x0 + x1) * 0.5 - dy * b, cy = (y0 + y1) * 0.5 + dx * b;
+    const i1 = 1 - e, A = i1 * i1, Bq = 2 * e * i1, C = e * e;
+    const xi = (A * x0 + Bq * cx + C * x1) | 0, yi = (A * y0 + Bq * cy + C * y1) | 0;
+    if (xi < 0 || xi >= GW || yi < 0 || yi >= GH) continue;
+    let sr, sg, sb;
+    if (dust) { const k = 0.6; sr = (cd & 255) * k + 24; sg = ((cd >>> 8) & 255) * k + 20; sb = ((cd >>> 16) & 255) * k + 28; }
+    else { const cs = src[c]; sr = cs & 255; sg = (cs >>> 8) & 255; sb = (cs >>> 16) & 255; }
+    const f = u < 0.25 ? 0 : u > 0.85 ? 1 : smooth((u - 0.25) / 0.6), glow = 1 + 0.5 * Math.sin(Math.PI * u);
+    buf[yi * GW + xi] = pack((sr + ((cd & 255) - sr) * f) * glow, (sg + (((cd >>> 8) & 255) - sg) * f) * glow, (sb + (((cd >>> 16) & 255) - sb) * f) * glow);
+  }
+}
+function renderPixels(t) {
+  for (const m of MORPHS) if (t >= m.t0 && t < m.t1) { renderMorph(m, t); return; }
+  let s = 0;
+  for (let i = 0; i < MORPHS.length; i++) if (t >= MORPHS[i].t1) s = MORPHS[i].b;
+  sceneFrame(s, t, buf);
+}
+
+// =====================================================================
+//  COMPOSITING — pixels, pixel grid, bloom, vignette, grain
+// =====================================================================
+const cellTile = document.createElement('canvas'); cellTile.width = cellTile.height = PX;
+{ const c = cellTile.getContext('2d'); c.fillStyle = 'rgba(0,0,0,0.13)'; c.fillRect(PX - 1, 0, 1, PX); c.fillRect(0, PX - 1, PX - 1, 1); }
+const grainTile = document.createElement('canvas'); grainTile.width = grainTile.height = 128;
+{ const c = grainTile.getContext('2d'), id = c.createImageData(128, 128), r = rng(3); for (let i = 0; i < id.data.length; i += 4) { const v = (128 + (r() - 0.5) * 200) | 0; id.data[i] = id.data[i + 1] = id.data[i + 2] = v; id.data[i + 3] = 255; } c.putImageData(id, 0, 0); }
+let cellPat = null, grainPat = null;
+const HAS_FILTER = typeof bctx.filter === 'string';
+function composite(t) {
+  pctx.putImageData(frameImg, 0, 0);
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(pix, 0, 0, OW, OH);
+  if (!cellPat) { cellPat = ctx.createPattern(cellTile, 'repeat'); grainPat = ctx.createPattern(grainTile, 'repeat'); }
+  ctx.fillStyle = cellPat; ctx.fillRect(0, 0, OW, OH);                 // the pixel grid, barely there
+  bctx.globalCompositeOperation = 'copy'; bctx.imageSmoothingEnabled = true;
+  if (HAS_FILTER) bctx.filter = 'blur(2px)';
+  bctx.drawImage(pix, 0, 0, blm.width, blm.height);
+  if (HAS_FILTER) bctx.filter = 'none';
+  ctx.imageSmoothingEnabled = true;
+  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.26;
+  ctx.drawImage(blm, 0, 0, OW, OH);                                      // light bleeds from bright pixels
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  const vg = ctx.createRadialGradient(OW / 2, OH * 0.45, OH * 0.3, OW / 2, OH * 0.45, OH * 0.78);
+  vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.42)');
+  ctx.fillStyle = vg; ctx.fillRect(0, 0, OW, OH);
+  drawCaptions(t);
+  const f = Math.floor(t * 30), ox = (hash(f, 1) * 128) | 0, oy = (hash(f, 2) * 128) | 0;
+  ctx.save(); ctx.globalCompositeOperation = 'overlay'; ctx.globalAlpha = 0.05; ctx.translate(-ox, -oy); ctx.fillStyle = grainPat; ctx.fillRect(ox, oy, OW, OH); ctx.restore();
+}
+
+// =====================================================================
+//  CAPTIONS — the site's copy, in its serif; accents in italic, same family
+// =====================================================================
+const ACC = { teal: [142, 197, 214], coral: [255, 138, 112] };
+const CAPS = [
+  { t0: -0.6, t1: 3.55, y: 300, size: 124, lines: ['Vendi casa', 'a *Tivoli*?'] },
+  { t0: 3.85, t1: 7.25, y: 300, size: 108, lines: ['Conosciamo', '*ogni pietra*.'], label: { text: 'TIVOLI · DAL 1994', t0: 4.6, dy: 262 } },
+  { t0: 9.3, t1: 13.45, y: 280, size: 100, lines: ['Ogni casa ha', '*la sua storia*.'] },
+  { t0: 11.25, t1: 13.45, y: 560, size: 70, lines: ['E il suo *giusto prezzo*.'], accent: 'coral' },
+  { t0: 21.75, t1: 25.95, y: 280, size: 104, lines: ['Non vendiamo', '*solo mura*.'] },
+  { t0: 23.55, t1: 25.95, y: 560, size: 104, lines: ['Custodiamo *sogni*.'], accent: 'coral' },
+];
+const METHOD = { t0: 15.3, t1: 19.75, items: [
+  { t: 15.6, title: 'Valutazioni oneste', sub: 'sui dati reali di Tivoli' },
+  { t: 16.85, title: 'Ti guidiamo fino al rogito', sub: 'notaio, mutuo, conformità' },
+  { t: 18.1, title: 'Marketing trasparente', sub: 'report costanti su visite e trattative' },
+] };
+function tokens(line) {                          // "*word*" → italic accent
+  const out = []; let it = false;
+  for (const raw of line.split(' ')) {
+    let w = raw;
+    const open = w.startsWith('*'); if (open) { it = true; w = w.slice(1); }
+    const close = w.includes('*'); w = w.replace('*', '');
+    out.push({ w, it }); if (close) it = false;
+  }
+  return out;
+}
+function wordAnim(t, t0, k, t1) {                // Apple-style entrance: rise + fade, staggered; soft exit
+  const u = E.outCubic(inv(t0 + k * 0.075, t0 + k * 0.075 + 0.5, t)), x = 1 - inv(t1 - 0.32, t1, t);
+  return { a: u * x, dy: (1 - u) * 34 - (1 - x) * 18 };
+}
+function scrim(a) {                               // quiet gradient behind the words, for legibility
+  if (a <= 0) return;
+  const g = ctx.createLinearGradient(0, 0, 0, 900);
+  g.addColorStop(0, `rgba(8,12,20,${(0.5 * a).toFixed(3)})`); g.addColorStop(0.55, `rgba(8,12,20,${(0.3 * a).toFixed(3)})`); g.addColorStop(1, 'rgba(8,12,20,0)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, OW, 900);
+}
+function drawCaptions(t) {
+  let sa = 0;
+  for (const c of CAPS) sa = Math.max(sa, sstep(c.t0 - 0.2, c.t0 + 0.3, t) * (1 - sstep(c.t1 - 0.3, c.t1 + 0.1, t)));
+  sa = Math.max(sa, sstep(METHOD.t0 - 0.2, METHOD.t0 + 0.3, t) * (1 - sstep(METHOD.t1 - 0.3, METHOD.t1 + 0.1, t)));
+  scrim(sa);
+  ctx.textBaseline = 'alphabetic';
+  for (const c of CAPS) {
+    if (t < c.t0 || t > c.t1) continue;
+    let k = 0;
+    c.lines.forEach((line, li) => {
+      const toks = tokens(line), y = c.y + li * c.size * 1.08;
+      const fontOf = it => `${it ? 'italic ' : ''}500 ${c.size}px ${FONT_SERIF}`;
+      const space = c.size * 0.26;
+      let w = 0;
+      toks.forEach((tk, i) => { ctx.font = fontOf(tk.it); tk.m = ctx.measureText(tk.w).width; w += tk.m + (i ? space : 0); });
+      let x = OW / 2 - w / 2;
+      for (const tk of toks) {
+        const an = wordAnim(t, c.t0, k++, c.t1);
+        if (an.a > 0.003) {
+          ctx.font = fontOf(tk.it);
+          ctx.fillStyle = tk.it ? css(ACC[c.accent || 'teal'], an.a) : css(COL.paper, an.a);
+          ctx.shadowColor = `rgba(0,0,0,${(0.55 * an.a).toFixed(3)})`; ctx.shadowBlur = 26; ctx.shadowOffsetY = 4;
+          ctx.fillText(tk.w, x, y + an.dy);
+          ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+        }
+        x += tk.m + space;
+      }
+    });
+    if (c.label) {
+      const an = wordAnim(t, c.label.t0, 0, c.t1);
+      if (an.a > 0.003) {
+        ctx.font = `600 30px ${FONT_SANS}`; ctx.fillStyle = css(COL.paper, 0.82 * an.a);
+        spaced(c.label.text, OW / 2, c.y + c.label.dy + an.dy, 30 * 0.3, 'center');
+        ctx.fillStyle = css(COL.tealL, 0.9 * an.a);
+        ctx.fillRect(OW / 2 - 28, c.y + c.label.dy + 30 + an.dy, 56, 3);
+      }
+    }
+  }
+  drawMethod(t);
+  drawEndCard(t);
+}
+function spaced(s, x, y, sp, align) {
+  let w = 0; for (const ch of s) w += ctx.measureText(ch).width + sp; w -= sp;
+  let px = align === 'center' ? x - w / 2 : align === 'right' ? x - w : x;
+  for (const ch of s) { ctx.fillText(ch, px, y); px += ctx.measureText(ch).width + sp; }
+  return w;
+}
+function rrect(x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+function drawMethod(t) {
+  const M = METHOD; if (t < M.t0 || t > M.t1) return;
+  const inA = E.outCubic(inv(M.t0, M.t0 + 0.5, t)), outA = 1 - inv(M.t1 - 0.35, M.t1, t), a = inA * outA;
+  const x0 = 110, w = OW - 220, y0 = 196, h = 560;
+  ctx.fillStyle = `rgba(12,18,28,${(0.62 * a).toFixed(3)})`; rrect(x0, y0 + (1 - inA) * 30, w, h, 40); ctx.fill();
+  ctx.strokeStyle = `rgba(255,255,255,${(0.14 * a).toFixed(3)})`; ctx.lineWidth = 2; ctx.stroke();
+  ctx.font = `600 30px ${FONT_SANS}`; ctx.fillStyle = css(COL.glow, 0.95 * a); ctx.textBaseline = 'alphabetic';
+  spaced('IL METODO CASA 2.0', x0 + 64, y0 + 86 + (1 - inA) * 30, 9, 'left');
+  M.items.forEach((it, i) => {
+    const an = wordAnim(t, it.t, 0, M.t1), y = y0 + 190 + i * 140 + an.dy;
+    if (an.a <= 0.003) return;
+    const cx = x0 + 96, cy = y - 20;
+    ctx.beginPath(); ctx.arc(cx, cy, 30, 0, TAU); ctx.fillStyle = css(COL.tealL, 0.95 * an.a); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(cx - 13, cy + 1); ctx.lineTo(cx - 3, cy + 11); ctx.lineTo(cx + 15, cy - 11);
+    ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = css(COL.paper, an.a); ctx.stroke();
+    ctx.font = `500 58px ${FONT_SERIF}`; ctx.fillStyle = css(COL.paper, an.a);
+    ctx.fillText(it.title, x0 + 156, y);
+    ctx.font = `400 31px ${FONT_SANS}`; ctx.fillStyle = css(COL.paper, 0.72 * an.a);
+    ctx.fillText(it.sub, x0 + 158, y + 46);
+  });
+}
+function drawEndCard(t) {
+  if (t < 27.6) return;
+  ctx.textBaseline = 'alphabetic';
+  let an = wordAnim(t, 27.75, 0, 99);
+  ctx.font = `600 34px ${FONT_SANS}`; ctx.fillStyle = css(COL.paper, 0.86 * an.a);
+  spaced('AGENZIA IMMOBILIARE', OW / 2, 1000 + an.dy, 34 * 0.32, 'center');
+  an = wordAnim(t, 27.95, 0, 99);
+  ctx.font = `italic 500 48px ${FONT_SERIF}`; ctx.fillStyle = css(COL.glow, an.a);
+  const s1 = 'Tivoli · dal 1994'; ctx.fillText(s1, OW / 2 - ctx.measureText(s1).width / 2, 1072 + an.dy);
+  an = wordAnim(t, 28.25, 0, 99);
+  if (an.a > 0.003) {                                                   // the one call to action
+    ctx.font = `700 44px ${FONT_SANS}`;
+    const s2 = 'Valutazione gratuita in 24h', w2 = ctx.measureText(s2).width;
+    const pw = w2 + 170, ph = 124, px = OW / 2 - pw / 2, py = 1150 + an.dy, sc = 0.94 + 0.06 * an.a;
+    ctx.save(); ctx.translate(OW / 2, py + ph / 2); ctx.scale(sc, sc); ctx.translate(-OW / 2, -(py + ph / 2));
+    const pg = ctx.createLinearGradient(0, py, 0, py + ph); pg.addColorStop(0, css(COL.coralL, an.a)); pg.addColorStop(1, css(COL.red, an.a));
+    ctx.shadowColor = `rgba(192,57,43,${(0.55 * an.a).toFixed(3)})`; ctx.shadowBlur = 40;
+    rrect(px, py, pw, ph, ph / 2); ctx.fillStyle = pg; ctx.fill(); ctx.shadowBlur = 0;
+    ctx.font = `700 44px ${FONT_SANS}`; ctx.fillStyle = css(COL.paper, an.a);
+    ctx.fillText(s2, OW / 2 - w2 / 2 - 22, py + ph / 2 + 15);
+    ctx.beginPath(); const ax = OW / 2 + w2 / 2 + 6, ay = py + ph / 2;
+    ctx.moveTo(ax, ay); ctx.lineTo(ax + 30, ay); ctx.moveTo(ax + 18, ay - 12); ctx.lineTo(ax + 30, ay); ctx.lineTo(ax + 18, ay + 12);
+    ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.strokeStyle = css(COL.paper, an.a); ctx.stroke();
+    ctx.restore();
+  }
+  an = wordAnim(t, 28.6, 0, 99);
+  ctx.font = `500 38px ${FONT_SANS}`; ctx.fillStyle = css(COL.paper, 0.9 * an.a);
+  spaced('casaduepuntozero.net', OW / 2, 1356 + an.dy, 38 * 0.04, 'center');
+}
+function renderAt(t) { t = clamp(t, 0, DUR); renderPixels(t); composite(t); }
+
+// =====================================================================
+//  COLONNA SONORA — originale, sintetizzata con la Web Audio API
+//  96 BPM · Re maggiore · corde pizzicate (Karplus–Strong), pad, basso,
+//  ritmica leggera, whoosh e "pioggia di pixel" sui passaggi
+// =====================================================================
+const BEAT = 60 / 96, BAR = BEAT * 4;
+const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+const CHORDS = [                                   // one per bar (12 bars = 30 s)
+  [50, 57, 61, 64, 66], [50, 57, 61, 64, 66], [47, 54, 57, 62, 66], [43, 54, 57, 59, 62],
+  [40, 55, 59, 62, 66], [45, 57, 62, 64, 67], [47, 54, 57, 61, 62], [43, 54, 57, 59, 62],
+  [40, 55, 59, 62, 66], [43, 54, 57, 59, 64], [45, 57, 61, 64, 67], [50, 57, 61, 64, 69],
+];
+function ksBuffer(ac, freq, dur, bright) {         // Karplus–Strong plucked string, fractional delay
+  const sr = ac.sampleRate, n = Math.floor(sr * dur), b = ac.createBuffer(1, n, sr), d = b.getChannelData(0);
+  const D = sr / freq - 0.5, Di = Math.floor(D), fr = D - Di, r = rng(Math.round(freq * 100));
+  let lp = 0;
+  for (let i = 0; i <= Di + 2 && i < n; i++) { lp += ((r() * 2 - 1) - lp) * bright; d[i] = lp; }
+  const decay = Math.pow(0.5, 1 / (sr * (0.9 + 220 / freq)));
+  for (let i = Di + 3; i < n; i++) {
+    const a = d[i - Di] * (1 - fr) + d[i - Di - 1] * fr, c = d[i - Di - 1] * (1 - fr) + d[i - Di - 2] * fr;
+    d[i] = decay * 0.5 * (a + c);
+  }
+  let pk = 0; for (let i = 0; i < n; i++) pk = Math.max(pk, Math.abs(d[i]));
+  for (let i = 0; i < n; i++) d[i] /= pk || 1;
+  return b;
+}
+function noiseBuffer(ac, sec) {
+  const n = Math.floor(ac.sampleRate * sec), b = ac.createBuffer(1, n, ac.sampleRate), d = b.getChannelData(0), r = rng(8);
+  for (let i = 0; i < n; i++) d[i] = r() * 2 - 1;
+  return b;
+}
+function impulse(ac, sec, decay) {
+  const sr = ac.sampleRate, n = Math.floor(sr * sec), b = ac.createBuffer(2, n, sr), r = rng(21);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = b.getChannelData(ch); let lp = 0;
+    for (let i = 0; i < n; i++) { const x = i / n; lp += ((r() * 2 - 1) - lp) * (0.8 - 0.6 * x); d[i] = lp * Math.pow(1 - x, decay) * Math.min(1, i / (sr * 0.01)); }
+  }
+  return b;
+}
+function buildScore(ac, out, T0) {
+  const at = t => T0 + t, nodes = [];
+  const panTo = (v, dest) => { if (!ac.createStereoPanner) return dest; const p = ac.createStereoPanner(); p.pan.value = v; p.connect(dest); return p; };   // a panner that feeds dest
+  const panned = (node, v) => { if (!ac.createStereoPanner) return node; const p = ac.createStereoPanner(); p.pan.value = v; node.connect(p); return p; };  // node → panner
+  const verb = ac.createConvolver(); verb.buffer = impulse(ac, 2.8, 2.6);
+  const verbIn = ac.createGain(), verbOut = ac.createGain(); verbOut.gain.value = 0.8;
+  verbIn.connect(verb); verb.connect(verbOut); verbOut.connect(out);
+  const send = (node, dry, wet) => { const d = ac.createGain(); d.gain.value = dry; node.connect(d); d.connect(out); const w = ac.createGain(); w.gain.value = wet; node.connect(w); w.connect(verbIn); };
+  const noise = noiseBuffer(ac, 2);
+  const src = (buf, t, rate = 1) => { const s = ac.createBufferSource(); s.buffer = buf; s.playbackRate.value = rate; s.start(at(t)); nodes.push(s); return s; };
+  const osc = (type, f, t0, t1) => { const o = ac.createOscillator(); o.type = type; o.frequency.setValueAtTime(f, at(t0)); o.start(at(t0)); o.stop(at(t1)); nodes.push(o); return o; };
+  const env = (g, t, a, peak, hold, rel) => { g.gain.setValueAtTime(0.0001, at(t)); g.gain.exponentialRampToValueAtTime(peak, at(t + a)); g.gain.setValueAtTime(peak, at(t + a + hold)); g.gain.exponentialRampToValueAtTime(0.0001, at(t + a + hold + rel)); };
+
+  // ---- plucked strings: an arpeggio in eighths, bars 0–10
+  const ks = {};
+  const pluck = (t, midi, vel, p, bright = 0.55) => {
+    const key = midi + '_' + bright;
+    if (!ks[key]) ks[key] = ksBuffer(ac, mtof(midi), 2.4, bright);
+    const s = src(ks[key], t), g = ac.createGain(), lp = ac.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 2400 + vel * 3000;
+    g.gain.value = vel * 0.34; s.connect(lp); lp.connect(g);
+    send(panned(g, p), 1, 0.38);
+  };
+  const ARP = [1, 2, 3, 4, 3, 2, 4, 3];
+  for (let bar = 0; bar < 11; bar++) {
+    const ch = CHORDS[bar];
+    for (let s = 0; s < 8; s++) {
+      const t = bar * BAR + s * BEAT / 2;
+      if (t < 0.25) continue;
+      const midi = ch[ARP[s]] + 12, vel = (s === 0 ? 0.95 : s % 2 ? 0.55 : 0.72) * (bar < 1 ? 0.75 : 1);
+      pluck(t, midi, vel, s % 2 ? 0.35 : -0.35);
+    }
+    pluck(bar * BAR, ch[0] + 12, 0.8, 0, 0.35);                     // the root, low and round
+  }
+  // ---- warm pad
+  const padLP = ac.createBiquadFilter(); padLP.type = 'lowpass'; padLP.Q.value = 0.7;
+  padLP.frequency.setValueAtTime(700, at(0)); padLP.frequency.linearRampToValueAtTime(1800, at(24)); padLP.frequency.linearRampToValueAtTime(2600, at(28.5));
+  const padBus = ac.createGain(); padBus.gain.value = 1; padLP.connect(padBus); send(padBus, 1, 0.55);
+  CHORDS.forEach((ch, bar) => {
+    const t0 = bar * BAR, dur = BAR + (bar === 11 ? 0.2 : 0.5);
+    ch.slice(1).forEach((m, vi) => [-7, 7].forEach(det => {
+      const o = osc('sawtooth', mtof(m), t0, t0 + dur + 0.8); o.detune.value = det;
+      const g = ac.createGain(); o.connect(g); g.connect(panTo(vi % 2 ? 0.4 : -0.4, padLP));
+      const lvl = bar === 11 ? 0.03 : bar < 1 ? 0.012 : 0.02;
+      env(g, t0, 0.45, lvl, dur - 0.45, 0.8);
+    }));
+  });
+  // ---- bass: the root, whole bars, from bar 1
+  for (let bar = 1; bar < 12; bar++) {
+    const f = mtof(CHORDS[bar][0] - 12), t0 = bar * BAR;
+    const o = osc('sine', f, t0, t0 + BAR + 0.4), o2 = osc('triangle', f * 2, t0, t0 + BAR + 0.4);
+    const g = ac.createGain(), g2 = ac.createGain(); g2.gain.value = 0.18; o.connect(g); o2.connect(g2); g2.connect(g);
+    env(g, t0, 0.06, bar === 11 ? 0.34 : 0.26, BAR - 0.35, 0.5); g.connect(out);
+  }
+  // ---- rhythm: kick from the first transition, hats and a soft clap later
+  const kick = t => { const o = osc('sine', 120, t, t + 0.5); o.frequency.exponentialRampToValueAtTime(42, at(t + 0.16)); const g = ac.createGain(); env(g, t, 0.004, 0.62, 0.02, 0.32); o.connect(g); g.connect(out); };
+  const hat = (t, v, open) => { const s = src(noise, t); const hp = ac.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 7500; const g = ac.createGain(); env(g, t, 0.002, v, 0, open ? 0.18 : 0.045); s.connect(hp); hp.connect(g); send(panned(g, 0.25), 1, 0.1); s.stop(at(t + 0.3)); };
+  const clap = t => { const s = src(noise, t); const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1700; bp.Q.value = 0.9; const g = ac.createGain(); env(g, t, 0.003, 0.2, 0.01, 0.16); s.connect(bp); bp.connect(g); send(g, 1, 0.3); s.stop(at(t + 0.4)); };
+  for (let b = 12; b < 44; b++) {                                   // beats 12–43 (7.5 s → 27.5 s)
+    const t = b * BEAT, inBar = b % 4;
+    if (inBar === 0 || inBar === 2) kick(t);
+    if (b >= 20) hat(t + BEAT / 2, 0.06, inBar === 3);
+    if (b >= 24 && (inBar === 1 || inBar === 3)) clap(t);
+  }
+  // ---- transitions: a whoosh and a rain of pixel ticks for every morph
+  const whoosh = (t, len, up) => {
+    const s = src(noise, t); const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 1.1;
+    bp.frequency.setValueAtTime(up ? 300 : 3200, at(t)); bp.frequency.exponentialRampToValueAtTime(up ? 4200 : 500, at(t + len * 0.6)); bp.frequency.exponentialRampToValueAtTime(900, at(t + len));
+    const g = ac.createGain(); g.gain.setValueAtTime(0.0001, at(t)); g.gain.exponentialRampToValueAtTime(0.32, at(t + len * 0.45)); g.gain.exponentialRampToValueAtTime(0.0001, at(t + len));
+    s.connect(bp); bp.connect(g);
+    let p = g; if (ac.createStereoPanner) { p = ac.createStereoPanner(); p.pan.setValueAtTime(-0.7, at(t)); p.pan.linearRampToValueAtTime(0.7, at(t + len)); g.connect(p); }
+    send(p, 1, 0.35); s.stop(at(t + len + 0.1));
+  };
+  const tick = (t, f, v, p) => { const o = osc('sine', f, t, t + 0.06); const g = ac.createGain(); env(g, t, 0.001, v, 0, 0.035); o.connect(g); send(panned(g, p), 1, 0.5); };
+  const r = rng(12);
+  MORPHS.forEach((m, i) => {
+    whoosh(m.t0 - (i ? 0.25 : 0), m.spread + m.flight + (i ? 0.1 : 0.4), true);
+    const n = i ? 70 : 150;
+    for (let k = 0; k < n; k++) {
+      const t = m.t0 + (m.spread + m.flight) * Math.pow(r(), 0.8);
+      tick(t, 2600 + r() * 5200, 0.015 + r() * 0.03, r() * 1.6 - 0.8);
+    }
+  });
+  // ---- the hook lands, and the mark resolves
+  const bell = (t, midi, v) => [[1, 1], [2, 0.3], [3.01, 0.14], [4.2, 0.06]].forEach(([mul, a]) => { const o = osc('sine', mtof(midi) * mul, t, t + 3.2); const g = ac.createGain(); env(g, t, 0.003, v * a, 0, 2.6 / mul + 0.3); o.connect(g); send(g, 1, 0.6); });
+  const boom = (t, v) => { const o = osc('sine', 95, t, t + 2); o.frequency.exponentialRampToValueAtTime(38, at(t + 0.9)); const g = ac.createGain(); env(g, t, 0.006, v, 0.05, 1.6); o.connect(g); send(g, 1, 0.35); const s = src(noise, t); const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(1800, at(t)); lp.frequency.exponentialRampToValueAtTime(120, at(t + 0.8)); const gn = ac.createGain(); env(gn, t, 0.004, v * 0.4, 0, 0.9); s.connect(lp); lp.connect(gn); send(gn, 1, 0.5); s.stop(at(t + 1.2)); };
+  boom(0.2, 0.55); bell(0.2, 86, 0.1);
+  boom(27.75, 0.8); bell(27.8, 81, 0.12); bell(28.1, 86, 0.1); bell(28.4, 90, 0.08);
+  [50, 57, 61, 64, 69, 73].forEach((m, i) => pluck(27.75 + i * 0.045, m + (i > 3 ? 0 : 12), 0.85, i / 3 - 0.8, 0.45));   // a final strum
+  // ---- master fade so the loop closes softly
+  out.gain.setValueAtTime(out.gain.value, at(29.35)); out.gain.linearRampToValueAtTime(0.0001, at(30));
+  return nodes;
+}
+const Sound = (() => {
+  let ac = null, master = null, streamDest = null, nodes = [], T0 = 0;
+  function chain(c) {
+    const comp = c.createDynamicsCompressor();
+    comp.threshold.value = -14; comp.knee.value = 8; comp.ratio.value = 3; comp.attack.value = 0.005; comp.release.value = 0.25;
+    const lim = c.createDynamicsCompressor();
+    lim.threshold.value = -2; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.001; lim.release.value = 0.1;
+    const g = c.createGain(); g.gain.value = 0.82;
+    g.connect(comp); comp.connect(lim); lim.connect(c.destination);
+    return { input: g, lim };
+  }
+  function start() {                                  // inside a user gesture
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return false;
+    if (!ac) { try { ac = new AC({ latencyHint: 'interactive' }); } catch (e) { ac = new AC(); } }
+    if (ac.state !== 'running') { const p = ac.resume(); if (p && p.catch) p.catch(() => {}); }
+    stop();
+    const ch = chain(ac);
+    master = ch.input;
+    if (ac.createMediaStreamDestination) { streamDest = ac.createMediaStreamDestination(); ch.lim.connect(streamDest); }
+    T0 = ac.currentTime + 0.1;
+    nodes = buildScore(ac, master, T0);
+    return true;
+  }
+  function stop() {
+    if (!master) return;
+    const m = master, n = nodes, now = ac.currentTime;
+    m.gain.cancelScheduledValues(now); m.gain.setValueAtTime(m.gain.value, now); m.gain.linearRampToValueAtTime(0, now + 0.08);
+    setTimeout(() => { n.forEach(x => { try { x.stop(); } catch (e) { /* done */ } }); try { m.disconnect(); } catch (e) { /* gone */ } }, 200);
+    master = null; nodes = [];
+  }
+  function time() { if (!ac || !master || ac.state !== 'running') return null; return ac.currentTime - T0 - (ac.outputLatency || 0); }
+  async function renderWav() {                        // offline render → 16-bit stereo WAV (for the MP4 export)
+    const sr = 48000, oc = new OfflineAudioContext(2, Math.ceil(sr * DUR), sr);
+    const ch = chain(oc);
+    buildScore(oc, ch.input, 0);
+    const b = await oc.startRendering();
+    const L = b.getChannelData(0), R = b.getChannelData(1), n = L.length, ab = new ArrayBuffer(44 + n * 4), v = new DataView(ab);
+    const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+    w(0, 'RIFF'); v.setUint32(4, 36 + n * 4, true); w(8, 'WAVE'); w(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 2, true);
+    v.setUint32(24, sr, true); v.setUint32(28, sr * 4, true); v.setUint16(32, 4, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, n * 4, true);
+    let peak = 0;
+    for (let i = 0; i < n; i++) {
+      const l = Math.max(-1, Math.min(1, L[i])), r = Math.max(-1, Math.min(1, R[i]));
+      peak = Math.max(peak, Math.abs(l), Math.abs(r));
+      v.setInt16(44 + i * 4, l * 32767, true); v.setInt16(46 + i * 4, r * 32767, true);
+    }
+    return { wav: new Uint8Array(ab), peak };
+  }
+  return { start, stop, time, renderWav, stream: () => streamDest && streamDest.stream };
+})();
+
+// =====================================================================
+//  PLAYER — preparazione, schermata iniziale, riproduzione, download
+// =====================================================================
+const Q = new URLSearchParams(location.search);
+const EXPORT = Q.has('export');
+const APP = { mode: 'loading', progress: 0, ready: false, p0: 0, startMs: 0, debugT: 0, rec: null, btns: [], note: '' };
+if (EXPORT) document.body.classList.add('export');
+function fit() {
+  if (EXPORT) { cvs.style.width = OW + 'px'; cvs.style.height = OH + 'px'; return; }
+  const s = Math.min(window.innerWidth / OW, window.innerHeight / OH);
+  cvs.style.width = Math.floor(OW * s) + 'px'; cvs.style.height = Math.floor(OH * s) + 'px';
+}
+window.addEventListener('resize', fit);
+fit();
+
+const tick0 = () => new Promise(r => setTimeout(r, 0));
+async function prepare() {
+  if (document.fonts && document.fonts.ready) await document.fonts.ready;
+  for (let i = 0; i < PAINTERS.length; i++) { SCENES[i] = PAINTERS[i](); APP.progress = (i + 1) / 10; await tick0(); }
+  for (let i = 0; i < MORPHS.length; i++) { prepMorph(MORPHS[i], i); APP.progress = 0.5 + (i + 1) / 10; await tick0(); }
+  APP.ready = true;
+  if (APP.mode === 'loading') APP.mode = Q.has('t') ? 'debug' : 'intro';
+}
+const ready = prepare();
+
+function drawLoading(now) {
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  ctx.fillStyle = '#0E1116'; ctx.fillRect(0, 0, OW, OH);
+  ctx.textBaseline = 'alphabetic';
+  ctx.font = `500 96px ${FONT_SERIF}`; ctx.fillStyle = css(COL.paper, 0.9);
+  const w1 = ctx.measureText('Casa ').width, w2 = (ctx.font = `italic 500 96px ${FONT_SERIF}`, ctx.measureText('2.0').width);
+  ctx.font = `500 96px ${FONT_SERIF}`; ctx.fillText('Casa ', OW / 2 - (w1 + w2) / 2, 900);
+  ctx.font = `italic 500 96px ${FONT_SERIF}`; ctx.fillStyle = css(COL.coral); ctx.fillText('2.0', OW / 2 - (w1 + w2) / 2 + w1, 900);
+  ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(OW / 2 - 200, 980, 400, 4);
+  ctx.fillStyle = css(COL.tealL); ctx.fillRect(OW / 2 - 200, 980, 400 * APP.progress, 4);
+  ctx.font = `500 28px ${FONT_SANS}`; ctx.fillStyle = css(COL.paper, 0.6);
+  spaced('PREPARAZIONE DEI PIXEL', OW / 2, 1050, 8, 'center');
+}
+function button(id, label, x, y, w, h, filled) {
+  APP.btns.push({ id, x, y, w, h });
+  rrect(x, y, w, h, h / 2);
+  if (filled) { const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, css(COL.coralL)); g.addColorStop(1, css(COL.red)); ctx.fillStyle = g; ctx.fill(); }
+  else { ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.lineWidth = 2; ctx.stroke(); }
+  ctx.font = `600 38px ${FONT_SANS}`; ctx.fillStyle = css(COL.paper); ctx.textBaseline = 'middle';
+  ctx.fillText(label, x + w / 2 - ctx.measureText(label).width / 2, y + h / 2 + 2); ctx.textBaseline = 'alphabetic';
+}
+function drawIntro(now) {
+  SPIN = (now / 1000) * 0.3; renderMorph(MORPHS[0], -5);             // the galaxy of pixels, turning slowly
+  composite(-1);
+  ctx.fillStyle = 'rgba(8,12,20,0.35)'; ctx.fillRect(0, 0, OW, OH);
+  const cx = OW / 2, cy = 960, pu = (now / 1000 % 2.2) / 2.2;
+  ctx.beginPath(); ctx.arc(cx, cy, 96 + pu * 60, 0, TAU); ctx.strokeStyle = `rgba(255,255,255,${(0.35 * (1 - pu)).toFixed(3)})`; ctx.lineWidth = 3; ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx, cy, 96, 0, TAU); ctx.fillStyle = css(COL.coral, 0.95); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(cx - 26, cy - 40); ctx.lineTo(cx + 44, cy); ctx.lineTo(cx - 26, cy + 40); ctx.closePath(); ctx.fillStyle = css(COL.paper); ctx.fill();
+  APP.btns = [{ id: 'play', x: cx - 110, y: cy - 110, w: 220, h: 220 }];
+  ctx.textBaseline = 'alphabetic';
+  ctx.font = `500 76px ${FONT_SERIF}`; ctx.fillStyle = css(COL.paper);
+  const s = 'Guarda il video'; ctx.fillText(s, cx - ctx.measureText(s).width / 2, cy + 230);
+  ctx.font = `500 30px ${FONT_SANS}`; ctx.fillStyle = css(COL.paper, 0.7);
+  spaced('30 SECONDI · AUDIO ATTIVO', cx, cy + 300, 8, 'center');
+}
+function drawEnd() {
+  renderAt(DUR);
+  APP.btns = [];
+  if (APP.rec) return;
+  ctx.fillStyle = 'rgba(8,12,20,0.55)'; ctx.fillRect(0, 1520, OW, 400);
+  button('replay', '↻  Rivedi', 110, 1610, 380, 110, false);
+  button('record', 'Scarica il video', 530, 1610, 440, 110, true);
+  if (APP.note) { ctx.font = `500 28px ${FONT_SANS}`; ctx.fillStyle = css(COL.paper, 0.75); spaced(APP.note, OW / 2, 1790, 2, 'center'); }
+}
+function frame(now) {
+  requestAnimationFrame(frame);
+  if (!APP.ready) { if (!EXPORT) drawLoading(now); return; }
+  if (APP.mode === 'export') return;
+  if (APP.mode === 'intro') { drawIntro(now); return; }
+  if (APP.mode === 'debug') { renderAt(APP.debugT); return; }
+  if (APP.mode === 'end') { drawEnd(); return; }
+  let t = (now - APP.p0) / 1000;
+  const at = Sound.time();
+  if (at !== null && Math.abs(at - t) > 0.03) { APP.p0 = now - at * 1000; t = at; }
+  if (t >= DUR) { finish(); drawEnd(); return; }
+  renderAt(Math.max(0, t));
+}
+function play() {
+  Sound.start();
+  APP.mode = 'play'; APP.startMs = performance.now(); APP.p0 = APP.startMs + 100;
+  document.body.style.cursor = 'none';
+}
+function finish() {
+  APP.mode = 'end'; document.body.style.cursor = 'pointer';
+  if (APP.rec) { const r = APP.rec; setTimeout(() => r.stop(), 250); }
+}
+function record() {                                // records the canvas + soundtrack in real time
+  const stream = cvs.captureStream ? cvs.captureStream(30) : null;
+  if (!stream || typeof MediaRecorder === 'undefined') { APP.note = 'Registrazione non supportata da questo browser'; return; }
+  play();
+  const as = Sound.stream(); if (as) as.getAudioTracks().forEach(tr => stream.addTrack(tr));
+  const types = ['video/mp4;codecs="avc1.640028,mp4a.40.2"', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+  const mime = types.find(m => MediaRecorder.isTypeSupported(m)) || '';
+  const rec = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 16e6 } : undefined), parts = [];
+  rec.ondataavailable = e => e.data.size && parts.push(e.data);
+  rec.onstop = () => {
+    const blob = new Blob(parts, { type: rec.mimeType || 'video/webm' }), a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'casa2-0-reel.' + ((rec.mimeType || '').includes('mp4') ? 'mp4' : 'webm');
+    document.body.appendChild(a); a.click(); a.remove();
+    APP.rec = null; APP.note = 'Video salvato · ' + a.download; badge.remove();
+  };
+  const badge = document.createElement('div');
+  badge.textContent = '● REC';
+  badge.style.cssText = 'position:fixed;top:14px;left:14px;font:600 13px system-ui,sans-serif;color:#fff;background:#C0392B;padding:6px 10px;border-radius:99px;letter-spacing:.08em';
+  document.body.appendChild(badge);
+  APP.rec = rec; rec.start();
+}
+function hit(e) {
+  const r = cvs.getBoundingClientRect(), x = (e.clientX - r.left) * OW / r.width, y = (e.clientY - r.top) * OH / r.height;
+  return APP.btns.find(b => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h);
+}
+window.addEventListener('click', e => {
+  if (!APP.ready) return;
+  if (APP.mode === 'intro') { play(); return; }                       // anywhere starts the film
+  if (APP.mode === 'end' && !APP.rec) { const b = hit(e); if (!b) return; APP.note = ''; if (b.id === 'replay') play(); else record(); }
+});
+window.addEventListener('keydown', e => {
+  if ((e.key === 'Enter' || e.key === ' ') && APP.ready && (APP.mode === 'intro' || (APP.mode === 'end' && !APP.rec))) { e.preventDefault(); play(); }
+});
+// review & export hooks: ?t=12.5 freezes a frame · ?export=1 exposes the renderer
+if (Q.has('t')) APP.debugT = parseFloat(Q.get('t')) || 0;
+window.__reel = { ready, renderAt: t => { APP.mode = 'export'; renderAt(t); }, renderWav: () => Sound.renderWav(), duration: DUR };
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
